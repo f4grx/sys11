@@ -1,0 +1,5 @@
+*.o
+*.elf
+*.s19
+*.bin
+map.txt
