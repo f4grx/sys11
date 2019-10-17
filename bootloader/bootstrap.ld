@@ -6,11 +6,6 @@ MEMORY
 
 ENTRY(_start)
 
-/*PHDRS
-{
-  load PT_LOAD ;
-}*/
-
 SECTIONS
 {
   . = 0x0000;
