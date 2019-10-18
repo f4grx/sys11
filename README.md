@@ -35,16 +35,18 @@ protection
 * Additional LM2575 step-down to reduce LDO heating, but can be bypassed
 * 4 outputs (PORTA) dedicated as SPI CS lines (3 bits + 74138 decoder + OE line)
 * SCI : (UART), TX and RX lines on a pin header for external communication
-* SPI : CS0 connected to a SPI flash chip
-* HE10-40 (IDE drive) connector for external bus. All lines buffered by 74245.
-* TODO: I2C bus, also available on external bus connector. Requires bidir lines.
+* SPI : CS0 connected to a SPI flash chip, CS1 to a SD/MicroSD card.
+* HE10-40 (IDE drive) connector for external bus. All lines buffered by 74xx245.
+* I2C bus
+
+Seriously planned features:
+* Multi-VPP EPROM programmer
 
 Planned vaporware features:
 * removable SPI flash cardriges
 * Fully shielded aluminum enclosure for a 100x160 board
 * SCSI controller
 * Additional UARTs
-* Multi-VPP EPROM programmer
 * Wireless communication interfaces (AX.25)
 * Audio cassette program storage (Kansas)
 * MCP 2515 CAN Bus on SPI
@@ -52,10 +54,27 @@ Planned vaporware features:
 What is already done
 --------------------
 * Memory map
-* I have some chips: 3x 68HC11A0, 2x 68HC11A1, some 74LS245 and 74LS138
+* I have some chips: 4x 68HC11A0, 1x 68HC11A1, some 74xx245, 573, 138, 00, 10
 
 What is being done right now
 ----------------------------
 
 * Schematic
 * Prototype
+
+SPI bus
+-------
+
+The hardware SPI bus is used in master mode.
+* The SS line is used as CS for the internal flash memory (mass storage).
+* The OC3 line is used as CS for the SD card
+
+TODO: If I can find 4 outputs I will use a HC138 to create 8 CS lines and put the SPI bus on a SUBD-15 (MISO/MOSI/SCK+6CS+GND+5VCC)
+
+I2C bus
+-------
+
+A proper i2c bus needs two bidirectionnal open drain lines, which are not available on the HC11 if one wants to benefit from
+the hardware SPI block on PORTD. Moreover, the HC11 does not have a hardware i2c, so bitbanging must be used.
+
+The i2c bus will be done on port A using Input Capture and Output Compare lines. To read SDA and SCL, the IC1 and IC2 lines are used. To write the bus, the OC1 and OC2 lines are used to drive small BS170 MOSFETs. This requires inversion of the bits to write, which is not a big problem.
