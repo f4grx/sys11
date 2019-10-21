@@ -13,7 +13,7 @@ out.elf: loader.o bootstrap.ld
 	m68hc11-elf-ld -T bootstrap.ld -o out.elf -Map map.txt loader.o
 
 loader.o: loader.asm
-	m68hc11-elf-as -o loader.o loader.asm
+	m68hc11-elf-as -I../inc -o loader.o loader.asm
 
 clean:
 	rm -f out.* *.o map.txt 

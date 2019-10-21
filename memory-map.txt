@@ -1,0 +1,31 @@
+Memory is partitioned in 8-KB ranges, so the full 64 memory space has 8 pages
+The 3 MSB of the address are used for decodingm using 2- and 3-input NAND gates.
+
++-----+-----+-----+---------------+-----------------------------+
+| A15 | A14 | A13 | Range         |         Description         |
++-----+-----+-----+---------------+-----------------------------+
+|  0  |  0  |  0  | 0000h - 1FFFh | 0000h - 7FFFh               |
+|  0  |  0  |  1  | 2000h - 3FFFh | General Purpose RAM (32KB)  |
+|  0  |  1  |  0  | 4000h - 5FFFh | /CSRAM = A15                |
+|  0  |  1  |  1  | 6000h - 7FFFh |                             |
++-----+-----+-----+---------------+-----------------------------+
+|  1  |  0  |  0  | 8000h - 9FFFh | 8000h - BFFFh               |
+|  1  |  0  |  1  | A000h - BFFFh | External RAM (16KB)         |
+|     |     |     |               | /CSXRAM= !(A15 & !A14)      |
++-----+-----+-----+---------------+-----------------------------+
+|  1  |  1  |  0  | C000h - DFFFh | I/O space (8KB)             |
+|     |     |     |               | /CSIO= !(A15 & A14 & !A13)  |
++-----+-----+-----+---------------+-----------------------------+
+|  1  |  1  |  1  | E000h - FFFFh | Monitor ROM (8KB)           |
+|     |     |     |               | /CSROM= !(A15 & A14 & A13)  |
++-----+-----+-----+---------------+-----------------------------+
+
+Computation of CSEXT: Must be low when any input is low
+Requires an AND gate (2 NAND)
+
+CSXRAM CSIO  -> CSEXT
+0      0        0 (ERROR)
+0      1        0
+1      0        0
+1      1        1
+
