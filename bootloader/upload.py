@@ -16,9 +16,19 @@ parser.add_argument('--xtal',
                     default='8',
                     type=float,
                     help='HC11 XTAL frequency in MHz (default %(default)s)')
+parser.add_argument('--reset',
+                    default='no',
+                    choices=['no', 'rts'],
+                    help='reset before upload (default %(default)s)')
+parser.add_argument('--run',
+                    nargs=argparse.REMAINDER,
+                    default=None,
+                    help='program to run after bootstrap is done')
 
 args = parser.parse_args()
 args = vars(args)
+
+print(args)
 
 # Compute the baud rate from the xtal clock
 
@@ -61,6 +71,10 @@ print("Opening port: ", args["port"], "at speed: ", baud)
 ser = serial.Serial(args["port"], baud,
                     bytesize=8, parity='N', stopbits=1, timeout=1)
 
+#Optionnally, reset the board
+if args["reset"] == 'rts':
+    print("Resetting board via RTS (todo)")
+
 # All good. Send the initial FF byte
 
 ser.reset_output_buffer()
@@ -70,19 +84,22 @@ ser.write(b'\xff')
 
 n = -1
 for x in binary:
-  n = n + 1
-  ser.reset_output_buffer()
-  ser.reset_input_buffer()
-  ser.write(x)
-  echo = ser.read()
-  if len(echo) == 0:
-    print("timeout waiting for echo of byte",n)
-    continue
-  echo = ord(echo)
-  if echo != x:
-    print("echo error at byte",n,"expected",x,"received",echo)
+    n = n + 1
+    ser.reset_output_buffer()
+    ser.reset_input_buffer()
+    ser.write(x)
+    echo = ser.read()
+    if len(echo) == 0:
+        print("timeout waiting for echo of byte",n)
+        continue
+    echo = ord(echo)
+    if echo != x:
+        print("echo error at byte",n,"expected",x,"received",echo)
 
 ser.close()
 
 print("All good. program is running.")
+
+if args["run"] != None:
+    print("Starting program (todo): ", args["run"][0])
 
