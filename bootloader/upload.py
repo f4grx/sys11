@@ -4,6 +4,7 @@
 
 import argparse
 import serial
+import sys
 import os
 import time
 import struct
@@ -56,7 +57,8 @@ for b in bauds:
         baud_real = b
 
 if baud_real == None:
-    raise "Cannot determine baud rate from xtal clock"
+    print("Cannot determine baud rate from xtal clock")
+    sys.exit(1)
 
 if minerr < 5.0:
     baud = baud_real
@@ -67,23 +69,31 @@ else:
 # Try opening the program to be bootloaded
 f = open(args["binary"], "rb")
 if f == None:
-    raise "Cannot open:"+args[binary]
+    print("Cannot open:",args[binary])
+    sys.exit(1)
+
 f.seek(0, os.SEEK_END)
 size = f.tell()
 f.seek(0, os.SEEK_SET)
 
 if size != 256:
-    raise "File size must be 256 bytes"
+    print("File size must be 256 bytes")
+    sys.exit(1)
+
 binary=f.read()
 f.close()
 
 # Try to open the serial port
 print("Opening port: ", args["port"], "at speed: ", baud)
-ser = serial.Serial(args["port"], baud, timeout=1)
+try:
+    ser = serial.Serial(args["port"], baud, timeout=1)
+except serial.serialutil.SerialException as e:
+    print("Cannot open serial port")
+    sys.exit(1)
 
 #Optionnally, reset the board
 if args["reset"] == 'rts':
-    print("Resetting board via RTS (todo)")
+    print("Resetting board via RTS")
     ser.rts=False
     time.sleep(0.1)
     ser.rts=True
