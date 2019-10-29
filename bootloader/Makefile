@@ -15,6 +15,11 @@ out.elf: loader.o bootstrap.ld
 loader.o: loader.asm
 	m68hc11-elf-as -I../inc -o loader.o loader.asm
 
+.PHONY: clean
 clean:
 	rm -f out.* *.o map.txt 
+
+.PHONY: boot
+boot:
+	../tools/upload.py --reset=rts --fast out.bin
 

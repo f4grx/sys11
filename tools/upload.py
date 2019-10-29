@@ -9,7 +9,7 @@ import os
 import time
 import struct
 
-parser = argparse.ArgumentParser('68hc11 uploader')
+parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('binary',
                     help='binary to upload (256 bytes)')
 parser.add_argument('--port',
