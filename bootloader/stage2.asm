@@ -27,15 +27,15 @@ _start:
 	ldx	#REGS
 
 	/* init UART */
-	ldaa	#0x30		/* prediv 13, postdiv 1, 9600 bauds @ 8 MHz */
+	ldaa	#BAUD_PRESC_13		/* prediv 13, postdiv 1, 9600 bauds @ 8 MHz */
 	staa	BAUD,X
 	ldaa	#0x0C		/* No interrupts, enable TX and RX */
 	staa	SCCR2,X
 
 	/* Wait for reception of SOF (0x7E) */
 _rxsof:
-	brclr	SCSR,X 0x20 _rxsof
-	ldaa	SCDAT,X             /* Got a byte */
+	brclr	SCSR,X #SCSR_RDRF _rxsof
+	ldaa	SCDR,X             /* Got a byte */
 	cmpa	#SOF                /* Is it SOF? */
 	bne     _rxsof              /* No: try agn */
 
@@ -44,8 +44,8 @@ _rxsof:
 	ldab	#0 /* This is the checksum */
 
 _rxdata:
-	brclr	SCSR,X 0x20 _rxdata
-	ldaa	SCDAT,X             /* Got a data byte */
+	brclr	SCSR,X #SCSR_RDRF _rxdata
+	ldaa	SCDR,X             /* Got a data byte */
     
 	/* prepare response */
 	/* checksum ok?

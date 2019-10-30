@@ -60,7 +60,7 @@ if baud_real == None:
     print("Cannot determine baud rate from xtal clock")
     sys.exit(1)
 
-if minerr < 5.0:
+if minerr < 4.5: #maximum error tolerated in 8 bit mode according to the 68HC11RM 6.1
     baud = baud_real
 else:
     baud = int(baud)
