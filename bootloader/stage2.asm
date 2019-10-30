@@ -26,11 +26,21 @@ _start:
 	/* prepare indexed access to regs */
 	ldx	#REGS
 
+	/* Let the bootstrap loader finish sending the last ACK byte */
+_waitack:
+	brclr	SCSR,X #SCSR_TC _waitack
+
+/* There is actually no need to reinit the UART.
+ * Init is already done by the bootstrap loader at a decent speed.
+ */
+.if 0
+_init:
 	/* init UART */
 	ldaa	#BAUD_PRESC_13		/* prediv 13, postdiv 1, 9600 bauds @ 8 MHz */
 	staa	BAUD,X
 	ldaa	#0x0C		/* No interrupts, enable TX and RX */
 	staa	SCCR2,X
+.endif
 
 	/* Wait for reception of SOF (0x7E) */
 _rxsof:
