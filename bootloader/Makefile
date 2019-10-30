@@ -1,5 +1,5 @@
 stage2_OBJS=stage2.o
-stage2_LKR=bootstrap.ld
+stage2_LKR=../link/bootstrap.ld
 
 TARGETS=stage2
 
