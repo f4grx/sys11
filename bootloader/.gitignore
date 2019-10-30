@@ -1,3 +1,6 @@
 *.o
-out.*
-map.txt
+*.elf
+*.srec
+*.bin
+*.txt
+*.map
