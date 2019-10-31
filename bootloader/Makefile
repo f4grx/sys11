@@ -3,7 +3,7 @@ stage2_LKR=../link/bootstrap.ld
 
 TARGETS=stage2
 
-include ../make/program.mk
+include ../make/programs.mk
 
 .PHONY: boot
 boot:

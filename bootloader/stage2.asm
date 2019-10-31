@@ -16,7 +16,7 @@
 	.equ MASK, 0x20
 
 /* UART defs */
-	.include "uart.inc"
+	.include "sci.inc"
 
 /* Start of program */
 

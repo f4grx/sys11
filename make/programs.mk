@@ -3,7 +3,7 @@ default: $(TARGETS)
 define BUILD_TARGET
 .PHONY: S(1)
 $(1): $(1).bin $(1).srec $(1).txt
-	@echo "done"
+	@size $(1).elf
 
 $(1).elf: $$($(1)_OBJS) $$($(1)_LKR)
 	m68hc11-elf-ld -T $$($(1)_LKR) -o $(1).elf -Map $(1).map $$($(1)_OBJS)
