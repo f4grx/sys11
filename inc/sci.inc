@@ -49,12 +49,12 @@
 
 /* SCCR2 bits */
 
-	.equ SCCR2_SBK_BIT    ,0 /*  */
-	.equ SCCR2_RWU_BIT    ,1 /*  */
-	.equ SCCR2_RE_BIT     ,2 /*  */
-	.equ SCCR2_TE_BIT     ,3 /*  */
-	.equ SCCR2_ILIE_BIT   ,4 /*  */
-	.equ SCCR2_RIE_BIT    ,5 /*  */
+	.equ SCCR2_SBK_BIT    ,0 /* Send Break */
+	.equ SCCR2_RWU_BIT    ,1 /* Receiver Wake-Up */
+	.equ SCCR2_RE_BIT     ,2 /* Receive Enable */
+	.equ SCCR2_TE_BIT     ,3 /* Transmit Enable */
+	.equ SCCR2_ILIE_BIT   ,4 /* Idle Line Interrupt Enable */
+	.equ SCCR2_RIE_BIT    ,5 /* Receive Interrupt Enable */
 	.equ SCCR2_TCIE_BIT   ,6 /* Transmit Complete Interrupt Enable */
 	.equ SCCR2_TIE_BIT    ,7 /* Transmit Interrupt Enable */
 

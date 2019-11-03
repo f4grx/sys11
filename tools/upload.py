@@ -2,12 +2,17 @@
 # This software uploads a 256-byte program to
 # a 68HC11 chip in bootstrap mode.
 
-import argparse
-import serial
 import sys
 import os
 import time
 import struct
+import argparse
+try:
+  import serial
+except Exception as e:
+  print("python3-serial not installed")
+  sys.exit(1)
+
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('binary',
@@ -26,6 +31,10 @@ parser.add_argument('--reset',
                     default='no',
                     choices=['no', 'rts'],
                     help='reset before upload (default %(default)s)')
+parser.add_argument('--term',
+                    action='store_true',
+                    default=None,
+                    help='Keep running in terminal mode after upload')
 parser.add_argument('--run',
                     nargs=argparse.REMAINDER,
                     default=None,
@@ -122,10 +131,19 @@ for x in binary:
     echo = ord(echo)
     if echo != x:
         print("echo error at byte",n,"expected",x,"received",echo)
-ser.close()
 
 print("All good. program is running.")
 
 if args["run"] != None:
     print("Starting program (todo): ", args["run"][0])
+
+if args["term"] == None:
+    ser.close()
+    sys.exit(0)
+
+print("Serial terminal started")
+while(True):
+    x=ser.read(1)
+    if len(x) == 0 : continue
+    print(x)
 

@@ -15,8 +15,10 @@
 	.equ ESC,  0x7D
 	.equ MASK, 0x20
 
-/* UART defs */
+/* HC11 defs */
 	.include "sci.inc"
+	.include "ioport.inc"
+    .include "timer.inc"
 
 /* Start of program */
 
@@ -24,7 +26,18 @@
 	.global _start
 _start:
 	/* prepare indexed access to regs */
-	ldx	#REGS
+	ldx		#REGS
+
+	/* switch on the LED*/
+	ldaa	PACTL,X
+	oraa	#0x80
+	staa	PACTL,X
+
+	ldaa	PORTA,X
+	anda	#0x7F
+	staa	PORTA,X
+
+    bra     .
 
 	/* Let the bootstrap loader finish sending the last ACK byte */
 _waitack:
