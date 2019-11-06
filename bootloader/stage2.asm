@@ -9,11 +9,12 @@
  * checksum (last byte) is valid, it executes the command in the first byte.
  */
 
-	.equ REGS, 0x1000
-	.equ BUF,  0x100 /* 256 bytes byffer for command reception */
-	.equ SOF,  0x7E
-	.equ ESC,  0x7D
-	.equ MASK, 0x20
+	.equ REGS  , 0x1000
+	.equ BUF   , 0x100 /* 256+1 bytes buffer for command reception, in external RAM */
+	.equ BUFEND, 0x201 /* First byte past the buffer */
+	.equ SOF   , 0x7E
+	.equ ESC   , 0x7D
+	.equ MASK  , 0x20
 
 /* HC11 defs */
 	.include "sci.inc"
@@ -25,6 +26,8 @@
 	.text
 	.global _start
 _start:
+/* TODO Enable extended mode */
+
 /* prepare indexed access to regs */
 	ldx		#REGS
 
@@ -49,7 +52,7 @@ rxsof:
 	bne	rxsof		/* No: try agn */
 
 	/* we got a SOF. Now receive up to 256 bytes */
-	ldy	#0		/* This is the current buffer length */
+	ldy	#BUF		/* Where to store the received bytes*/
 	clrb			/* This is the checksum */
 	clv			/* overflow flag used to mark escape */
 
@@ -76,8 +79,11 @@ notesc:
 
 databyte:
 	/* TODO update checksum in B */
+	cpy	#BUFEND		/* We can receive up to 256+1 bytes */
+	beq	nostore		/* Skip store if we have overflow */
 	staa	0,Y
 	iny
+nostore:
 	/* TODO check for overflow */
 	bra	rxdata		/* Wait for next byte */
 

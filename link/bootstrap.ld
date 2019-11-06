@@ -13,8 +13,9 @@ SECTIONS
   .data : { *(.data) } > iram
   .bss  : { *(.bss) } > iram
   .pad  : {
-    FILL(0xAA);
-    . = ORIGIN( iram ) + LENGTH( iram ) - 1;
+    FILL(0x00);
+    . = ORIGIN( iram ) + LENGTH( iram ) - 2;
+    BYTE(0x55);
     BYTE(0x55);
   } >iram
 }
