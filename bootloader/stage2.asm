@@ -20,16 +20,23 @@
 	.include "sci.inc"
 	.include "ioport.inc"
 	.include "timer.inc"
+	.include "system.inc"
 
 /* Start of program */
 
 	.text
 	.global _start
 _start:
-/* TODO Enable extended mode */
-
 /* prepare indexed access to regs */
 	ldx		#REGS
+
+/* Enable extended mode */
+	ldaa	HPRIO,X
+	oraa	#HPRIO_MDA		/* Enable extended mode */
+	anda	#~HPRIO_RBOOT		/* Disable bootstrap ROM */
+	anda	#~HPRIO_SMOD		/* Disable special mode */
+	anda	#~HPRIO_IRV
+	staa	HPRIO,X
 
 /* switch on the LED*/
 	ldaa	PACTL,X
