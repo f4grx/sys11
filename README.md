@@ -84,6 +84,17 @@ What remains to be done
 * Decision to use shielded wire to route the E signal
 * bootstrapped program to load more memory
 
+Software roadmap
+----------------
+* Bootloader for extended mode
+* Basic shell
+* SPI or I2C driver
+* Filesystem
+* Self-hosted Assembler
+* Definition of a position independent binary format
+* IO kernel
+* Program loader
+
 SPI bus
 -------
 
