@@ -18,64 +18,93 @@
 /* HC11 defs */
 	.include "sci.inc"
 	.include "ioport.inc"
-    .include "timer.inc"
+	.include "timer.inc"
 
 /* Start of program */
 
 	.text
 	.global _start
 _start:
-	/* prepare indexed access to regs */
+/* prepare indexed access to regs */
 	ldx		#REGS
 
-	/* switch on the LED*/
+/* switch on the LED*/
 	ldaa	PACTL,X
 	oraa	#0x80
 	staa	PACTL,X
-
-	ldaa	PORTA,X
-	anda	#0x7F
-	staa	PORTA,X
-
-    bra     .
+	bsr	ledon
 
 	/* Let the bootstrap loader finish sending the last ACK byte */
-_waitack:
-	brclr	SCSR,X #SCSR_TC _waitack
+waitack:
+	brclr	SCSR,X #SCSR_TC waitack
 
-/* There is actually no need to reinit the UART.
- * Init is already done by the bootstrap loader at a decent speed.
- */
-.if 0
-_init:
-	/* init UART */
-	ldaa	#BAUD_PRESC_13		/* prediv 13, postdiv 1, 9600 bauds @ 8 MHz */
-	staa	BAUD,X
-	ldaa	#0x0C		/* No interrupts, enable TX and RX */
-	staa	SCCR2,X
-.endif
+/* UART Init is already done by the bootstrap loader at a decent speed. */
 
-	/* Wait for reception of SOF (0x7E) */
-_rxsof:
-	brclr	SCSR,X #SCSR_RDRF _rxsof
-	ldaa	SCDR,X             /* Got a byte */
-	cmpa	#SOF                /* Is it SOF? */
-	bne     _rxsof              /* No: try agn */
+/* Wait for reception of SOF (0x7E) */
+rxsof:
+	bsr	ledon		/* LED ON when waiting for a packet */
+	brclr	SCSR,X #SCSR_RDRF rxsof
+	ldaa	SCDR,X		/* Got a byte */
+	cmpa	#SOF		/* Is it SOF? */
+	bne	rxsof		/* No: try agn */
 
 	/* we got a SOF. Now receive up to 256 bytes */
-	ldy     #0 /* This is the current buffer length */
-	ldab	#0 /* This is the checksum */
+	ldy	#0		/* This is the current buffer length */
+	clrb			/* This is the checksum */
+	clv			/* overflow flag used to mark escape */
 
-_rxdata:
-	brclr	SCSR,X #SCSR_RDRF _rxdata
+rxdata:
+	bsr	ledoff		/* LED OFF when receiving data */
+	brclr	SCSR,X #SCSR_RDRF rxdata
 	ldaa	SCDR,X             /* Got a data byte */
-    
-	/* prepare response */
-	/* checksum ok?
+
+	/* Apply escape if needed */
+	bvc	notesc
+	eora	#MASK
+	clv			/* Next byte not escaped */
+notesc:
+
+	cmpa	#SOF
+	beq	exec		/* End of packet reached */
+
+	cmpa	#ESC
+	bne	databyte	/* This is not an escape command*/
+
+/* We reach this point if this is an escape command */
+	sev			/* Next received byte will be unescaped */
+	bra	rxdata		/* Wait for next byte */
+
+databyte:
+	/* TODO update checksum in B */
+	staa	0,Y
+	iny
+	/* TODO check for overflow */
+	bra	rxdata		/* Wait for next byte */
+
+	/* Execute the command */
+exec:
+	/* checksum ok? must be zrro */
 
 	/* no: send error code and go back to rx */
 	/* execute command */
 	/* send response */
 	/* done */
-	jmp     _rxsof /* Wait for next command */
+	bra	rxsof		/* Wait for next command */
+
+
+; Switches LED ON
+; Destroys A
+ledon:
+	ldaa	PORTA,X
+	anda	#0x7F
+	staa	PORTA,X
+	rts
+
+; Switches LED OFF
+; Destroys A
+ledoff:
+	ldaa	PORTA,X
+	oraa	#0x80
+	staa	PORTA,X
+	rts
 
