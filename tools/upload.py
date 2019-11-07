@@ -13,10 +13,18 @@ except Exception as e:
   print("python3-serial not installed")
   sys.exit(1)
 
+#
+################################################################################
+#
+
+def upload_stage_2(serialport, programdata):
+    print("todo")
+
+#
+################################################################################
+#
 
 parser = argparse.ArgumentParser(sys.argv[0])
-parser.add_argument('binary',
-                    help='binary to upload (256 bytes)')
 parser.add_argument('--port',
                     default='/dev/ttyUSB0',
                     help='serial port to use (default %(default)s)')
@@ -31,19 +39,23 @@ parser.add_argument('--reset',
                     default='no',
                     choices=['no', 'rts'],
                     help='reset before upload (default %(default)s)')
+parser.add_argument('--stage2',
+                    default=None,
+                    help='program to upload using stage2 after bootstrap is done')
 parser.add_argument('--term',
                     action='store_true',
-                    default=None,
                     help='Keep running in terminal mode after upload')
-parser.add_argument('--run',
-                    nargs=argparse.REMAINDER,
+parser.add_argument('binary',
+                    nargs='?',
                     default=None,
-                    help='program to run after bootstrap is done')
+                    help='binary to upload, mandatory unless using stage2 (256 bytes)')
 
 args = parser.parse_args()
 args = vars(args)
 
+#
 # Compute the baud rate from the xtal clock
+#
 
 if args["fast"] :
     divider = 16
@@ -75,22 +87,51 @@ else:
     baud = int(baud)
     print("WARNING this is not a standard baud rate")
 
+#
+# Determine the programs to be uploaded
+#
+
+if args["binary"] == None:
+    #no binary given to program
+    if args["stage2"] != None:
+        #use the well-known stage2 bootstrap binary
+        args["binary"] = (os.path.dirname(os.path.realpath(__file__)))+"/stage2.bin"
+    else:
+        print("A bootstrap binary is required")
+        sys.exit(1)
+
+#
 # Try opening the program to be bootloaded
+#
+
 f = open(args["binary"], "rb")
 if f == None:
-    print("Cannot open:",args[binary])
+    print("Cannot open:",args["binary"])
     sys.exit(1)
-
 f.seek(0, os.SEEK_END)
 size = f.tell()
 f.seek(0, os.SEEK_SET)
-
 if size != 256:
     print("File size must be 256 bytes")
     sys.exit(1)
-
 binary=f.read()
 f.close()
+
+if args["stage2"] == None:
+    stage2=None
+else:
+    f = open(args["stage2"], "rb")
+    if f == None:
+        print("Cannot open:",args["stage2"])
+        sys.exit(1)
+    f.seek(0, os.SEEK_END)
+    size = f.tell()
+    f.seek(0, os.SEEK_SET)
+    if size > 65536:
+        print("cannot upload more than 64KB with stage2")
+        sys.exit(1)
+    stage2=f.read()
+    f.close()
 
 # Try to open the serial port
 print("Opening port: ", args["port"], "at speed: ", baud)
@@ -134,16 +175,34 @@ for x in binary:
 
 print("All good. program is running.")
 
-if args["run"] != None:
-    print("Starting program (todo): ", args["run"][0])
+#
+# The bootstrap program is the stage2 bootloader.
+# Use that to upload a larger binary to ext mem.
+#
+
+if stage2 != None:
+    print("Starting stage2 loading: ", args["stage2"])
+    #stage2 program is an intel hex or s-record
+    upload_stage_2(serial, stage2)
+
+#
+# The user does not want to keep running in terminal mode
+#
 
 if args["term"] == None:
     ser.close()
     sys.exit(0)
+
+#
+# Start behaving as a serial terminal.
+#
 
 print("Serial terminal started")
 while(True):
     x=ser.read(1)
     if len(x) == 0 : continue
     print(x)
+
+ser.close()
+print("Terminal stopped")
 
