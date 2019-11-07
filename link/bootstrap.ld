@@ -9,14 +9,15 @@ ENTRY(_start)
 SECTIONS
 {
   . = 0x0000;
-  .text : { *(.text) } > iram
-  .data : { *(.data) } > iram
-  .bss  : { *(.bss) } > iram
-  .pad  : {
+  .text : {
+    *(.text)
     FILL(0x00);
     . = ORIGIN( iram ) + LENGTH( iram ) - 2;
     BYTE(0x55);
     BYTE(0x55);
-  } >iram
+  } > iram
+
+  .data : { *(.data) } > iram
+  .bss  : { *(.bss) } > iram
 }
 

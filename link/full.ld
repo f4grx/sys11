@@ -6,6 +6,7 @@ MEMORY
   ram  (rwx): ORIGIN = 0x0100, LENGTH = 0x7F00
   xram (rwx): ORIGIN = 0x8000, LENGTH = 0x4000
   rom  (rx ): ORIGIN = 0xE000, LENGTH = 0x2000
+  vecs (r  ): ORIGIN = 0xFFD6, LENGTH = 0x002E
 }
 
 ENTRY(_start)
@@ -14,9 +15,11 @@ SECTIONS
 {
 	.text : {
 		*(.text)
-		. = ORIGIN( rom ) + LENGTH( rom ) - 0x2A;
-		*(.vectors)
 	} > rom
+
+	.vectors : {
+		*(.vectors)
+	} > vecs
 
 	.ndata : {
 		*(.ndata)
