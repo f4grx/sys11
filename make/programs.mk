@@ -15,7 +15,7 @@ $(1).srec: $(1).elf
 	m68hc11-elf-objcopy -O srec $(1).elf $(1).srec
 
 $(1).txt: $(1).elf
-	m68hc11-elf-objdump -S $(1).elf > $(1).txt
+	m68hc11-elf-objdump -ds $(1).elf > $(1).txt
 
 $(1)_clean:
 	rm -f $(1).bin $(1).srec $(1).elf $(1).txt $(1).map $($(1)_OBJS)
