@@ -1,4 +1,4 @@
-monitor_OBJS=main.o vectors.o
+monitor_OBJS=vectors.o main.o sci.o
 monitor_LKR=../link/full.ld
 
 TARGETS=monitor

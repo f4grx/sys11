@@ -17,6 +17,10 @@ SECTIONS
 		*(.text)
 	} > rom
 
+	.rodata : {
+		*(.rodata)
+	} > rom
+
 	.vectors : {
 		*(.vectors)
 	} > vecs
