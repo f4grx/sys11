@@ -1,5 +1,5 @@
 Memory is partitioned in 8-KB ranges, so the full 64 memory space has 8 pages
-The 3 MSB of the address are used for decodingm using 2- and 3-input NAND gates.
+The 3 MSB of the address are used for decoding, using 2- and 3-input NAND gates.
 
 +-----+-----+-----+---------------+-----------------------------+
 | A15 | A14 | A13 | Range         |         Description         |
@@ -28,4 +28,7 @@ CSXRAM CSIO  -> CSEXT
 0      1        0
 1      0        0
 1      1        1
+
+CSEXT validates the buffers that drive the external bus connector.
+This means that the bus traffic is reduced when on-board memory is used.
 
