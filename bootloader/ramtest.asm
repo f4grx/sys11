@@ -35,7 +35,7 @@ _start:
 	oraa	#HPRIO_MDA		/* Enable extended mode */
 	anda	#~HPRIO_RBOOT		/* Disable bootstrap ROM */
 	anda	#~HPRIO_SMOD		/* Disable special mode */
-;	anda	#~HPRIO_IRV
+	anda	#~HPRIO_IRV
 	staa	HPRIO,X
 
 /* switch on the LED*/
@@ -49,40 +49,43 @@ waitack:
 	brclr	SCSR,X #SCSR_TC waitack
 
 start_test:
-	ldaa	#'A'
-	bsr	sertx
-	bsr	serlf
-
-	ldaa	#0xff
-	tab
+	ldab	#0x55
+	tba
 	bsr	serhex
 	bsr	serlf
 	bsr	testram
 
-	ldaa	#0x00
-	tab
+	ldab	#0xaa
+	tba
 	bsr	serhex
 	bsr	serlf
 	bsr	testram
 
 	ldaa	#'Z'
 	bsr	sertx
+	bsr	serlf
 	bra	.
 
 
 testram:
 	ldy	#0x100		/* start test after internal ram */
-dotest:
+fill:
+	stab	0,Y
+	iny			/* test next byte */
+	cpy	#0x1000		/* until we reach regs! */
+	bne	nextfill
+	ldy	#0x1040
+nextfill:
+	cpy	#0x8000		/* until we end of ram! */
+	bne	fill
 
+checkram:
+	ldy	#0x100
+check:
 	tba
-	staa	0,Y		/* store A in ext mem */
-	nop			/* wait a bit */
-	eora	0,Y		/* read ext mem and xor into A */
-	
-	bne	ramfail		/* xor not zero: fail */
-;	ldaa	#'S'
-	bra	next
-ramfail:
+	eora	0,Y
+	beq	ok
+fail:
 	psha
 	pshb
 	pshy
@@ -96,19 +99,18 @@ ramfail:
 	pulb
 	pula
 	bsr	serhex
-	ldaa	#'F'
+	ldaa	#'!'
 	bsr	sertx
 	bsr	serlf
-next:
+ok:
 	iny			/* test next byte */
 	cpy	#0x1000		/* until we reach regs! */
-	beq	skip
-	cpy	#0x8000		/* until we reach regs! */
-	bne	dotest
-	rts
-skip:
+	bne	nextcheck
 	ldy	#0x1040
-	bra	dotest
+nextcheck:
+	cpy	#0x8000		/* until we end of ram! */
+	bne	check
+	rts
 
 ;------------------------------------------------------------------------------
 ; Switches LED ON
