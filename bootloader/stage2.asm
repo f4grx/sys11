@@ -28,7 +28,7 @@
 	.global _start
 _start:
 /* prepare indexed access to regs */
-	ldx		#REGS
+	ldx	#REGS
 
 /* Enable extended mode */
 	ldaa	HPRIO,X

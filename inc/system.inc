@@ -1,5 +1,6 @@
 /* System registers */
-	.equ	HPRIO, 0x3C
+	.equ	HPRIO , 0x3C
+	.equ	OPTION, 0x39	/* Option register to map regs and iram */
 
 /* HPRIO bits */
 	.equ	HPRIO_PSEL0, 0x01
