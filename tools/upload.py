@@ -145,5 +145,5 @@ print("Serial terminal started")
 while(True):
     x=ser.read(1)
     if len(x) == 0 : continue
-    print(x)
+    print(chr(x[0]),end='')
 
