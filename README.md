@@ -102,17 +102,16 @@ What remains to be done
 -----------------------
 * Determine next step for hardware. Secondary board with more RAM?
 * NVRAM SSD using these old bq samples maxim generously offered me for free
-multiple years ago (Unfortunately this will be a one-of-a-kind project unless
-you have these chips available)
-* SPI bus driver
-* SPI flash driver
+multiple years ago (Unfortunately this board will be a one-of-a-kind add-on unless
+you have these chips available or are able to find enough RAM chips)
+* I2C bus hardware
 
 Software roadmap
 ----------------
 * Bootloader for extended mode - WIP
 * Malloc
 * Basic shell to manipulate memory
-* SPI or I2C driver
+* SPI and I2C drivers
 * Filesystem
 * ed-based text editor
 * Assembler
@@ -125,7 +124,7 @@ SPI bus
 -------
 
 The HC11 hardware SPI bus wil be used in master mode.
-* The SS line is used as OE for a xx138 decoder that provides 8 CS lines from
+* The SS line is used as OE for a 74138 decoder that provides 8 CS lines from
 3 OC lines of port A.
 
 I2C bus
@@ -151,6 +150,6 @@ We are not anymore in the situation where the 6800 was $179 and the 6502 was $29
 Q: Why not use a Z80?
 
 A: Because I did not have one when I started this project. However, I plan to
-have an assembler for this target. If you want to play with the HC11, have a
-look at RC2014 and/or gthub.com/hsoft/collapseos
+have an assembler for this target. If you want to play with the Z80, have a
+look at the RC2014 project and/or github.com/hsoft/collapseos
 
