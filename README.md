@@ -48,19 +48,17 @@ Peripherals
 * 5V power from USB
 * SCI : (UART), TX and RX lines on a pin header for external communication.
 10K pullups are installed to ensure proper behaviour in bootstrap mode where
-PORTD is configured as open drain
+PORTD is configured as open drain.
 * HE10-40 connector for external bus. All lines buffered by 74xx245.
-drain, and IC lines used to read the bus.
 
 Seriously planned features
 --------------------------
 
 * Robust 5V power supply (LF50 LDO, max voltage 40V) with reverse voltage
 protection
-* Additional LM2575 step-down to reduce LDO heating, but can be bypassed.
-* SPI : CS0 connected to a SPI flash chip, CS1 to a SD/MicroSD card.
-* 3 outputs (PORTA) dedicated as SPI CS selector lines (3 bits + 74138 decoder
-+ normal /SS line)
+* Additional LM2575 step-down to reduce LDO heating (bypassable).
+* 3 outputs (PORTA) dedicated as SPI CS selector lines (3 bits + 74138 decoder +
+normal /SS line)
 * I2C bus using discrete N-MOS transistor on OC lines to drive the bus in open
 * Multi-VPP EPROM programmer on a secondary board
 * Fully shielded aluminum enclosure for a 100x160 board
@@ -68,15 +66,15 @@ protection
 Planned vaporware features
 --------------------------
 
-* Removable SPI flash cardriges
+* Removable SPI/I2C flash cardriges
 * SCSI controller
 * Additional UARTs and various comm interfaces (fiber, RS422 RS485...)
 * Ethernet
-* Wireless communication interfaces (AX.25)
+* Wireless communication interfaces (AX.25, 1200 bauds packet modem)
 * Audio cassette program storage (Kansas)
 * MCP 2515 CAN Bus on SPI
 * Dual-port RAM in IO space for communication and shared mem with another HC11.
-* Infinite ROM for device drivers :)
+* Infinite ROM space for device drivers :)
 
 What is already done
 --------------------
@@ -102,8 +100,10 @@ What is being done right now
 
 What remains to be done
 -----------------------
-* Determine next step for hardware.
-* NVRAM SSD using these old bq samples maxim generously offered me for free multiple years ago
+* Determine next step for hardware. Secondary board with more RAM?
+* NVRAM SSD using these old bq samples maxim generously offered me for free
+multiple years ago (Unfortunately this will be a one-of-a-kind project unless
+you have these chips available)
 * SPI bus driver
 * SPI flash driver
 
