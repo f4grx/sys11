@@ -17,8 +17,14 @@ except Exception as e:
 ################################################################################
 #
 
-def upload_stage_2(serialport, programdata):
-    print("todo")
+def upload_srec(port, programdata):
+    port.reset_output_buffer()
+    port.reset_input_buffer()
+    for l in programdata:
+        print(l)
+        port.write(l)
+        ret=port.read(1)
+        print(ret)
 
 #
 ################################################################################
@@ -39,9 +45,9 @@ parser.add_argument('--reset',
                     default='no',
                     choices=['no', 'rts'],
                     help='reset before upload (default %(default)s)')
-parser.add_argument('--stage2',
+parser.add_argument('--srec',
                     default=None,
-                    help='program to upload using stage2 after bootstrap is done')
+                    help='program to upload using stage2-srec after bootstrap is done')
 parser.add_argument('--term',
                     action='store_true',
                     help='Keep running in terminal mode after upload')
@@ -93,7 +99,7 @@ else:
 
 if args["binary"] == None:
     #no binary given to program
-    if args["stage2"] != None:
+    if args["srec"] != None:
         #use the well-known stage2 bootstrap binary
         args["binary"] = (os.path.dirname(os.path.realpath(__file__)))+"/stage2.bin"
     else:
@@ -117,21 +123,19 @@ if size != 256:
 binary=f.read()
 f.close()
 
-if args["stage2"] == None:
-    stage2=None
+if args["srec"] == None:
+    srec=None
 else:
-    f = open(args["stage2"], "rb")
+    f = open(args["srec"], "rb")
     if f == None:
-        print("Cannot open:",args["stage2"])
+        print("Cannot open:",args["srec"])
         sys.exit(1)
-    f.seek(0, os.SEEK_END)
-    size = f.tell()
-    f.seek(0, os.SEEK_SET)
-    if size > 65536:
-        print("cannot upload more than 64KB with stage2")
-        sys.exit(1)
-    stage2=f.read()
+    srec=f.readlines()
     f.close()
+
+if srec != None:
+    for l in srec:
+        print(l)
 
 # Try to open the serial port
 print("Opening port: ", args["port"], "at speed: ", baud)
@@ -180,10 +184,10 @@ print("All good. program is running.")
 # Use that to upload a larger binary to ext mem.
 #
 
-if stage2 != None:
-    print("Starting stage2 loading: ", args["stage2"])
-    #stage2 program is an intel hex or s-record
-    upload_stage_2(serial, stage2)
+if srec != None:
+    print("Starting srec loading: ", args["srec"])
+    #stage2 program is a s-record
+    upload_srec(ser, srec)
 
 #
 # The user does not want to keep running in terminal mode

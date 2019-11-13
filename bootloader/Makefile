@@ -8,9 +8,9 @@ TARGETS=stage2 ramtest
 
 include ../make/programs.mk
 
-.PHONY: boot
-boot:
-	../tools/upload.py --reset=rts --fast stage2.bin
+.PHONY: mon
+mon:
+	../tools/upload.py --reset=rts --term --fast --srec ../monitor/monitor.srec
 
 .PHONY: run
 run:
