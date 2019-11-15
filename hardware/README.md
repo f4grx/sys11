@@ -89,3 +89,12 @@ The ideal situation would be a single UART communication channel using
 opto-isolated signals, like TOSLINK plastic optical fibers. Only the power supply would
 then need severe EMP protections.
 
+Prototype Progress
+------------------
+![proto top 1](hardware/images/proto_top_1.jpg)
+![proto top 2](hardware/images/proto_top_2.jpg)
+![proto bot 3](hardware/images/proto_bot_3.jpg)
+![proto top 4](hardware/images/proto_top_4.jpg)
+![proto top 5](hardware/images/proto_top_5.jpg)
+![proto bot 6](hardware/images/proto_bot_6.jpg)
+

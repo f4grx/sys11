@@ -24,7 +24,28 @@ def upload_srec(port, programdata):
         print(l)
         port.write(l)
         ret=port.read(1)
-        print(ret)
+        print("<%02X>" % ret[0])
+        ret=port.read(1)
+        print("<%02X>" % ret[0])
+        ret=port.read(1)
+        print("<%02X>" % ret[0])
+        if l[1] == 48+0:
+            ret = port.read(1)
+            print(ret)
+        elif l[1] == 48+1:
+            ch = len(l) - 4
+            ch = int(ch / 2)
+            ch = ch - 4
+            print(ch)
+            for i in range(ch):
+                ret = port.read(1)
+                print("<%02X>" % ret[0])
+            ret = port.read(1)
+            print(ret)
+        elif l[1] == 48+9:
+            ret = port.read(1)
+            print(ret)
+
 
 #
 ################################################################################
@@ -205,7 +226,10 @@ print("Serial terminal started")
 while(True):
     x=ser.read(1)
     if len(x) == 0 : continue
-    print(chr(x[0]),end='')
+    if x[0] < 0x20:
+        print("<%02X>" % x[0])
+    else:
+        print(chr(x[0]),end='')
 
 ser.close()
 print("Terminal stopped")

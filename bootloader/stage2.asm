@@ -32,14 +32,8 @@ _start:
 /* Enable extended mode */
 	ldaa	HPRIO,X
 	oraa	#HPRIO_MDA		/* Enable extended mode */
-	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
+;	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
 	staa	HPRIO,X
-
-/* switch on the LED*/
-	ldaa	PACTL,X
-	oraa	#0x80
-	staa	PACTL,X
-	bsr	ledon
 
 	/* Let the bootstrap loader finish sending the last ACK byte */
 waitack:
@@ -49,7 +43,6 @@ waitack:
 
 /* Wait for reception of SREC (S) */
 rxsrec:
-	bsr	ledon		/* LED ON when waiting for a packet */
 	brclr	SCSR,X #SCSR_RDRF rxsrec
 	ldaa	SCDR,X		/* Got a byte */
 	cmpa	#SREC		/* Is it S? */
@@ -60,7 +53,6 @@ rxsrec:
 
 rxdata:
 	brclr	SCSR,X #SCSR_RDRF rxdata
-	bsr	ledoff		/* LED OFF when receiving */
 	ldaa	SCDR,X             /* Got a data byte */
 	cmpa	#EOL
 	beq	exec
@@ -72,31 +64,116 @@ rxdata:
 
 nostore:
 	ldaa	#'!'
+txrep:
 	bsr	sertx
 	bra	rxsrec		/* Wait for next byte */
 
 	/* Execute the command */
 exec:
+	/*check record type we handle S1 and S9*/
+	ldy	#BUF
+	ldaa	0,Y
+	staa	type
+	iny
+
+	/* Decode hex pair byte to len */
+	bsr	hex2dec
+	bcs	nostore
+	suba	#3	/* remove addr and csum*/
+	staa	len
+	bsr	sertx
+	iny
+	iny
+
+	/* Decode hex quad to addr */
+	bsr	hex2dec
+	bcs	nostore
+	staa	addr+0
+	bsr	sertx
+	iny
+	iny
+	bsr	hex2dec
+	bcs	nostore
+	staa	addr+1
+	bsr	sertx
+	iny
+	iny
+		
+	ldaa	type
+	cmpa	#'1'
+	beq	sone
+	cmpa	#'9'
+	beq	snine	
+	bra	nostore
+
+sone:
+	bsr	hex2dec
+	bcs	nostore
+	iny
+	iny
+	bsr	sertx
+
+	pshx
+	ldx	addr
+	staa	0,X
+	inx
+	stx	addr
+	pulx
+
+	dec	len
+	bne	sone
+	ldaa	#'*'
+	bsr	sertx
+	jmp	rxsrec
+
+snine:
 	ldaa	#'>'
 	bsr	sertx
-	bra	rxsrec		/* Wait for next command */
-
-;------------------------------------------------------------------------------
-; Switches LED ON
-; Destroys A
-ledon:
-	ldaa	PORTA,X
-	anda	#0x7F
-	staa	PORTA,X
+	ldx	addr
+	pshx
 	rts
 
 ;------------------------------------------------------------------------------
-; Switches LED OFF
-; Destroys A
-ledoff:
-	ldaa	PORTA,X
-	oraa	#0x80
-	staa	PORTA,X
+; Decode pair of hex chars pointed by Y
+; If error, carry set, else carry clear and result in A
+hex2dec:
+	ldaa	0,Y
+	bsr	convnibble
+	bcs	err
+	lsla
+	lsla
+	lsla
+	lsla
+	tab
+	ldaa	1,Y
+	bsr	convnibble	
+	bcs	err
+	aba
+	clc
+err:	
+	rts
+	
+;------------------------------------------------------------------------------
+; Convert hex char 0-9,A-F to half-byte
+convnibble:
+	cmpa	#'0'
+	blo	hd_fail	/* Below 0 */
+	cmpa	#'9'
+	bhi	letter  /* Above 9 */
+	suba	#'0'
+	clc
+	rts
+letter:
+	cmpa	#'F'
+	bhi	hd_fail /* Above F */
+	cmpa	#'A'
+	blo	hd_fail /* Below A*/
+	suba	#'A'
+	adda	#10
+	clc
+	rts
+hd_fail:
+	sec
 	rts
 
 ;------------------------------------------------------------------------------
@@ -107,4 +184,10 @@ sertx:
 txwait:
 	brclr	SCSR,X #SCSR_TC txwait
 	rts
+
+;------------------------------------------------------------------------------
+	.data
+type:	.byte	0	/* S-rec type*/
+len:	.byte	0	/* nbr of bytes */
+addr:	.word	0	/* address */
 

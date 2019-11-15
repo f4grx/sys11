@@ -4,9 +4,12 @@ stage2_LKR=../link/bootstrap.ld
 ramtest_OBJS=ramtest.o
 ramtest_LKR=../link/bootstrap.ld
 
-TARGETS=stage2 ramtest
+dump_OBJS=dump.o
+dump_LKR=../link/bootstrap.ld
 
-include ../make/programs.mk
+TARGETS=stage2 ramtest dump
+
+include ../make/bootstrap.mk
 
 .PHONY: mon
 mon:
@@ -15,4 +18,8 @@ mon:
 .PHONY: run
 run:
 	../tools/upload.py --reset=rts --term --fast ramtest.bin
+
+.PHONY: read
+read:
+	../tools/upload.py --reset=rts --term --fast dump.bin
 

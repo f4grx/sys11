@@ -11,13 +11,15 @@ SECTIONS
   . = 0x0000;
   .text : {
     *(.text)
+  } > iram
+  .data : {
+    *(.data)
+  } > iram
+  .bss (COPY) : {
     FILL(0x00);
-    . = ORIGIN( iram ) + LENGTH( iram ) - 2;
-    BYTE(0x55);
+    . = ORIGIN( iram ) + LENGTH( iram ) - 1;
     BYTE(0x55);
   } > iram
 
-  .data : { *(.data) } > iram
-  .bss  : { *(.bss) } > iram
 }
 

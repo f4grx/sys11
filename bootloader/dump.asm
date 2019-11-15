@@ -8,6 +8,8 @@
  */
 
 	.equ REGS  , 0x1000
+	.equ START , 0xFFD6
+	.equ COUNT , 42
 
 /* HC11 defs */
 	.include "sci.inc"
@@ -27,115 +29,33 @@ _start:
 /* Enable extended mode */
 	ldaa	HPRIO,X
 	oraa	#HPRIO_MDA		/* Enable extended mode */
-	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
+;	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
 	staa	HPRIO,X
 
 /* Let the bootstrap loader finish sending the last ACK byte */
 waitack:
 	brclr	SCSR,X #SCSR_TC waitack
 
-start_test:
-	ldab	#0x01
-	bsr	testram
-	comb
-	bsr	testram
+doit:
+	ldy	#COUNT
+	sty	len
+	ldy	#START
+	sty	addr
 
-	ldab	#0x02
-	bsr	testram
-	comb
-	bsr	testram
+loop:
+	ldy	addr
+	ldaa	0,y
+	bsr	serhex
+	iny
+	sty	addr
 
-	ldab	#0x04
-	bsr	testram
-	comb
-	bsr	testram
+	ldy	len
+	dey
+	sty	len
 
-	ldab	#0x08
-	bsr	testram
-	comb
-	bsr	testram
-
-	ldab	#0x10
-	bsr	testram
-	comb
-	bsr	testram
-
-	ldab	#0x20
-	bsr	testram
-	comb
-	bsr	testram
-
-	ldab	#0x40
-	bsr	testram
-	comb
-	bsr	testram
-
-	ldab	#0x80
-	bsr	testram
-	comb
-	bsr	testram
-
-	ldaa	#'Z'
-	bsr	sertx
+	bne	loop
 	bsr	serlf
 	bra	.
-
-
-testram:
-	tba
-	bsr	serhex
-	bsr	serlf
-	ldy	#0x100		/* start test after internal ram */
-fill:
-	stab	0,Y
-	iny			/* test next byte */
-	cpy	#0x1000		/* until we reach regs! */
-	bne	nextfill
-	ldy	#0x1040
-nextfill:
-	cpy	#0x8000		/* until we end of ram! */
-	bne	nextnextfill
-	ldy	#0xE000
-nextnextfill:
-	cpy	#0xFFFF
-	bne	fill
-
-checkram:
-	ldy	#0x100
-check:
-	tba
-	eora	0,Y
-	beq	ok
-fail:
-	psha
-	pshb
-	pshy
-	xgdy
-	bsr	serhex
-	tba
-	bsr	serhex
-	ldaa	#' '
-	bsr	sertx
-	puly
-	pulb
-	pula
-	bsr	serhex
-	ldaa	#'!'
-	bsr	sertx
-	bsr	serlf
-ok:
-	iny			/* test next byte */
-	cpy	#0x1000		/* until we reach regs! */
-	bne	nextcheck
-	ldy	#0x1040
-nextcheck:
-	cpy	#0x8000		/* until we end of ram! */
-	bne	nextnextcheck
-	ldy	#0xE000
-nextnextcheck:
-	cpy	#0xFFFF
-	bne	check
-	rts
 
 ;------------------------------------------------------------------------------
 ;send byte in A as hex pair
@@ -184,3 +104,7 @@ serlf:
 	bra	txwait
 
 ;------------------------------------------------------------------------------
+	.data
+addr:	.word	0
+len:	.word	0
+

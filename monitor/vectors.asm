@@ -1,3 +1,6 @@
+	.text
+	.equ noit, 0xFFFF
+
 	.section .vectors
 
 	.extern _start
@@ -5,24 +8,24 @@
 	.global _vectors
 
 _vectors:
-	.word 0 /* SCI */
-	.word 0 /* SPI */
-	.word 0 /* PAI edge */
-	.word 0 /* PA overflow */
-	.word 0 /* Timer overflow */
-	.word 0 /* OC5 */
-	.word 0 /* OC4 */
-	.word 0 /* OC3 */
-	.word 0 /* OC2 */
-	.word 0 /* OC1 */
-	.word 0 /* IC2 */
-	.word 0 /* IC1 */
-	.word 0 /* IC0 */
-	.word 0 /* Real Time Int */
-	.word 0 /* IRQ */
-	.word 0 /* XIRQ */
-	.word 0 /* SWI */
-	.word 0 /* Illegal Opcode */
-	.word 0 /* COP Fail */
-	.word 0 /* Clock Monitor */
+	.word noit /* SCI */
+	.word noit /* SPI */
+	.word noit /* PAI edge */
+	.word noit /* PA overflow */
+	.word noit /* Timer overflow */
+	.word noit /* OC5 */
+	.word noit /* OC4 */
+	.word noit /* OC3 */
+	.word noit /* OC2 */
+	.word noit /* OC1 */
+	.word noit /* IC3 */
+	.word noit /* IC2 */
+	.word noit /* IC1 */
+	.word noit /* Real Time Int */
+	.word noit /* IRQ */
+	.word noit /* XIRQ */
+	.word noit /* SWI */
+	.word noit /* Illegal Opcode */
+	.word noit /* COP Fail */
+	.word noit /* Clock Monitor */
 	.word _start
