@@ -97,7 +97,7 @@ nextfill:
 	bne	nextnextfill
 	ldy	#0xE000
 nextnextfill:
-	cpy	#0xFFFF
+	cpy	#0x0000
 	bne	fill
 
 checkram:
@@ -133,7 +133,7 @@ nextcheck:
 	bne	nextnextcheck
 	ldy	#0xE000
 nextnextcheck:
-	cpy	#0xFFFF
+	cpy	#0x0000
 	bne	check
 	rts
 
@@ -171,7 +171,7 @@ txlo:
 sertx:
 	staa	SCDR,X
 txwait:
-	brclr	SCSR,X #SCSR_TC txwait
+	brclr	SCSR,X #SCSR_TDRE txwait
 	rts
 ;------------------------------------------------------------------------------
 ;send char in A on serial line

@@ -32,7 +32,7 @@ _start:
 /* Enable extended mode */
 	ldaa	HPRIO,X
 	oraa	#HPRIO_MDA		/* Enable extended mode */
-;	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
+	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
 	staa	HPRIO,X
 
 	/* Let the bootstrap loader finish sending the last ACK byte */
@@ -182,7 +182,7 @@ hd_fail:
 sertx:
 	staa	SCDR,X
 txwait:
-	brclr	SCSR,X #SCSR_TC txwait
+	brclr	SCSR,X #SCSR_TDRE txwait
 	rts
 
 ;------------------------------------------------------------------------------

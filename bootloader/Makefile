@@ -15,9 +15,9 @@ include ../make/bootstrap.mk
 mon:
 	../tools/upload.py --reset=rts --term --fast --srec ../monitor/monitor.srec
 
-.PHONY: run
-run:
-	../tools/upload.py --reset=rts --term --fast ramtest.bin
+.PHONY: test
+test:
+	../tools/upload.py --reset=rts --fast ramtest.bin
 
 .PHONY: read
 read:

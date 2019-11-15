@@ -226,7 +226,7 @@ print("Serial terminal started")
 while(True):
     x=ser.read(1)
     if len(x) == 0 : continue
-    if x[0] < 0x20:
+    if x[0] < 0x20 and x[0] != 0x0D and x[0] != 0x0A:
         print("<%02X>" % x[0])
     else:
         print(chr(x[0]),end='')

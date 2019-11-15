@@ -8,8 +8,10 @@
  */
 
 	.equ REGS  , 0x1000
-	.equ START , 0xFFD6
-	.equ COUNT , 42
+	;.equ START , 0xFFD6
+	;.equ COUNT , 42
+	.equ START , 0xE000
+	.equ COUNT , 8192
 
 /* HC11 defs */
 	.include "sci.inc"
@@ -29,7 +31,6 @@ _start:
 /* Enable extended mode */
 	ldaa	HPRIO,X
 	oraa	#HPRIO_MDA		/* Enable extended mode */
-;	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
 	staa	HPRIO,X
 
 /* Let the bootstrap loader finish sending the last ACK byte */
@@ -43,17 +44,38 @@ doit:
 	sty	addr
 
 loop:
+	ldaa	addr+1
+	anda	#0x7F
+	cmpa	#0x00
+	bne	next
+	bsr	serlf
+	ldaa	addr
+	bsr	serhex
+	ldaa	addr+1
+	bsr	serhex
+	ldaa	#':'
+	bsr	sertx
+	ldaa	#' '
+	bsr	sertx
+
+next:
+	;16-bit inc with deref and print
 	ldy	addr
 	ldaa	0,y
 	bsr	serhex
 	iny
 	sty	addr
 
+	;16-bit dec
 	ldy	len
 	dey
 	sty	len
 
 	bne	loop
+	bsr	serlf
+	ldaa	#'-'
+	bsr	sertx
+	bsr	sertx
 	bsr	serlf
 	bra	.
 
@@ -91,7 +113,7 @@ txlo:
 sertx:
 	staa	SCDR,X
 txwait:
-	brclr	SCSR,X #SCSR_TC txwait
+	brclr	SCSR,X #SCSR_TDRE txwait
 	rts
 ;------------------------------------------------------------------------------
 ;send char in A on serial line

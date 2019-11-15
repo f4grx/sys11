@@ -16,7 +16,7 @@ sci_init:
  */
 	.global sci_putchar
 sci_putchar:
-	brclr	SCSR,X #SCSR_TC sci_putchar
+	brclr	*SCSR #SCSR_TDRE, sci_putchar
 	staa	SCDR
 	rts
 
