@@ -64,9 +64,9 @@
 	.equ SCSR_NF_BIT   ,2
 	.equ SCSR_OR_BIT   ,3
 	.equ SCSR_IDLE_BIT ,4
-	.equ SCSR_RDRF_BIT ,5    /* Receive data register full */
-	.equ SCSR_TC_BIT   ,6
-	.equ SCSR_TDRE_BIT ,7
+	.equ SCSR_RDRF_BIT ,5    /* Receive buffer full */
+	.equ SCSR_TC_BIT   ,6    /* Transmission complete */
+	.equ SCSR_TDRE_BIT ,7    /* Transmit buffer empty */
 
 	.equ SCSR_FE       ,0x02
 	.equ SCSR_NF       ,0x04
