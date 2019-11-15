@@ -6,6 +6,11 @@ MEMORY
 
 ENTRY(_start)
 
+PHDRS
+{
+  load PT_LOAD;
+}
+
 SECTIONS
 {
   . = 0x0000;
@@ -15,11 +20,11 @@ SECTIONS
   .data : {
     *(.data)
   } > iram
-  .bss (COPY) : {
+  .pad : {
     FILL(0x00);
     . = ORIGIN( iram ) + LENGTH( iram ) - 1;
     BYTE(0x55);
-  } > iram
+  } > iram :load
 
 }
 
