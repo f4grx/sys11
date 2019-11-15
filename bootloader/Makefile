@@ -7,7 +7,10 @@ ramtest_LKR=../link/bootstrap.ld
 dump_OBJS=dump.o
 dump_LKR=../link/bootstrap.ld
 
-TARGETS=stage2 ramtest dump
+dumpeee2_OBJS=dumpee_e2.o
+dumpeee2_LKR=../link/bootstrap.ld
+
+TARGETS=stage2 ramtest dump dumpeee2
 
 include ../make/bootstrap.mk
 

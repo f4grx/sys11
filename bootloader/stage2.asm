@@ -29,11 +29,13 @@ _start:
 /* prepare indexed access to regs */
 	ldx	#REGS
 
-/* Enable extended mode */
-	ldaa	HPRIO,X
-	oraa	#HPRIO_MDA		/* Enable extended mode */
-	anda	#~(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
-	staa	HPRIO,X
+/* Enable extended mode but stay in special mode*/
+	bset	HPRIO,X #HPRIO_MDA /* Enable extended mode */
+;	bclr	HPRIO,X #(HPRIO_RBOOT|HPRIO_SMOD|HPRIO_IRV)
+	bclr	HPRIO,X #(HPRIO_RBOOT|HPRIO_IRV)
+
+	bset	PACTL,X #0x80 /* Enable LED */
+	bclr	PORTA,X #0x80 /* LED ON */
 
 	/* Let the bootstrap loader finish sending the last ACK byte */
 waitack:
