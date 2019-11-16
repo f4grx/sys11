@@ -118,6 +118,18 @@ sone:
 	pshx
 	ldx	addr
 	staa	0,X
+
+	/* Memory may be a 2864 EEPROM
+	 * Use /DATA polling to wait end of programming
+	 */
+
+datapoll:
+	ldab	0,X
+	cba
+	bne	datapoll
+
+	/* Programming done */
+
 	inx
 	stx	addr
 	pulx
