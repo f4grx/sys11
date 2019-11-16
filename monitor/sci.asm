@@ -6,6 +6,10 @@
 
 	.global sci_init
 sci_init:
+	ldaa	#0x22
+	staa	BAUD
+	ldaa	#0x0C
+	staa	SCCR2
 	rts
 
 /*

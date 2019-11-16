@@ -154,10 +154,6 @@ else:
     srec=f.readlines()
     f.close()
 
-if srec != None:
-    for l in srec:
-        print(l)
-
 # Try to open the serial port
 print("Opening port: ", args["port"], "at speed: ", baud)
 try:
