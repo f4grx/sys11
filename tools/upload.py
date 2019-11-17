@@ -23,28 +23,8 @@ def upload_srec(port, programdata):
     for l in programdata:
         print(l)
         port.write(l)
-        ret=port.read(1)
-        print("<%02X>" % ret[0])
-        ret=port.read(1)
-        print("<%02X>" % ret[0])
-        ret=port.read(1)
-        print("<%02X>" % ret[0])
-        if l[1] == 48+0:
-            ret = port.read(1)
-            print(ret)
-        elif l[1] == 48+1:
-            ch = len(l) - 4
-            ch = int(ch / 2)
-            ch = ch - 4
-            print(ch)
-            for i in range(ch):
-                ret = port.read(1)
-                print("<%02X>" % ret[0])
-            ret = port.read(1)
-            print(ret)
-        elif l[1] == 48+9:
-            ret = port.read(1)
-            print(ret)
+        ret = port.read(1)
+        print(ret)
 
 
 #

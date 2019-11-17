@@ -34,5 +34,5 @@ ledon:
 	rts
 
 	.section .rodata
-motd:	.asciz	"sys11 monitor 0.1\r\n"
+motd:	.asciz	"sys11 monitor by f4grx v0.1\r\n"
 

@@ -83,7 +83,6 @@ exec:
 	bcs	nostore
 	suba	#3	/* remove addr and csum*/
 	staa	len
-	bsr	sertx
 	iny
 	iny
 
@@ -91,13 +90,11 @@ exec:
 	bsr	hex2dec
 	bcs	nostore
 	staa	addr+0
-	bsr	sertx
 	iny
 	iny
 	bsr	hex2dec
 	bcs	nostore
 	staa	addr+1
-	bsr	sertx
 	iny
 	iny
 		
@@ -113,7 +110,6 @@ sone:
 	bcs	nostore
 	iny
 	iny
-	bsr	sertx
 
 	pshx
 	ldx	addr
@@ -137,8 +133,7 @@ datapoll:
 	dec	len
 	bne	sone
 	ldaa	#'*'
-	bsr	sertx
-	jmp	rxsrec
+	bra	txrep
 
 snine:
 	ldaa	#'>'
