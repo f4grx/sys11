@@ -9,11 +9,12 @@
 
 	.global	_start
 _start:
-	lds	#0xFF
+	lds	#0x7FFF
 
 	/* Map registers and internal RAM to 0000h
 	 * By default regs are mapped at 1000h
-	 * This ONLY works if the monitor starts at boot, else this must be done by the bootstrap loader in special mode.
+	 * This ONLY works if the monitor starts at boot, else this must be done
+	 * by the bootstrap loader in special mode.
 	 */
 	clra
 	staa	INIT+0x1000
