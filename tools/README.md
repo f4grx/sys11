@@ -1,3 +1,16 @@
+Installing toolchain
+====================
+
+The last version of GNU binutils still supports 68hc11
+
+```
+# wget https://ftpmirror.gnu.org/binutils/binutils-2.33.1.tar.xz
+# tar Jzvf binutils-2.33.1.tar.xz
+# cd binutils-2.33.1
+# ./configure --prefix=... --target=m68hc11-elf
+# make -j
+```
+
 upload.py
 =========
 

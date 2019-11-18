@@ -6,7 +6,7 @@ MEMORY
   ram  (rwx): ORIGIN = 0x0100, LENGTH = 0x7F00	/* On-board ext RAM, 32k */
   xram (rwx): ORIGIN = 0x8000, LENGTH = 0x4000	/* Off-board optional RAM, 8K */
   rom  (rx ): ORIGIN = 0xE000, LENGTH = 0x2000	/* Monitor EPROM */
-  vecs (r  ): ORIGIN = 0xFFD6, LENGTH = 0x002E	/* Special place in EPROM */
+  vecs (r  ): ORIGIN = 0xFFC0, LENGTH = 0x0040	/* Special place in EPROM */
 }
 
 ENTRY(_start)

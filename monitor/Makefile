@@ -1,4 +1,4 @@
-monitor_OBJS=vectors.o main.o softregs.o
+monitor_OBJS=main.o vectors.o softregs.o
 monitor_OBJS+=sci.o
 monitor_OBJS+=mman.o string.o
 
