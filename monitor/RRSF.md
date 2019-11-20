@@ -60,18 +60,30 @@ Device organization
 -------------------
 Storage is organized in 256-byte pages
 Each page has a 4-byte header with a type that describes its function
+```
 Offset Description
+------------------
 00h    Page type
 01h    For pages with type=1, Number of valid bytes in the page. Else, FFh.
 02h    Index of next page (FFFFh if none)
+```
 
-Page types
+```
+Type   Description
+------------------
 00h    Superblock
 01h    File data
 02h    Directory
 03h    Symbolic Link
 04h    Garbage list
 FFh    free
+```
+
+File metadata
+-------------
+Files and dir have simplified metadata. They have an owner ID on one byte, and
+separate read/write/execute bits for the owner and other users. There is no
+notion of group.
 
 Page allocation
 ---------------
@@ -98,12 +110,15 @@ Since the file size is not stored in directory entries, getting the size of a
 file requires browsing all the pages of the file.
 
 The first bytes of the first page of a file are not user data but file metadata.
+```
 Offset Size             Description
+-----------------------------------
 00h    01h              Access rights (0-0-OX-OW-OR-X-W-R)
 01h    01h              Owner ID
 02h    02h              Page index of the parent directory (for file erase
                         recovery)
 04h    FILENAME_MAXSIZE File name
+```
 
 As a consequence, the first page holds 232 bytes of user data, and the next
 pages hold 252.
@@ -139,10 +154,10 @@ new pages at the end of the garbage list.
 
 When some pages of a file/dir are not used, the first page of the chain to
 delete is appended to the list of garbage pages:
-* set the page type to 04h (this is atomic)
-* set the NEXT pointer of the last garbaged page to the index of the new page
-chain to be deleted
-* Remember the new index of the last page of the resulting chain.
+1) set the page type to 04h (this is atomic)
+2) set the NEXT pointer of the last garbaged page to the index of the new page
+   chain to be deleted
+3) Remember the new index of the last page of the resulting chain.
 
 If nothing more is done at this point, a file/dir can point to garbaged pages.
 At the time of mounting, when the directories are traversed, if any dir/file has
@@ -177,11 +192,11 @@ Mounting
 1) If superblock indicates "being formatted", do a format then reset this flag
 2) Traverse the directories depth first (can be done without a stack, just with
    current/parent dir pointers):
-   2.1) if any child entry in a directory points to a page that is in
+   1) if any child entry in a directory points to a page that is in
         the garbage list (type=04h), set the directory entry to FFFFh.
-   2.2) When all entries in a directory have been traversed, cleanup this
+   2) When all entries in a directory have been traversed, cleanup this
         directory (see below).
-   2.3) When browsing the next page of a directory or file, if that page is in
+   3) When browsing the next page of a directory or file, if that page is in
         the garbage list (type=04h), then set the "next" pointer of the current
         page to FFFFh (truncation).
 3) Cleanup the garbage chain: Browse it forward to define the previous links
@@ -200,64 +215,64 @@ and set free all the unreachable pages that dont have a type set to FFh.
 
 Directory creation
 ------------------
-* Allocate a named page with type 02h and no "next" pointer, having the current
-  directory as parent
-* Populate dir rights, owner and name
-* Create a new child entry in the current dir
+1) Allocate a named page with type 02h and no "next" pointer, having the current
+   directory as parent
+2) Populate dir rights, owner and name
+3) Create a new child entry in the current dir
 TODO analyze partial execution and recovery options
 
 File creation
 -------------
-* Allocate a page with type 01h and no "next" pointer, having the current
-  directory as parent
-* Populate file rights,owner and name
-* Create a new child entry in the current dir
+1) Allocate a page with type 01h and no "next" pointer, having the current
+   directory as parent
+2) Populate file rights,owner and name
+3) Create a new child entry in the current dir
 TODO analyze partial execution and recovery options
 
 Child creation in current dir
 -----------------------------
 This is used to add a file or dir to the current directory
-* Find a FFFFh entry in the current dir (that may be between two existing
-  entries, or at the end of the list of entries). The directory may span on
-  multiple pages, child entries do not have to be stored by name.
-* If no entry is found,
-  * Create a new directory page. If page not erased, do a full erase (required).
-  * Link this page as next page of the current directory
-  * This page will obviously have entries, so retry the first step
-* Set the entry to the index of the first page of the child
+1) Find a FFFFh entry in the current dir (that may be between two existing
+   entries, or at the end of the list of entries). The directory may span on
+   multiple pages, child entries do not have to be stored by name.
+2) If no entry is found,
+   1) Create a new directory page. If page not erased, do a full page erase.
+   2) Link this page as next page of the current directory
+   3) This page will obviously have entries, so retry the first step
+3) Set the entry to the index of the first page of the child
 TODO analyze partial execution and recovery options
 
 Directory deletion
 ------------------
 Only empty directories can be deleted. This means only one page has to be freed.
 The current directory has to be the parent directory of the entry being deleted.
-* If directory to delete is not empty, fail.
-* Add the directory page to the garbage list
+1) If directory to delete is not empty, fail.
+2) Add the directory page to the garbage list.
 If power is cut here the next mount operation will find the deleted dir and
 clean it up.
-* Set the entry to this directory to FFFFh
+3) Set the entry to this directory to FFFFh
 If cleanup is not done bc of power cut, it will be reattempted at next mount
-* Cleanup the directory
+4) Cleanup the directory
 TODO finalize analyze partial execution and recovery options
 
 File deletion
 -------------
-* Add the first page of the file to the garbage list
+1) Add the first page of the file to the garbage list
 If power is cut here the next mount operation will find the deleted dir and
 clean it up>
-* Set the directory entry to this file to FFFFh
+2) Set the directory entry to this file to FFFFh
 If cleanup is not done bc of power cut, it will be reattempted at next mount>
-* Cleanup the directory
+3) Cleanup the directory
 TODO finalize analyze partial execution and recovery options
 
 Directory cleanup
 -----------------
 This process has to happen after a directory or file is deleted.
-* While there are holes in the list (FFFFh entries), swap this entry and the
-  last entry of the directory. This ensures that the list has no holes.
-* If this process results in removing the last entry of the last directory
-  page, then add the last page of the directory to the garbage list and fix the
-  next pointer of the previous page.
+1) While there are holes in the list (FFFFh entries), swap this entry and the
+   last entry of the directory. This ensures that the list has no holes.
+2) If this process results in removing the last entry of the last directory
+   page, then add the last page of the directory to the garbage list and fix the
+   next pointer of the previous page.
 TODO analyze partial execution and recovery options
    
 File data writing
@@ -279,23 +294,23 @@ File appending (growing)
 When the write pointer is at EOF, two situations happen:
 
 Write beyond the file size within the same page:
-  * Write the byte at correct offset
-  * Update the page use size in the page header
+1) Write the byte at correct offset
+2) Update the page use size in the page header
 If the data does not fit in the last page of the file, a new file page must be
 allocated:
-* Allocate a page with type 01h and no "next" pointer
-* Write the data and length in header if the page will not be used in full
-* Update the header of the previous page to point to this new next page
-* Repeat this until all data has been appended.
+1) Allocate a page with type 01h and no "next" pointer
+2) Write the data and length in header if the page will not be used in full
+3) Update the header of the previous page to point to this new next page
+4) Repeat this until all data has been appended.
 TODO analyze partial execution and recovery options
 
 File truncation (shrinking)
 ---------------------------
 This is equivalent to a partial file deletion.
-* Find the page that contains the truncation point
-* Update the valid number of bytes in the header
-* Add the page that follows the truncation point to the garbage list
-* Fix the next pointer of the current page
+1) Find the page that contains the truncation point
+2) Update the valid number of bytes in the header
+3) Add the page that follows the truncation point to the garbage list
+4) Fix the next pointer of the current page
 TODO analyze partial execution and recovery options
 
 EOF
