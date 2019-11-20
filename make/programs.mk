@@ -24,7 +24,7 @@ endef
 $(foreach TARGET, $(TARGETS), $(eval $(call BUILD_TARGET,$(TARGET))))
 
 %.o:%.asm
-	m68hc11-elf-as -I../inc -o $@ $<
+	m68hc11-elf-as -g -I../inc -o $@ $<
 
 .PHONY: clean
 clean: $(addsuffix _clean, $(TARGETS))

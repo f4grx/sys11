@@ -31,11 +31,11 @@ SECTIONS
 /* RAM SECTIONS */
 
 	.data : {
-		*(.softregs)
 		*(.data)
 	} > iram
 	.bss : {
 		*(.bss)
-	} > ram
+		*(COMMON)
+	} > iram
 }
 
