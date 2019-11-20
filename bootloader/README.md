@@ -1,11 +1,13 @@
-Bootloader
-==========
+stage2.asm Bootloader
+=====================
 
 This program is a second stage bootloader to test programs without having an
 EPROM programmer.
 
 In bootstrap mode, the 68HC11 will load 256 bytes from the SCI into the internal
 RAM at address zero, and then run it.
+
+We use this feature to allow loading a full s-record file in the memory map.
 
 The EPROM socket has 32 pins even if a 27256 is 28-pin. This header has the
 ~WR signal on it. This allows the use of a special small PCB header to use a
@@ -17,36 +19,41 @@ run it as if the system had real EPROM. This can be used to develop the first
 programs that you will run on this board.
 
 Of course this means that the program is volatile, unless you use some
-battery-backed RAM from Dallas or others.
+battery-backed RAM from Dallas or a 2864 EEPROM.
 
 Loading algorithm:
 ------------------
 
-At first, the program inits the UART.
+* We Reuse UART settings installed by the bootstrap ROM
+* Init extended mode by clearing HPRIO.MODA
+* Wait for a S character
+* Read all chars until LF or overflow
+* Read type char (0-9)
+* Read Length and address hex pairs
+* If this is a S1 line, convert hex pairs, write to mem
+* If this is a S9 line, jump to address
+* Else signal an error
 
-Then, it waits for HDLC framed packets that contains 1-byte of command, followed
-by parameters and a 16-bit CRC (could be simplified to a XOR FFh checksum).
+This is pretty much all that can be done safely in 256 bytes of RAM.
 
-The packet format is as follows, similar to PPP in HDLC framing (RFC 1662)
-* Frame delimiter: 7Eh (can be sent consecutively)
-* Escape character: 7Dh
-* Escape modification: XOR 20h
+Note that there is still room for optimization in this code, that was
+written very naively.
 
-The commands are:
-* 00h: Clear RAM, parameters (16-bit address) (1 byte length)
-* 01h: Write RAM, parameters (16-bit address) (N<=256 bytes data)
-* 02h: Read RAM, parameters (16-bit address) (1 byte length)
-* 03h: Run, parameters (16-bit address)
+Build process
+-------------
+The only requirement is binutils compiled for 68hc11 and make
 
-Addresses are encoded big-endian.
+The Makefile is common and uses some make iterations and magic to generate
+build targets.
 
-Command parameters are stored in a data RAM buffer before checking the CRC
-or checksum. Command is only executed if the CRC/Checksum is correct.
+Other programs
+--------------
+This directory also contains some small test programs that can run directly
+from the bootstrap rom:
+* a memory dumper
+* a copy of this, made to read the internal EEPROM of a HC11E2
+* a RAM tester to ensure the external bus is wired properly
 
-The responses are:
-* 00h: Clear RAM done, status: 00h OK, 01h out of range
-* 01h: Write RAM done, status: 00h OK, 01h out of range
-* 02h: Read RAM done, status: 00h OK followed by data, 01h out of range
-
-More commands can be added later (eg, register access, step by step execution).
+These programs can be uploaded in a HC11 in bootstrap mode using upload.py from
+the tools directory.
 

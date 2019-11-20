@@ -88,37 +88,45 @@ some 74xx245, 573, 138, 00, 10, 27256, various 32Kx8 and 8Kx8 RAMs
 * Clock, Reset, UART connection, power supply with decoupling
 * Memory map decoder using logic gates
 * The HC11 starts in bootstrap mode and successfully executes code to drive LED.
-* The HC11 is able to select the expanded mode and test the 32K RAM without errors (and also a RAM in the dedicated 8K EPROM space).
+* The HC11 is able to select the expanded mode and test the 32K RAM without
+  errors (and also a RAM in the dedicated 8K EPROM space).
+* bootstrap program to load more memory. Initally planned to use a custom HDLC
+  protocol, but will rather load S-records directly.
+* IRQ lines from expansion board to cpu (were broken due to lack of pullups)
 
 Summary: The system is validated on the soldered wirewrap euro board.
 
 What is being done right now
 ----------------------------
-* IRQ lines from expansion board to cpu (currently broken due to lack of pullups)
-* bootstrap program to load more memory. Initally planned to use a custom HDLC protocol, but will rather load S-records directly.
+* Editing schematic to fix errors and match reality of prototype
 * Writing the monitor ROM including a RAM allocator
 
 What remains to be done
 -----------------------
-* Determine next step for hardware. Secondary board with more RAM?
-* NVRAM SSD using these old bq samples maxim generously offered me for free
-multiple years ago (Unfortunately this board will be a one-of-a-kind add-on unless
-you have these chips available or are able to find enough RAM chips)
+* Replace fifth LS245 registers with sth that allows open drain on RST and IRQs.
+* Determine next step for hardware. Secondary board with more RAM? EPROM programmer?
+* NVRAM SSD using these old bq4017 samples maxim generously offered me for free
+  multiple years ago (Unfortunately this board will be a one-of-a-kind add-on
+  unless you have these chips available or are able to find enough RAM chips)
+* Some kind of documentation storage using big EEPROMs (27C040) mapped in IO
+  space using a 256-byte window. This would allow use as block storage. Same idea
+  applies to the bq4017 nvrams.
 * I2C bus hardware
 
 Software roadmap
 ----------------
-* Bootloader for extended mode - WIP
-* Malloc
+* Bootloader for extended mode - DONE
+* Malloc - WIP
 * Basic shell to manipulate memory
 * SPI and I2C drivers
-* Filesystem
+* Filesystem (RRSF, already half designed)
 * ed-based text editor
 * Assembler
 * Self host the system
 * Definition of a position independent binary format
 * IO kernel
 * Program loader
+* RTOS
 
 SPI bus
 -------
