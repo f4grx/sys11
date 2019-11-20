@@ -60,6 +60,12 @@ removed. The PCB is cut so that the socket and the plug of the ribbon do not
 protrude outside of the euro board. This allows the user to build a simple and
 robust metallic case from aluminum strips and flats.
 
+Here is the current state of the prototype, top and bottom:
+
+![Prototype top side](docs/pics/protoboard/15_proto_top.jpg)
+
+![Prototype bottom side](docs/pics/protoboard/16_proto_bot.jpg)
+
 Enclosure
 ---------
 

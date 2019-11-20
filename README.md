@@ -14,6 +14,13 @@ Clock speed: 8 MHz XTAL / OSC, which translates to 2 MHz internal and
 bus clock (Cycle time 500 ns). It seems that 16 MHz (4 MHz E clock, 250 ns
 cycle) is also working. May switch to that later.
 
+Currently sys11 is implemented on a protoboard using soldered 30AWG (wirewrap)
+wires.
+
+![Prototype top side](docs/pics/protoboard/15_proto_top.jpg)
+
+![Prototype bottom side](docs/pics/protoboard/16_proto_bot.jpg)
+
 Memory map (HC11 extended mode)
 -------------------------------
 
