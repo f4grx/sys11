@@ -103,6 +103,7 @@ if args["binary"] == None:
     if args["srec"] != None:
         #use the well-known stage2 bootstrap binary
         args["binary"] = (os.path.dirname(os.path.realpath(__file__)))+"/stage2.bin"
+        args["binary2"] = (os.path.dirname(os.path.realpath(__file__)))+"/../bootloader/stage2.bin"
     else:
         print("A bootstrap binary is required")
         sys.exit(1)
@@ -115,6 +116,12 @@ f = open(args["binary"], "rb")
 if f == None:
     print("Cannot open:",args["binary"])
     sys.exit(1)
+    if args["binary2"] != None:
+        f = open(args["binary2"], "rb")
+        if f == None:
+            print("Cannot open:",args["binary2"])
+            sys.exit(1)
+        
 f.seek(0, os.SEEK_END)
 size = f.tell()
 f.seek(0, os.SEEK_SET)
