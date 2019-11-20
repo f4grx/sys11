@@ -30,16 +30,10 @@ SECTIONS
 
 /* RAM SECTIONS */
 
-	.neardata : {
-		*(.softregs)
-		*(.neardata)
-	} > iram
-	.fardata : {
-		*(.fardata)
-	} > xram
 	.data : {
+		*(.softregs)
 		*(.data)
-	} > ram
+	} > iram
 	.bss : {
 		*(.bss)
 	} > ram
