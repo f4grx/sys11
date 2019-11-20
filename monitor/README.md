@@ -22,6 +22,12 @@ the code that uses register. X is then free for other uses.
 * Addresses C000h .. DFFFh are the Memory Mapped IO registers
 * Addresses E000h .. FFFFh are the Monitor ROM.
 
+Simulation
+==========
+gdb 8.3.1 still supports 68hc11 simulation. Some init instructions are required to make it run with the sys11 monitor.
+
+the simulator currently has a bug that prevents me from remapping the I/O registers via a write to INIT, but I intend to fix that.
+
 Application Binary Interface
 ============================
 
@@ -52,8 +58,8 @@ static registers. For the moment 4 16-bit soft regs are allocated, sr0 to sr3.
 They can be anywhere in the RAM but it's a good idea to have them in page0 to
 avoid the use of extended addressing mode.
 
-Calling functions with registers params
----------------------------------------
+Calling functions with stack params
+-----------------------------------
 Parameters are pushed right to left on the stack by the caller.
 Parameters are popped from the stack by the callee.
 X is usually used as a copy of SP to access parameters in indexed mode.
