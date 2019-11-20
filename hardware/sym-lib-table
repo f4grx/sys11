@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name hc11)(type Legacy)(uri ${KIPRJMOD}/hc11.lib)(options "")(descr ""))
+  (lib (name hc11main-rescue)(type Legacy)(uri ${KIPRJMOD}/hc11main-rescue.lib)(options "")(descr ""))
+)
