@@ -1,0 +1,71 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP 27256
+D EPROM 32KB x8
+$ENDCMP
+#
+$CMP 62256
+D Static RAM 32KB x8
+$ENDCMP
+#
+$CMP 7400
+D quad 2-input NAND gate
+K TTL nand 2-input
+F http://www.ti.com/lit/gpn/sn7400
+$ENDCMP
+#
+$CMP 74HC00
+D quad 2-input NAND gate
+K HCMOS nand 2-input
+F http://www.ti.com/lit/gpn/sn74hc00
+$ENDCMP
+#
+$CMP 74HC245
+D Octal BUS Transceivers, 3-State outputs
+K HCMOS BUS 3State
+F http://www.ti.com/lit/gpn/sn74HC245
+$ENDCMP
+#
+$CMP 74HCT00
+D quad 2-input NAND gate
+K HCTMOS nand 2-input
+F http://www.ti.com/lit/gpn/sn74hct00
+$ENDCMP
+#
+$CMP 74LS00
+D quad 2-input NAND gate
+K TTL nand 2-input
+F http://www.ti.com/lit/gpn/sn74ls00
+$ENDCMP
+#
+$CMP 74LS10
+D Triple 3-input NAND
+K TTL Nand3
+F http://www.ti.com/lit/gpn/sn74LS10
+$ENDCMP
+#
+$CMP 74LS138
+D Decoder 3 to 8 active low outputs
+K TTL DECOD DECOD8
+F http://www.ti.com/lit/gpn/sn74LS138
+$ENDCMP
+#
+$CMP 74LS245
+D Octal BUS Transceivers, 3-State outputs
+K TTL BUS 3State
+F http://www.ti.com/lit/gpn/sn74LS245
+$ENDCMP
+#
+$CMP 74LS37
+D quad 2-input NAND buffer
+K TTL nand 2-input buffer
+F http://www.ti.com/lit/gpn/sn74ls37
+$ENDCMP
+#
+$CMP 74LS573
+D 8-bit Latch 3-state outputs
+K TTL DFF DFF8 LATCH 3State
+F 74xx/74hc573.pdf
+$ENDCMP
+#
+#End Doc Library
