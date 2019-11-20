@@ -61,22 +61,22 @@ Device organization
 Storage is organized in 256-byte pages
 Each page has a 4-byte header with a type that describes its function
 ```
-Offset Description
-------------------
-00h    Page type
-01h    For pages with type=1, Number of valid bytes in the page. Else, FFh.
-02h    Index of next page (FFFFh if none)
+Offset | Description
+-------+------------
+00h    | Page type
+01h    | For pages with type=1, Number of valid bytes in the page. Else, FFh.
+02h    | Index of next page (FFFFh if none)
 ```
 
 ```
-Type   Description
-------------------
-00h    Superblock
-01h    File data
-02h    Directory
-03h    Symbolic Link
-04h    Garbage list
-FFh    free
+Type   | Description
+-------+------------
+00h    | Superblock
+01h    | File data
+02h    | Directory
+03h    | Symbolic Link
+04h    | Garbage list
+FFh    | free
 ```
 
 File metadata
@@ -111,13 +111,13 @@ file requires browsing all the pages of the file.
 
 The first bytes of the first page of a file are not user data but file metadata.
 ```
-Offset Size             Description
------------------------------------
-00h    01h              Access rights (0-0-OX-OW-OR-X-W-R)
-01h    01h              Owner ID
-02h    02h              Page index of the parent directory (for file erase
-                        recovery)
-04h    FILENAME_MAXSIZE File name
+Offset | Size             | Description
+-------+------------------+------------
+00h    | 01h              | Access rights (0-0-OX-OW-OR-X-W-R)
+01h    | 01h              | Owner ID
+02h    | 02h              | Page index of the parent directory (for file erase
+       |                  | recovery)
+04h    | FILENAME_MAXSIZE | File name
 ```
 
 As a consequence, the first page holds 232 bytes of user data, and the next
@@ -168,7 +168,9 @@ Superblock
 ----------
 The superblock contains meta data about the filesystem.
 
+```
 Offset | Description
+-------+------------
 00h    | Type 00h
 01h    | FS options: 01h: read only, others bits RFU
 02-03h | RFU
@@ -178,6 +180,7 @@ Offset | Description
 10-13h | Format flag, 00h: being formatted, FFh: format complete
 14-15h | garbage head (FFFFh if none)
 16-FFh | RFU
+```
 
 Formatting
 ----------
