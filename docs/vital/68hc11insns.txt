@@ -1,0 +1,774 @@
+68hc11 instruction set
+
+Used names
+
+OPCODE	Operation
+Flags
+ MODE CYCLES BYTES
+ N INH
+ I IMM
+ D DIR
+ E EXT
+ X,Y Indexed
+ R REL
+
+Flags SHXINZVC
+indicated: can change
+followed by zero or one: set to value
+
+Instructions
+
+ABA	A <= A + B
+HNZVC
+ N 2 1B
+
+ABX	X <= X + B
+-
+ N 3 3A
+
+ABY	Y <= Y + B
+-
+ N 4 18 3A
+
+ADCA	A <= A + C + (mem)
+HNZVC
+ I 2 89 ii
+ D 3 99 dd
+ E 4 B9 hh ll
+ X 4 A9 oo
+ Y 5 18 A9 oo
+
+ADCB	B <= B + C + (mem)
+HNZVC
+ I 2 C9 ii
+ D 3 D9 dd
+ E 4 F9 hh ll
+ X 4 E9 oo
+ Y 5 18 E9 oo
+
+ADDA	A <= A + (mem)
+HNZVC
+ I 2 8B ii
+ D 3 9B dd
+ E 4 BB hh ll
+ X 4 AB oo
+ Y 5 18 AB oo
+
+ADDB	B <= B + (mem)
+HNZVC
+ I 2 CB ii
+ D 3 DB dd
+ E 4 FB hh ll
+ X 4 EB oo
+ Y 5 18 EB oo
+
+ADDD	D <= D + (mem16)
+NZVC
+ I 4 C3 jj kk
+ D 5 D3 dd
+ E 6 F3 hh ll
+ X 6 E3 oo
+ Y 7 18 E3 oo
+
+ANDA	A <= A AND (mem)
+NZ V0
+ I 2 84 ii
+ D 3 94 dd
+ E 4 B4 hh ll
+ X 4 A4 oo
+ Y 5 18 A4 oo
+
+ANDB	B <= B AND (mem)
+NZ V0
+ I 2 C4 ii
+ D 3 D4 dd
+ E 4 F4 hh ll
+ X 4 E4 oo
+ Y 5 18 E4 oo
+
+ASL	{}
+NZVC
+ E 6 78 hh ll
+ X 6 68 oo
+ Y 7 18 68 oo
+
+ASLA	{}
+NZVC
+ N 2 48
+
+ASLB	{}
+NZVC
+ N 2 58
+
+ASLD	{}
+NZVC
+ N 3 05
+
+ASR	{}
+NZVC
+ E 6 77 hh ll
+ X 6 67 oo
+ Y 7 18 67 oo
+
+ASRA	{}
+NZVC
+ N 2 47
+
+ASRB	{}
+NZVC
+ N 2 57
+
+BCC	Branch Carry Clear
+-
+ R 3 24 rr
+
+BCLR	Bit Clear
+NZ V0
+ D 6 15 dd mm
+ X 7 1D oo mm
+ Y 8 18 1D oo mm
+
+BCS	Branch Carry Set
+-
+ R 3 25 rr
+
+BEQ	Branch Equal
+-
+ R 3 27 rr
+
+BGE	{}
+-
+ R 3 2C rr
+
+BGT	{}
+-
+ R 3 2e rr
+
+BHI	{}
+-
+ R 3 22 rr
+
+BHS	{}
+-
+ R 3 24 rr
+
+BITA	{}
+NZ V0
+ I 2 85 ii
+ D 3 95 dd
+ E 4 B5 hh ll
+ X 4 A5 oo
+ Y 5 18 A5 oo
+
+BITB	{}
+NZ V0
+ I 2 C5 ii
+ D 3 D5 dd
+ E 4 F5 hh ll
+ X 4 E5 oo
+ Y 5 18 E5 oo
+
+BLE	{}
+-
+ R 3 2F rr
+
+BLO	{}
+-
+ R 3 25 rr
+
+BLS	{}
+-
+ R 3 23 rr
+
+BLT	{}
+-
+ R 3 2D rr
+
+BMI	{}
+-
+ R 3 2B rr
+
+BNE	Branch Not Equal
+-
+ R 3 26 rr
+
+BPL	{}
+-
+ R 3 2A rr
+
+BRA	Branch Always
+-
+ R 3 20 rr
+
+BRCLR	{}
+-
+ D 6 13 dd mm rr
+ X 7 1F oo mm rr
+ Y 8 18 1F oo mm rr
+
+BRN	Branch Never
+-
+ R 3 21 rr
+
+BRSET	{}
+-
+ D 6 12 dd mm rr
+ X 7 1E oo mm rr
+ Y 8 18 1E oo mm rr
+
+BSET	Bit Set
+NZ V0
+ D 6 14 dd mm
+ X 7 1C oo mm
+ Y 8 18 1C oo mm
+
+BSR	Branch To Subroutine
+-
+ R 3 8D rr
+
+BVC	{}
+-
+ R 3 28 rr
+
+BVS	{}
+-
+ R 3 29 rr
+
+CBA	Compare A to B
+NZVC
+ N 2 11
+
+CLC	Clear Carry
+C0
+ N 2 0C
+
+CLI	Clear Interrupt mask (Enable)
+I0
+ N 2 0E
+
+CLR	(mem) <= 0	Clear Memory Byte
+N0 Z1 V0 C0
+ E 6 7F hh ll
+ X 6 6F oo
+ Y 7 18 6F oo
+
+CLRA	A <= 0	Clear Accumulator
+N0 Z1 V0 C0
+ N 2 4F
+
+CLRB	B <= 0	Clear Accumulator
+N0 Z1 V0 C0
+ N 2 5F
+
+CLV	{}
+V0
+ N 2 0A
+
+CMPA	{}
+NZVC
+ I 2 81 ii
+ D 3 91 dd
+ E 4 B1 hh ll
+ X 4 A1 oo
+ Y 5 18 A1 oo
+
+CMPB	{}
+NZVC
+ I 2 C1 ii
+ D 3 D1 dd
+ E 4 F1 hh ll
+ X 4 E1 oo
+ Y 5 18 E1 oo
+
+COM	{}
+NZ V0 C1
+ E 6 73 hh ll
+ X 6 63 oo
+ Y 7 18 83 oo
+
+COMA	{}
+NZ V0 C1
+ N 2 43
+
+COMB	{}
+NZ V0 C1
+ N 2 53
+
+CPD	{}
+NZVC
+ I 5 1A 83 jj kk
+ D 6 1A 93 dd
+ E 7 1A B3 hh ll
+ X 7 1A A3 oo
+ Y 7 CD A3 oo
+
+CPX	{}
+NZVC
+ I 4 8C jj kk
+ D 5 9C dd
+ E 6 BC hh ll
+ X 6 AC oo
+ Y 7 CD AC oo
+
+CPY	{}
+NZVC
+ I 5 18 8C jj kk
+ D 6 18 9C dd
+ E 7 18 BC hh ll
+ X 7 1A AC oo
+ Y 7 18 AC oo
+
+DAA	Decimal Adjust Accum A
+NZVC
+ N 2 19
+
+DEC	{}
+NZV
+ E 6 7A hh ll
+ X 6 6A oo
+ Y 7 18 6A oo
+
+DECA	{}
+NZV
+ N 2 4A
+
+DECB	{}
+NZV
+ N 2 5A
+
+DES	{}
+-
+ N 3 34
+
+DEX	{}
+Z
+ N 3 09
+
+DEY	{}
+Z
+ N 4 18 09
+
+EORA	{}
+NZ V0
+ I 2 88 ii
+ D 3 98 dd
+ E 4 B8 hh ll
+ X 4 A8 oo
+ Y 5 18 A8 oo
+
+EORB	{}
+NZ V0
+ I 2 C8 ii
+ D 3 D8 dd
+ E 4 F8 hh ll
+ X 4 E8 oo
+ Y 5 18 E8 oo
+
+FDIV	{}
+ZVC
+ N 41 03
+
+IDIV	{}
+Z V0 C
+ N 41 02
+
+INC	{}
+NZV
+ E 6 7C hh ll
+ X 6 6C oo
+ Y 7 18 6C oo
+
+INCA	{}
+NZV
+ N 2 4C
+
+INCB	{}
+NZV
+ N 2 5C
+
+INS	{}
+ N 3 31
+
+INX	{}
+Z
+ N 3 08
+
+INY	{}
+Z
+ N 4 18 08
+
+JMP	Jump
+-
+ E 3 7E hh ll
+ X 3 6E ff
+ Y 4 18 6E ff
+
+JSR	(SP) <= PCL, SP--, (SP) <= PCH, SP--
+-
+ D 5 9D dd
+ E 6 BD hh ll
+ X 6 AD oo
+ Y 7 18 AD oo
+
+LDAA	A <= (mem)
+NZ V0
+ I 2 86 ii
+ D 3 96 dd
+ E 4 B6 hh ll
+ X 4 A6 oo
+ Y 5 18 A6 oo
+
+LDAB	B <= (mem)
+NZ V0
+ I 2 C6 ii
+ D 3 D6 dd
+ E 4 F6 hh ll
+ X 4 E6 oo
+ Y 5 18 E6 oo
+
+LDD	{}
+NZ V0
+ I 3 CC jj kk
+ D 4 DC dd
+ E 5 FC hh ll
+ X 5 EC oo
+ Y 6 18 EC oo
+
+LDS	SP <= (mem)
+NZ V0
+ I 3 8E jj kk
+ D 4 9E dd
+ E 5 BE hh ll
+ X 5 AE oo
+ Y 6 18 AE oo
+
+LDX	X <= (mem)
+NZ V0
+ I 3 CE jj kk
+ D 4 DE dd
+ E 5 FE hh ll
+ X 5 EE oo
+ Y 6 CD EE oo
+
+LDY	Y <= (mem)
+NZ V0
+ I 4 18 CE jj kk
+ D 5 18 DE dd
+ E 6 18 FE hh ll
+ X 6 1A EE oo
+ Y 6 18 EE oo
+
+LSL	{}
+NZVC
+ E 6 78 hh ll
+ X 6 68 oo
+ Y 7 18 68 oo
+
+LSLA	{}
+NZVC
+ N 2 48
+
+LSLB	{}
+NZVC
+ N 2 58
+
+LSLD	{}
+NZVC
+ N 3 05
+
+LSR	{}
+N0 ZVC
+ E 6 74 hh ll
+ X 6 64 oo
+ Y 7 18 64 oo
+
+LSRA	{}
+N0 ZVC
+ N 2 44
+
+LSRB	{}
+N0 ZVC
+ N 2 54
+
+LSRD	{}
+N0 ZVC
+ N 3 04
+
+MUL	{}
+C
+ N 10 3D
+
+NEG	{}
+NZVC
+ E 6 70 hh ll
+ X 6 60 oo
+ Y 7 18 60 oo
+
+NEGA	{}
+NZVC
+ N 2 40
+
+NEGB	{}
+NZVC
+ N 2 50
+
+NOP	{}
+-
+ N 2 01
+
+ORAA	A <= A OR (mem)
+NZ V0
+ I 2 8A ii
+ D 3 9A dd
+ E 4 BA hh ll
+ X 4 AA oo
+ Y 5 18 AA oo
+
+ORAB	{}
+NZ V0
+ I 2 CA ii
+ D 3 DA dd
+ E 4 FA hh ll
+ X 4 EA oo
+ Y 5 18 EA oo
+
+PSHA	{}
+-
+ N 3 36
+
+PSHB	{}
+-
+ N 3 37
+
+PSHX	{}
+-
+ N 4 3C
+
+PSHY	{}
+-
+ N 5 18 3C
+
+PULA	{}
+-
+ N 4 32
+
+PULB	{}
+-
+ N 4 33
+
+PULX	{}
+-
+ N 5 38
+
+PULY	{}
+-
+ N 6 18 38
+
+ROL	{}
+NZVC
+ E 6 79 hh ll
+ X 6 69 oo
+ Y 7 18 69 oo
+
+ROLA	{}
+NZVC
+ N 2 49
+
+ROLB	{}
+NZVC
+ N 2 59
+
+ROR	{}
+NZVC
+ E 6 76 hh ll
+ X 6 66 oo
+ Y 7 18 66 oo
+
+RORA	{}
+NZVC
+ N 2 46
+
+RORB	{}
+NZVC
+ N 2 56
+
+RTI	Return From Interrupt
+S Xc HINZVC
+ N 12 3B
+
+RTS	SP++, PCH <= (SP), SP++, PCL <= (SP)
+ N 5 39
+
+SBA	{}
+NZVC
+ N 2 10
+
+SBCA	{}
+NZVC
+ I 2 82 ii
+ D 3 92 dd
+ E 4 B2 hh ll
+ X 4 A2 oo
+ Y 5 18 A2 oo
+
+SBCB	{}
+NZVC
+ I 2 C2 ii
+ D 3 D2 dd
+ E 4 F2 hh ll
+ X 4 E2 oo
+ Y 5 18 E2 oo
+
+SEC	{}
+C1
+ N 2 0D
+
+SEI	Set Interrupt mask (Disable)
+I1
+ N 2 0F
+
+SEV	{}
+V1
+ N 2 0B
+
+STAA	(mem) <= A
+NZ V0
+ D 3 97 dd
+ E 4 B7 hh ll
+ X 4 A7 oo
+ Y 5 18 A7 oo
+
+STAB	(mem) <= B
+NZ V0
+ D 3 D7 dd
+ E 4 F7 hh ll
+ X 4 E7 oo
+ Y 5 18 E7 oo
+
+STD	{}
+NZ V0
+ D 4 DD dd
+ E 5 FD hh ll
+ X 5 ED oo
+ Y 6 18 ED oo
+
+STOP	{}
+-
+ N 2 CF
+
+STS	{}
+NZ V0
+ D 4 9F dd
+ E 5 BF hh ll
+ X 5 AF oo
+ Y 6 18 AF oo
+
+STX	(mem) <= X
+NZ V0
+ D 4 DF dd
+ E 5 FF hh ll
+ X 5 EF oo
+ Y 6 CD EF oo
+
+STY	(mem) <= Y
+NZ V0
+ D 4 18 DF dd
+ E 5 18 FF hh ll
+ X 5 1A EF oo
+ Y 6 18 EF oo
+
+SUBA	{}
+NZVC
+ I 2 80 ii
+ D 3 90 dd
+ E 4 B0 hh ll
+ X 4 A0 oo
+ Y 5 18 A0 oo
+
+SUBB	{}
+NZVC
+ I 2 C0 ii
+ D 3 D0 dd
+ E 4 F0 hh ll
+ X 4 E0 oo
+ Y 5 18 E0 oo
+
+SUBD	{}
+NZVC
+ I 4 83 jj kk
+ D 5 93 dd
+ E 6 B3 hh ll
+ X 6 A3 oo
+ Y 7 18 A3 oo
+
+SWI	Software Interrupt
+I1
+ N 14 3F
+
+TAB	{}
+NZ V0
+ N 2 16
+
+TAP	{}
+S Xc HINZVC
+ N 2 06
+
+TBA	{}
+NZ V0
+ N 2 17
+
+TEST	{}
+-
+ N * 00
+
+TPA	{}
+-
+ N 2 07
+
+TST	{}
+NZ V0 C0
+ E 6 7D hh ll
+ X 6 6D oo
+ Y 7 18 6D oo
+
+TSTA	{}
+NZ V0 C0
+ N 2 4D
+
+TSTB	{}
+NZ V0 C0
+ N 2 5D
+
+TSX	{}
+-
+ N 3 30
+
+TSY	{}
+-
+ N 4 18 30
+
+TXS	{}
+-
+ N 3 35
+
+TYS	{}
+-
+ N 4 18 35
+
+WAI	{}
+-
+ N ** 3E
+
+XGDX	Exchange D and X
+X <=> D
+-
+ N 3 8F
+
+XGDY	Exchange D and Y
+Y <=> D
+-
+ N 4 18 8F
+
+---
+EOF
+
