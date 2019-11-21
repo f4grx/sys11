@@ -3,7 +3,7 @@ sys11
 
 This is a development board for the 68hc11 microcontroller.
 
-The goal is to build a robus, simple, reliable, and repairable computer from
+The goal is to build a robust, simple, reliable, and repairable computer from
 scrap, similar to what collapseOS is seeking.
 
 CPU: 68HC11A0, the most basic one. This is what I found in my drawer, and is

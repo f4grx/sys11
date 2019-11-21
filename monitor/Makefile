@@ -15,4 +15,7 @@ include ../make/programs.mk
 boot:
 	../tools/upload.py --reset=rts --fast --stage2 monitor.bin --term
 
+.PHONY: sim
+sim:
+	m68hc11-elf-run monitor.elf
 
