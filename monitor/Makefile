@@ -3,7 +3,7 @@ monitor_OBJS=start.o vectors.o softregs.o
 #drivers
 monitor_OBJS+=sci.o
 #lib
-monitor_OBJS+=mman.o string.o
+monitor_OBJS+=mm.o string.o
 
 monitor_LKR=../link/full.ld
 

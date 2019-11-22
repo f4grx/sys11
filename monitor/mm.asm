@@ -39,9 +39,23 @@ mm_init:
  * a new smaller free zone has been created after the current free zone.
  */
 mm_split:
-	/*this is an inline routine. sr3 = curblock, sr2 = req size*/
-	ldx	sr3	/* Get pointer */
-	
+	/* this is an inline routine. sr3 = curblock, sr2 = req size
+	 * sr1 = cur->next
+	 */
+	ldx	sr3	/* after this X contains adr */
+	ldd	sr2	/* after this D contains size */
+	std	0,X	/* POKE adr+SIZE, size */
+	addd	sr3	/* after this D contains size+adr */
+	addd	#2	/* after this D contains size+adr+2 = nxtadr */
+	std	2,X	/* POKE adr+NEXT, nxtadr */
+	xgdx		/* after this X contains nxtadr */
+	ldd	sr1	/* after this D contains PEEK(adr+NEXT) */
+	std	2,X	/* POKE nxtadr+NEXT, PEEK(adr+NEXT) */
+	ldy	sr3	/* after this Y contains adr */
+	ldd	0,Y	/* after this D contains PEEK(adr+SIZE) = freesize */
+	subd	#2	/* after this D contains freesize-2 */
+	subd	sr2	/* after this D contains freesize-2-size = new free size */
+	std	0,X	/* POKE nxtadr+SIZE, PEEK(adr+size)-2-size */
 	rts
 
 /* Allocate a memory zone.

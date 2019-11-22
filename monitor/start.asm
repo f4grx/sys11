@@ -1,5 +1,6 @@
 	.include "system.inc"
 	.include "ioport.inc"
+	.include "mm.inc"
 
 	.text
 
@@ -35,12 +36,18 @@ _start:
 	ldx	#motd
 	jsr	sci_puts
 
+	ldx	#10
+	pshx
+	jsr	mm_alloc
+
 	/* ==================== */
 	/* Fall in the idle loop */
 	/* ==================== */
 
 idle:
+.ifndef DEBUG
 	wai		/* Do nothing until some interrupt happens */
+.endif
 	bra idle
 	
 	.section .rodata
