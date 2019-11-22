@@ -8,6 +8,7 @@ uint16_t head;
 
 #define SIZE 0
 #define NEXT 2
+#define EOL  0xFFFF
 
 #define ADDR(ptr) (uint16_t)((uint8_t*)(ptr)-memory)
 #define PTR(addr) (uint8_t*)((uint16_t)(addr)+memory)
@@ -39,7 +40,7 @@ static inline uint16_t PEEK_U16BE(uint16_t addr)
 void mem_init(void)
   {
   POKE_U16BE(SIZE, MEMSIZE-2);
-  POKE_U16BE(NEXT, 0xFFFF);
+  POKE_U16BE(NEXT, EOL);
   head = 0;
   }
 
@@ -53,8 +54,8 @@ uint16_t mem_split(uint16_t adr, uint16_t size)
     POKE_U16BE(adr+SIZE, size);
     POKE_U16BE(adr+NEXT, nxtadr);
     //Now link
-    if(adr == head)
-      head = nxtadr;
+    //if(adr == head)
+      //head = nxtadr;
     return adr;
   }
 
@@ -73,7 +74,7 @@ void mem_status(void)
       }
     printf("  META    SIZE   NEXT\n");
     adr = head;
-    while(adr != 0xFFFF)
+    while(adr != EOL)
       {
         uint16_t s = PEEK_U16BE(adr+SIZE);
         uint16_t n = PEEK_U16BE(adr+NEXT);
@@ -89,7 +90,7 @@ uint16_t mem_alloc(uint16_t size)
     uint16_t adr = head;
     uint16_t nxt;
     printf("\nasked to alloc %u bytes\n",size);
-    while(adr != 0xFFFF)
+    while(adr != EOL)
       {
         uint16_t n = PEEK_U16BE(adr+NEXT);
         uint16_t s = PEEK_U16BE(adr+SIZE);
@@ -112,12 +113,6 @@ uint16_t mem_alloc(uint16_t size)
           }
         adr = n;
       }
-    printf("list blocks done\n");
-
-    if(adr == 0xFFFF)
-      {
-        printf("algorithm error :(\n");
-      }
     printf("no suitable room found\n");
     return 0;
   }
@@ -130,7 +125,7 @@ void mem_coalesce(void)
     uint16_t nxt;
 again:
     adr = head;
-    while(adr != 0xFFFF)
+    while(adr != EOL)
       {
         siz = PEEK_U16BE(adr+SIZE);
         nxt = PEEK_U16BE(adr+NEXT);
@@ -169,14 +164,14 @@ void mem_free(uint16_t cur)
       {
         //browse free blocks until we find the insertion point
         adr = head;
-        while(adr != 0xFFFF)
+        while(adr != EOL)
           {
             nxt = PEEK_U16BE(adr+NEXT);
             if(nxt > cur)
               break;
             adr = nxt;
           }
-        if(adr == 0xFFFF)
+        if(adr == EOL)
           {
             printf("alg error :(\n");
             return;
