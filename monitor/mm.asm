@@ -39,6 +39,7 @@ mm_init:
  * a new smaller free zone has been created after the current free zone.
  */
 mm_split:
+	/* TODO check we have at least 2 spare bytes to store the size of the created zone */
 	/* this is an inline routine. sr3 = curblock, sr2 = req size
 	 * sr1 = cur->next
 	 * TODO inline this subroutine
@@ -77,8 +78,8 @@ mm_alloc:
 	stx	sr3	/* sr3 : pointer to the current zone */
 .Lagain:
 	ldx	sr3
-	ldy	2,X	/* Load the pointer to next zone, preserve X */
-	sty	sr1	/* sr1 now contains pointer to next zone */
+	ldd	2,X	/* Load the pointer to next zone, preserve X */
+	std	sr1	/* sr1 now contains pointer to next zone */
 	ldx	0,X	/* Load the zone size */
 	stx	sr0	/* sr0 now contains size of free zone */
 	cpx	sr2	/* Compare with required size */
@@ -91,17 +92,17 @@ mm_alloc:
 
 .Lalloc:
 	/* Set the mem fields to allocate this zone */
-	ldx	sr3	/* get the pointer to current zone */
-	cpx	head	/* is the current zone (allocated) the head of list? */
-	beq	.Lreplacehead	/* yes: so the head is the zone after the allocated block */
-	bra	.Lretblock	/* we can now return the block */
-.Lreplacehead:
-	stx	head
+	ldx	sr3		/* get the pointer to current zone */
+	cpx	head		/* is cur zone (alloced) the head of list? */
+	bne	.Lretblock	/* no: we can now return the block */
+	/* yes: so the head is the zone after the allocated block */
+	ldd	sr1 		/* Get next zone pointer */
+	std	head		/* Update head */
 .Lretblock:
-	inx		/* Make X look at the usable data zone */
+	inx			/* Make X look at the usable data zone */
 	inx
-	xgdx		/* Store X in D */
-	bra	.Lend	/* We're done! */
+	xgdx			/* Store in retval */
+	bra	.Lend		/* We're done! */
 
 .Lnext:	/* Setup pointers to look at next block */
 	ldx	sr1	/* Get curzone->next */
