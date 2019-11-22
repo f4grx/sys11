@@ -20,7 +20,7 @@ head:	.word	0 /* Pointer to the first free zone */
 mm_init:
 	ldx	#(RAMLEN-2)	/* Block size = all but two header bytes */
 	stx	RAMSTART
-	ldx	#0
+	ldx	#0xffff
 	stx	RAMSTART+2	/* This is the pointer to next (none) */
 	ldx	#RAMSTART
 	stx	head		/* Initialize head of free zone list */
@@ -41,6 +41,7 @@ mm_init:
 mm_split:
 	/* this is an inline routine. sr3 = curblock, sr2 = req size
 	 * sr1 = cur->next
+	 * TODO inline this subroutine
 	 */
 	ldx	sr3	/* after this X contains adr */
 	ldd	sr2	/* after this D contains size */
@@ -74,59 +75,47 @@ mm_alloc:
 	 */
 	ldx	head
 	stx	sr3	/* sr3 : pointer to the current zone */
-again:
+.Lagain:
 	ldx	sr3
 	ldy	2,X	/* Load the pointer to next zone, preserve X */
 	sty	sr1	/* sr1 now contains pointer to next zone */
 	ldx	0,X	/* Load the zone size */
 	stx	sr0	/* sr0 now contains size of free zone */
 	cpx	sr2	/* Compare with required size */
-	blo	next	/* Current free block smaller than request? try next */
+	blo	.Lnext	/* Current free block smaller than request? try next */
 	/* At this point we have a zone that is big enough for allocation */
-	beq	allocate /* Zone has the correct size */
+	beq	.Lalloc	/* Zone has the correct size */
 	/* Zone is larger than requested, we have to do a split */	
-	ldx	sr3
-	pshx		/* push current zone */
-	ldx	sr2
-	pshx		/* push requested size */
 	bsr	mm_split
 	/* now the current free zone @sr3 has the correct size */
 
-allocate:
+.Lalloc:
 	/* Set the mem fields to allocate this zone */
 	ldx	sr3	/* get the pointer to current zone */
 	cpx	head	/* is the current zone (allocated) the head of list? */
-	beq	replace_head	/* yes: so the head is the zone after the allocated block */
-	bra	retblock	/* we can now return the block */
-replace_head:
+	beq	.Lreplacehead	/* yes: so the head is the zone after the allocated block */
+	bra	.Lretblock	/* we can now return the block */
+.Lreplacehead:
 	stx	head
-retblock:
+.Lretblock:
 	inx		/* Make X look at the usable data zone */
 	inx
 	xgdx		/* Store X in D */
-	bra	end	/* We're done! */
+	bra	.Lend	/* We're done! */
 
-next:	/* Setup pointers to look at next block */
+.Lnext:	/* Setup pointers to look at next block */
 	ldx	sr1	/* Get curzone->next */
-	cpx	#0x0000	/* Is next the end of the list? */
-	beq	done	/* Yes, alloc was not possible, were done */
+	cpx	#0xffff	/* Is next the end of the list? */
+	beq	.Ldone	/* Yes, alloc was not possible, were done */
 	stx	sr3	/* now current zone is next zone */
-	bra	again	/* Try to fit the request in the next zone */
-done:
+	bra	.Lagain	/* Try to fit the request in the next zone */
+.Ldone:
 	/* We reached the end of free zones without finding a big enough one */
 	/* We have to fail the allocation by returning NULL */
 	ldd	#0
-end:
+.Lend:
 	rts
 
-/* Merge adjacent free zones in the heap
- * After this call, the free list does not contain any pair of contiguous free
- * zones. All free zones are maximally large.
- * Parameters: None
- * Return value: None
- */
-mm_coalesce:
-	rts
 
 /* Release a memory zone.
  * After this call the pointed memory zone is considered free for allocation.
@@ -136,5 +125,17 @@ mm_coalesce:
  */
 	.global mm_free
 mm_free:
+	/* Get size and zone pointer */
+	/* Browse free list to find insertion point */
+	/* Insert into free list */
+	/* Coalesce */
+
+/* Merge adjacent free zones in the heap
+ * After this call, the free list does not contain any pair of contiguous free
+ * zones. All free zones are maximally large.
+ * Parameters: None
+ * Return value: None
+ */
+mm_coalesce:
 	rts
 

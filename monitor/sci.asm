@@ -34,9 +34,9 @@ sci_putchar:
 	.global sci_puts
 sci_puts:
 	ldaa	0,X		/* Load char pointed b X */
-	beq	sci_puts_end
+	beq	1f
 	bsr	sci_putchar
 	inx
 	bra	sci_puts
-sci_puts_end:
+1:
 	rts

@@ -8,14 +8,13 @@
 	.global strlen
 strlen:
 	pulx
-	ldy	#0
-again:
+	ldd	#0
+.Lagain:
 	ldaa	0,X	/* Get pointed char */
-	beq	done	/* Pointed char zero: end of string */
+	beq	.Ldone	/* Pointed char zero: end of string */
 	inx		/* point at next char */
-	iny		/* increment string length */
-	bra	again	/* Continue with next char */
-done:
-	xgdy
+	addd	#1	/* increment string length */
+	bra	.Lagain	/* Continue with next char */
+.Ldone:
 	rts
 

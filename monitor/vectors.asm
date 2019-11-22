@@ -1,5 +1,6 @@
 	.text
 	.equ RESERVED, 0xFFFF
+	.global	noit
 noit:	rti
 
 	.section .vectors
