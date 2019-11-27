@@ -33,68 +33,69 @@ mm_init:
  */
 	.global mm_alloc
 mm_alloc:
-	/* Get requested size from stack into sr2 */
+	/* Get requested size from stack into *sr2 */
 	pulx
-	stx	sr2	/* sr2 <- size */
+	stx	*sr2	/* *sr2 <- size */
 
 	/* Browse all zones in the free list.
 	 * We need one that is larger than the requested size
 	 */
 	ldx	head
-	stx	sr3	/* sr3 <- adr */
+	stx	*sr3	/* *sr3 <- adr */
 .Lagain:
-	ldx	sr3	/* X <- adr */
+	ldx	*sr3	/* X <- adr */
 	ldx	0,X	/* X <- cursiz */
-	stx	sr0	/* sr0 <- cursiz */
-	cpx	sr2	/* Compare cursiz and size */
+	stx	*sr0	/* *sr0 <- cursiz */
+	cpx	*sr2	/* Compare cursiz and size */
 	blo	.Lnext	/* Current free block smaller than request? try next */
 	/* At this point we have a zone that is big enough for allocation */
 	beq	.Lalloc	/* Zone has the correct size */
 	/* Zone is larger than requested, we have to do a split */	
 .Lsplit:
-	ldd	sr2	/* D contains size */
-	addd	#2	/* D contains size + 2 */
-	addd	sr3	/* D contains size + 2 + adr == nxtadr */
-	std	sr1	/* sr1 contains nxtadr */
+	ldd	*sr2	/* D <- size */
+	addd	#2	/* D <- size + 2 */
+	addd	*sr3	/* D <- size + 2 + adr == nxtadr */
+	std	*sr1	/* *sr1 <- nxtadr */
 
-	ldx	sr3	/* X contains adr */
-	ldd	0,X	/* D contains PEEK(adr+SIZE) */
-	subd	#2	/* D contains PEEK(adr+SIZE) - 2 */
-	subd	sr2	/* D contains PEEK(adr+SIZE) - 2 - size == tmp */
-	ldx	sr1	/* X contains nxtadr */
+	ldx	*sr3	/* X <- adr */
+	ldd	0,X	/* D <- PEEK(adr+SIZE) */
+	subd	#2	/* D <- PEEK(adr+SIZE) - 2 */
+	subd	*sr2	/* D <- PEEK(adr+SIZE) - 2 - size == tmp */
+	ldx	*sr1	/* X <- nxtadr */
 	std	0,X	/* POKE(nxtadr+SIZE, tmp)*/
 
-	ldx	sr3	/* X contains adr */
-	ldd	2,X	/* D contains PEEK(adr+NEXT) == tmp */
-	ldx	sr1	/* X contains nxtadr */
+	ldx	*sr3	/* X <- adr */
+	ldd	2,X	/* D <- PEEK(adr+NEXT) == tmp */
+	ldx	*sr1	/* X <- nxtadr */
 	std	2,X	/* POKE(nxtadr+NEXT, tmp) */
 
-	ldx	sr3	/* X contain adr */
-	ldd	sr1	/* D contains nxtadr */
+	ldx	*sr3	/* X contain adr */
+	ldd	*sr1	/* D <- nxtadr */
 	std	2,X	/* POKE adr+NEXT, nxtadr */
-	ldd	sr2	/* D contains size */
+	ldd	*sr2	/* D <- size */
 	std	0,X	/* POKE adr+SIZE, size */
 
-	/* now the current free zone @sr3 has the correct size */
+	/* now the current free zone @*sr3 has the correct size */
 
 .Lalloc:
 	/* Set the mem fields to allocate this zone */
-	ldx	sr3		/* get the pointer to current zone */
+	ldx	*sr3		/* X <- adr */
 	cpx	head		/* is cur zone (alloced) the head of list? */
 	bne	.Lretblock	/* no: we can now return the block */
 	/* yes: so the head is the zone after the allocated block */
-	ldd	sr1 		/* Get next zone pointer */
+	ldd	*sr1 		/* Get next zone pointer */
 	std	head		/* Update head */
 .Lretblock:
-	ldd	sr3
-	addd	#2
+	inx			/* X still has *sr3(adr), skip size */
+	inx			/* skip size */
+	xgdx			/* put in D, X gets garbage */
 	bra	.Lend		/* We're done! */
 
 .Lnext:	/* Setup pointers to look at next block */
-	ldx	sr1	/* Get curzone->next */
+	ldx	*sr1	/* Get curzone->next */
 	cpx	#0xffff	/* Is next the end of the list? */
 	beq	.Ldone	/* Yes, alloc was not possible, were done */
-	stx	sr3	/* now current zone is next zone */
+	stx	*sr3	/* now current zone is next zone */
 	bra	.Lagain	/* Try to fit the request in the next zone */
 .Ldone:
 	/* We reached the end of free zones without finding a big enough one */
