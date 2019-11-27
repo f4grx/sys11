@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MEMSIZE 512
+#define MEMSIZE 256
 uint8_t memory[MEMSIZE];
 uint16_t head;
 
@@ -45,21 +45,6 @@ void mem_init(void)
   }
 
 /* ************************************************************************* */
-uint16_t mem_split(uint16_t adr, uint16_t size)
-  {
-    uint16_t nxtadr = adr + 2 + size;
-    POKE_U16BE(nxtadr+SIZE, PEEK_U16BE(adr+SIZE) - 2 - size);
-    POKE_U16BE(nxtadr+NEXT, PEEK_U16BE(adr+NEXT));
-    //Update params of current block
-    POKE_U16BE(adr+SIZE, size);
-    POKE_U16BE(adr+NEXT, nxtadr);
-    //Now link
-    //if(adr == head)
-      //head = nxtadr;
-    return adr;
-  }
-
-/* ************************************************************************* */
 void mem_status(void)
   {
     uint16_t adr;
@@ -88,61 +73,43 @@ void mem_status(void)
 uint16_t mem_alloc(uint16_t size)
   {
     uint16_t adr = head;
-    uint16_t nxt;
+    uint16_t nxtadr;
+    uint16_t tmp;
+    uint16_t cursiz;
     printf("\nasked to alloc %u bytes\n",size);
     while(adr != EOL)
       {
-        uint16_t n = PEEK_U16BE(adr+NEXT);
-        uint16_t s = PEEK_U16BE(adr+SIZE);
-        printf("meta at %04X: next %04X size %04X\n", adr,n,s);
-        if(s > size)
+        cursiz = PEEK_U16BE(adr+SIZE);
+        if(cursiz > size)
           {
+            nxtadr = adr + 2 + size;
             printf("suitable but bigger -> split\n");
-            adr = mem_split(adr,size);
-            s   = size;
+
+            tmp = PEEK_U16BE(adr+SIZE) - 2 - size;
+            POKE_U16BE(nxtadr+SIZE, tmp);
+
+            tmp = PEEK_U16BE(adr+NEXT);
+            POKE_U16BE(nxtadr+NEXT, tmp);
+
+            //Update params of current block
+            POKE_U16BE(adr+NEXT, nxtadr);
+            POKE_U16BE(adr+SIZE, size);
+
+            cursiz = size;
           }
-        if(s == size)
+        nxtadr = PEEK_U16BE(adr+NEXT);
+        if(cursiz == size)
           {
             printf("match\n");
             //Remove from free list
-            nxt = PEEK_U16BE(adr+NEXT);
             if(adr == head)
-              head = nxt;
-            POKE_U16BE(adr+SIZE, size);
+              head = nxtadr;
             return adr+2;
           }
-        adr = n;
+        adr = nxtadr;
       }
     printf("no suitable room found\n");
     return 0;
-  }
-
-/* ************************************************************************* */
-void mem_coalesce(void)
-  {
-    uint16_t siz;
-    uint16_t adr;
-    uint16_t nxt;
-again:
-    adr = head;
-    while(adr != EOL)
-      {
-        siz = PEEK_U16BE(adr+SIZE);
-        nxt = PEEK_U16BE(adr+NEXT);
-        printf("coalesce_check: adr %04X size %04X after %04X next %04X\n", adr,siz, (adr+siz+2), nxt);
-        if(nxt == adr + siz + 2)
-          {
-            printf("blocks %04X and %04X can be joined\n", adr, nxt);
-            siz += PEEK_U16BE(nxt+SIZE) + 2;
-            POKE_U16BE(adr+SIZE, siz);
-            nxt = PEEK_U16BE(nxt+NEXT);
-            POKE_U16BE(adr+NEXT, nxt);
-            mem_status();
-            goto again;
-          }
-        adr = nxt;
-      }
-    printf("mem_coalesce done\n");
   }
 
 /* ************************************************************************* */
@@ -171,16 +138,32 @@ void mem_free(uint16_t cur)
               break;
             adr = nxt;
           }
-        if(adr == EOL)
-          {
-            printf("alg error :(\n");
-            return;
-          }
         printf("insert to freelist: curhdr=%04X adr=%04X nxt=%04X\n",cur,adr,nxt);
         POKE_U16BE(cur+NEXT, nxt);
         POKE_U16BE(adr+NEXT, cur);
       }
-    mem_coalesce();
+
+    //now coalesce
+again:
+    adr = head;
+    while(adr != EOL)
+      {
+        siz = PEEK_U16BE(adr+SIZE);
+        nxt = PEEK_U16BE(adr+NEXT);
+        printf("coalesce_check: adr %04X size %04X after %04X next %04X\n", adr,siz, (adr+siz+2), nxt);
+        if(nxt == adr + siz + 2)
+          {
+            printf("blocks %04X and %04X can be joined\n", adr, nxt);
+            siz += PEEK_U16BE(nxt+SIZE) + 2;
+            POKE_U16BE(adr+SIZE, siz);
+            nxt = PEEK_U16BE(nxt+NEXT);
+            POKE_U16BE(adr+NEXT, nxt);
+            //mem_status();
+            goto again;
+          }
+        adr = nxt;
+      }
+    printf("mem_coalesce done\n");
   }
 
 /* ************************************************************************* */
