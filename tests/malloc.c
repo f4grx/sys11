@@ -113,55 +113,55 @@ uint16_t mem_alloc(uint16_t size)
   }
 
 /* ************************************************************************* */
-void mem_free(uint16_t cur)
+void mem_free(uint16_t adr)
   {
-    uint16_t siz = PEEK_U16BE(cur-2);
-    uint16_t adr;
+    uint16_t siz = PEEK_U16BE(adr-2);
+    uint16_t cur;
     uint16_t nxt;
-    cur -= 2;
-    printf("\nasked to free adr 0x%04X, block size %u (0x%04X)\n", cur, siz, siz);
+    adr -= 2;
+    printf("\nasked to free cur 0x%04X, block size %u (0x%04X)\n", adr, siz, siz);
     //Find insertion point
-    if(cur < head)
+    if(adr < head)
       {
         //new head
-        POKE_U16BE(cur+NEXT, head);
-        head = cur;
+        POKE_U16BE(adr+NEXT, head);
+        head = adr;
       }
     else
       {
         //browse free blocks until we find the insertion point
-        adr = head;
-        while(adr != EOL)
+        cur = head;
+        while(cur != EOL)
           {
-            nxt = PEEK_U16BE(adr+NEXT);
-            if(nxt > cur)
+            nxt = PEEK_U16BE(cur+NEXT);
+            if(nxt > adr)
               break;
-            adr = nxt;
+            cur = nxt;
           }
-        printf("insert to freelist: curhdr=%04X adr=%04X nxt=%04X\n",cur,adr,nxt);
-        POKE_U16BE(cur+NEXT, nxt);
-        POKE_U16BE(adr+NEXT, cur);
+        printf("insert to freelist: adrhdr=%04X cur=%04X nxt=%04X\n",adr,cur,nxt);
+        POKE_U16BE(adr+NEXT, nxt);
+        POKE_U16BE(cur+NEXT, adr);
       }
 
     //now coalesce
 again:
-    adr = head;
-    while(adr != EOL)
+    cur = head;
+    while(cur != EOL)
       {
-        siz = PEEK_U16BE(adr+SIZE);
-        nxt = PEEK_U16BE(adr+NEXT);
-        printf("coalesce_check: adr %04X size %04X after %04X next %04X\n", adr,siz, (adr+siz+2), nxt);
-        if(nxt == adr + siz + 2)
+        siz = PEEK_U16BE(cur+SIZE);
+        nxt = PEEK_U16BE(cur+NEXT);
+        printf("coalesce_check: cur %04X size %04X after %04X next %04X\n", cur,siz, (cur+siz+2), nxt);
+        if(nxt == cur + siz + 2)
           {
-            printf("blocks %04X and %04X can be joined\n", adr, nxt);
+            printf("blocks %04X and %04X can be joined\n", cur, nxt);
             siz += PEEK_U16BE(nxt+SIZE) + 2;
-            POKE_U16BE(adr+SIZE, siz);
+            POKE_U16BE(cur+SIZE, siz);
             nxt = PEEK_U16BE(nxt+NEXT);
-            POKE_U16BE(adr+NEXT, nxt);
+            POKE_U16BE(cur+NEXT, nxt);
             //mem_status();
             goto again;
           }
-        adr = nxt;
+        cur = nxt;
       }
     printf("mem_coalesce done\n");
   }
