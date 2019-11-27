@@ -101,7 +101,7 @@ mm_alloc:
 	/* We reached the end of free zones without finding a big enough one */
 	/* We have to fail the allocation by returning NULL */
 	clra	/* DL <- 0 */
-	clrb	/* DH <= 0 */
+	clrb	/* DH <- 0 */
 .Lend:
 	rts
 
@@ -116,54 +116,67 @@ mm_alloc:
 mm_free:
 	pulx		/* X <- pointer to data to free */
 	dex		/* Get pointer to zone */
-	dex		/* X <- cur */
-	stx	*sr0	/* sr0 <- cur */
-	cpx	head	/* Compare cur with head */
+	dex		/* X <- adr */
+	stx	*sr0	/* sr0 <- adr */
+	cpx	head	/* Compare adr with head */
 	bhs	.Lbrowse
-	/* Cur is < head, replace head */
+	/* adr is < head, replace head */
 	ldd	head	/* D <- head */
-	std	2,X	/* POKE(cur+NEXT, head) */
-	stx	head	/* head <- cur */
+	std	2,X	/* POKE(adr+NEXT, head) */
+	stx	head	/* head <- adr */
 	bra	.Lcoalesce
 
-.Lbrowse:
 	/* Browse free list to find insertion point */
-	ldx	head	/* X == adr <- head */
+.Lbrowse:
+	ldx	head	/* X == cur <- head */
 .Lbrowsenext:
 	cpx	#0xFFFF	/* Check end of list */
 	beq	.Leol
-	ldd	2,X	/* D == nxt <- PEEK(adr+NEXT) */
+	ldd	2,X	/* D == nxt <- PEEK(cur+NEXT) */
 	cpd	*sr0
-	bhi	.Leol	/* break if next > cur */
-	xgdx		/* X == adr <-> D == nxt*/
+	bhi	.Leol	/* break if next > adr, D has nxt, X has cur */
+	xgdx		/* X == cur <-> D == nxt : cur = nxt*/
 	bra	.Lbrowsenext
 .Leol:
 	/* Insert into free list */
-	ldx	*sr0
- printf("insert to freelist: curhdr=%04X adr=%04X nxt=%04X\n",cur,adr,nxt);
-        POKE_U16BE(cur+NEXT, nxt);
-        POKE_U16BE(adr+NEXT, cur);
-	/* Coalesce */
+	std	2,x	/* POKE(cur+NEXT, nxt) */
+	xgdx		/* D <- cur */
+	ldx	*sr0	/* X <- adr */
+	std	2,x	/* POKE(adr+NEXT, cur) */
+
+	/* Coalesce - merge block if current block finishes right before next block (cur+size+2==next) */
 .Lcoalesce:
-again:
-    adr = head;
-    while(adr != EOL)
-      {
-        siz = PEEK_U16BE(adr+SIZE);
-        nxt = PEEK_U16BE(adr+NEXT);
-        printf("coalesce_check: adr %04X size %04X after %04X next %04X\n", adr,siz, (adr+siz+2), nxt);
-        if(nxt == adr + siz + 2)
-          {
-            printf("blocks %04X and %04X can be joined\n", adr, nxt);
-            siz += PEEK_U16BE(nxt+SIZE) + 2;
-            POKE_U16BE(adr+SIZE, siz);
-            nxt = PEEK_U16BE(nxt+NEXT);
-            POKE_U16BE(adr+NEXT, nxt);
-            //mem_status();
-            goto again;
-          }
-        adr = nxt;
-      }
-    printf("mem_coalesce done\n");
+	ldx	head	/* X == cur <- head */
+.Lcoalloop:
+	cpx	#0xFFFF	/* end of list reached? */
+	beq	.Lcoaldone
+	stx	*sr2	/* sr2 <- cur (has to be saved for use later in block merge) */
+	ldd	2,X
+	std	*sr1	/*sr1 == D <- nxt == PEEK(cur+NEXT) */
+	ldd	0,X
+	std	*sr0	/*sr0 == D <- siz == PEEK(cur+SIZE) */
+	inx
+	inx		/* Double inc X saves one byte wrt addd #0x0002 */
+	xgdx		/* D <- cur + 2 */
+	addd	*sr0	/* D <- cur + 2 + siz */
+	cpd	*sr1	/* Compare with next */
+	bne	.Lcoalnext
+.Lcoaldo:
+	/* free blocks adr and nxt are adjacent, can be merged */
+	ldx	*sr1	/* X <- nxt */
+	ldd	2,X	/* D <- PEEK(nxt+SIZE) */
+	addd	#2	/* D <- PEEK(nxt+SIZE) + 2 */
+	addd	*sr0	/* D <- siz + nxtsiz + 2 */
+	ldx	*sr2	/* X <- cur */
+	std	0,X	/* POKE(cur+SIZE, D) */
+	ldy	*sr1	/* Y <- nxt */
+	ldd	2,Y	/* D == nxt = PEEK(nxt+NEXT) */
+        std	2,X	/* POKE(cur+NEXT, nxt) */
+	bra	.Lcoalesce	/* Try again */
+.Lcoalnext:
+	/* These blocks are not adjacent, replace cur by next and try again for next pair */
+	ldx	*sr1
+	bra	.Lcoalloop
+.Lcoaldone:
 	rts
 
