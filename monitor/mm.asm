@@ -114,17 +114,56 @@ mm_alloc:
  */
 	.global mm_free
 mm_free:
-	/* Get size and zone pointer */
-	/* Browse free list to find insertion point */
-	/* Insert into free list */
-	/* Coalesce */
+	pulx		/* X <- pointer to data to free */
+	dex		/* Get pointer to zone */
+	dex		/* X <- cur */
+	stx	*sr0	/* sr0 <- cur */
+	cpx	head	/* Compare cur with head */
+	bhs	.Lbrowse
+	/* Cur is < head, replace head */
+	ldd	head	/* D <- head */
+	std	2,X	/* POKE(cur+NEXT, head) */
+	stx	head	/* head <- cur */
+	bra	.Lcoalesce
 
-/* Merge adjacent free zones in the heap
- * After this call, the free list does not contain any pair of contiguous free
- * zones. All free zones are maximally large.
- * Parameters: None
- * Return value: None
- */
-mm_coalesce:
+.Lbrowse:
+	/* Browse free list to find insertion point */
+	ldx	head	/* X == adr <- head */
+.Lbrowsenext:
+	cpx	#0xFFFF	/* Check end of list */
+	beq	.Leol
+	ldd	2,X	/* D == nxt <- PEEK(adr+NEXT) */
+	cpd	*sr0
+	bhi	.Leol	/* break if next > cur */
+	xgdx		/* X == adr <-> D == nxt*/
+	bra	.Lbrowsenext
+.Leol:
+	/* Insert into free list */
+	ldx	*sr0
+ printf("insert to freelist: curhdr=%04X adr=%04X nxt=%04X\n",cur,adr,nxt);
+        POKE_U16BE(cur+NEXT, nxt);
+        POKE_U16BE(adr+NEXT, cur);
+	/* Coalesce */
+.Lcoalesce:
+again:
+    adr = head;
+    while(adr != EOL)
+      {
+        siz = PEEK_U16BE(adr+SIZE);
+        nxt = PEEK_U16BE(adr+NEXT);
+        printf("coalesce_check: adr %04X size %04X after %04X next %04X\n", adr,siz, (adr+siz+2), nxt);
+        if(nxt == adr + siz + 2)
+          {
+            printf("blocks %04X and %04X can be joined\n", adr, nxt);
+            siz += PEEK_U16BE(nxt+SIZE) + 2;
+            POKE_U16BE(adr+SIZE, siz);
+            nxt = PEEK_U16BE(nxt+NEXT);
+            POKE_U16BE(adr+NEXT, nxt);
+            //mem_status();
+            goto again;
+          }
+        adr = nxt;
+      }
+    printf("mem_coalesce done\n");
 	rts
 
