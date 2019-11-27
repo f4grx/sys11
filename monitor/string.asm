@@ -8,7 +8,8 @@
 	.global strlen
 strlen:
 	pulx
-	ldd	#0
+	clra
+	clrb		/* Clear D in 2 bytes instead of 3 using ldd */
 .Lagain:
 	ldaa	0,X	/* Get pointed char */
 	beq	.Ldone	/* Pointed char zero: end of string */
