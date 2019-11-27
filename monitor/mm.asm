@@ -100,7 +100,8 @@ mm_alloc:
 .Ldone:
 	/* We reached the end of free zones without finding a big enough one */
 	/* We have to fail the allocation by returning NULL */
-	ldd	#0
+	clra	/* DL <- 0 */
+	clrb	/* DH <= 0 */
 .Lend:
 	rts
 
