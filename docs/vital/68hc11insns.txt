@@ -14,23 +14,29 @@ Flags
 
 Flags SHXINZVC
 indicated: can change
-followed by zero or one: set to value
+followed by zero or one: set to value by c: can be cleared
+
+Compares R=A - B
+N=R7
+Z=!R0&!R1&!R2&!R3&!R4&!R5&!R6&!R7
+V=A7&!B7&!R7+!A7&B7&R7
+C=!A7&B7+B7&R7+R7&!A7
 
 Instructions
 
-ABA	A <= A + B
+ABA	A <- A + B
 HNZVC
  N 2 1B
 
-ABX	X <= X + B
+ABX	X <- X + B
 -
  N 3 3A
 
-ABY	Y <= Y + B
+ABY	Y <- Y + B
 -
  N 4 18 3A
 
-ADCA	A <= A + C + (mem)
+ADCA	A <- A + C + (M)
 HNZVC
  I 2 89 ii
  D 3 99 dd
@@ -38,7 +44,7 @@ HNZVC
  X 4 A9 oo
  Y 5 18 A9 oo
 
-ADCB	B <= B + C + (mem)
+ADCB	B <- B + C + (M)
 HNZVC
  I 2 C9 ii
  D 3 D9 dd
@@ -46,7 +52,7 @@ HNZVC
  X 4 E9 oo
  Y 5 18 E9 oo
 
-ADDA	A <= A + (mem)
+ADDA	A <- A + (M)
 HNZVC
  I 2 8B ii
  D 3 9B dd
@@ -54,7 +60,7 @@ HNZVC
  X 4 AB oo
  Y 5 18 AB oo
 
-ADDB	B <= B + (mem)
+ADDB	B <- B + (M)
 HNZVC
  I 2 CB ii
  D 3 DB dd
@@ -62,7 +68,7 @@ HNZVC
  X 4 EB oo
  Y 5 18 EB oo
 
-ADDD	D <= D + (mem16)
+ADDD	D <- D + (M:M+1)
 NZVC
  I 4 C3 jj kk
  D 5 D3 dd
@@ -70,7 +76,7 @@ NZVC
  X 6 E3 oo
  Y 7 18 E3 oo
 
-ANDA	A <= A AND (mem)
+ANDA	A <- A AND (M)
 NZ V0
  I 2 84 ii
  D 3 94 dd
@@ -78,7 +84,7 @@ NZ V0
  X 4 A4 oo
  Y 5 18 A4 oo
 
-ANDB	B <= B AND (mem)
+ANDB	B <- B AND (M)
 NZ V0
  I 2 C4 ii
  D 3 D4 dd
@@ -86,73 +92,89 @@ NZ V0
  X 4 E4 oo
  Y 5 18 E4 oo
 
-ASL	{}
+ASL	Arith Shift Left (M)
+C <- M7, M7..1 <- M6..0, M0 <- 0
 NZVC
  E 6 78 hh ll
  X 6 68 oo
  Y 7 18 68 oo
 
-ASLA	{}
+ASLA	Arith Shift Left A
+C <- A7, A7..1 <- A7..0, A0 <- 0
 NZVC
  N 2 48
 
-ASLB	{}
+ASLB	Arith Shift Left B
+C <- B7, B7..1 <- B7..0, B0 <- 0
 NZVC
  N 2 58
 
-ASLD	{}
+ASLD	Arith Shift Left D
+C <- A7, A7..1 <- A6..0, A0 <- B7, B7..1 <- B6..0, B0 <- 0 
 NZVC
  N 3 05
 
-ASR	{}
+ASR	Arith Shift Right (M)
+C <- M0, M6..0 <- M7..1, M7 <- M6
 NZVC
  E 6 77 hh ll
  X 6 67 oo
  Y 7 18 67 oo
 
-ASRA	{}
+ASRA	Arith Shift Right A
+C <- A0, A6..0 <- A7..1, A7 <- A6
 NZVC
  N 2 47
 
-ASRB	{}
+ASRB	Arith Shift Right B
+C <- B0, B6..0 <- B7..1, B7 <- B6
 NZVC
  N 2 57
 
-BCC	Branch Carry Clear
+BCC	Branch if Carry Clear
+if(!C): PC <- PC + 2 + rr
 -
  R 3 24 rr
 
 BCLR	Bit Clear
+(M) <- (M) AND NOT (PC + (Y?3:2))
 NZ V0
  D 6 15 dd mm
  X 7 1D oo mm
  Y 8 18 1D oo mm
 
-BCS	Branch Carry Set
+BCS	Branch if Carry Set
+if(C): PC <- PC + 2 + rr
 -
  R 3 25 rr
 
-BEQ	Branch Equal
+BEQ	Branch if Equal
+if(Z): PC <- PC + 2 + rr
 -
  R 3 27 rr
 
-BGE	{}
+BGE	Branch if Greater Or Equal (signed): ACC >= (M)
+if(!(N xor V)): PC <- PC + 2 + rr
 -
  R 3 2C rr
 
-BGT	{}
+BGT	Branch if Greater Than Zero (signed): ACC > (M)
+if(!(Z or (N xor V))): PC <- PC + 2 + rr
 -
  R 3 2e rr
 
-BHI	{}
+BHI	Branch if Higher (unsigned): ACC > (M)
+if(!(C or Z)): PC <- PC + 2 + rr
 -
  R 3 22 rr
 
-BHS	{}
+BHS	Branch if Higher Or Same (unsigned): ACC >= (M)
+if(!C): PC <- PC + 2 + rr
 -
  R 3 24 rr
 
-BITA	{}
+BITA	Bit test A
+Update flags with result of A AND (M)
 NZ V0
  I 2 85 ii
  D 3 95 dd
@@ -160,7 +182,8 @@ NZ V0
  X 4 A5 oo
  Y 5 18 A5 oo
 
-BITB	{}
+BITB	Bit test B
+Update flags with result of B AND (M)
 NZ V0
  I 2 C5 ii
  D 3 D5 dd
@@ -168,103 +191,125 @@ NZ V0
  X 4 E5 oo
  Y 5 18 E5 oo
 
-BLE	{}
+BLE	Branch if Less Than Equal (signed): ACC <= (M)
+if(Z or (N xor V)): PC <- PC + 2 + rr
 -
  R 3 2F rr
 
-BLO	{}
+BLO	Branch if Lower (unsigned): ACC < (M)
+if(C): PC <- PC + 2 + rr
 -
  R 3 25 rr
 
-BLS	{}
+BLS	Branch if Lower Or Same (unsigned): ACC <= (M)
+if(C or Z): PC <- PC + 2 + rr
 -
  R 3 23 rr
 
-BLT	{}
+BLT	Branch if Less Than Zero (signed): ACC < (M)
+if(N xor V): PC <- PC + 2 + rr
 -
  R 3 2D rr
 
-BMI	{}
+BMI	Branch if Minus
+if(N): PC <- PC + 2 + rr
 -
  R 3 2B rr
 
-BNE	Branch Not Equal
+BNE	Branch if Not Equal
+if(!Z): PC <- PC + 2 + rr
 -
  R 3 26 rr
 
-BPL	{}
+BPL	Branch if Plus
+if(!N): PC <- PC + 2 + rr
 -
  R 3 2A rr
 
 BRA	Branch Always
+PC <- PC + 2 + rr
 -
  R 3 20 rr
 
-BRCLR	{}
+BRCLR	Branch if Bit(s) Clear
+if( (M) AND (PC+ (Y?3:2)) == 0): PC <- PC + (Y?5:4) + rr
 -
  D 6 13 dd mm rr
  X 7 1F oo mm rr
  Y 8 18 1F oo mm rr
 
 BRN	Branch Never
+2-bytes / 3-cycles NOP
 -
  R 3 21 rr
 
 BRSET	{}
+if( ~(M) AND (PC+ (Y?3:2)) == 0): PC <- PC + (Y?5:4) + rr
 -
  D 6 12 dd mm rr
  X 7 1E oo mm rr
  Y 8 18 1E oo mm rr
 
 BSET	Bit Set
+(M) <- (M) OR (PC + (Y?3:2))
 NZ V0
  D 6 14 dd mm
  X 7 1C oo mm
  Y 8 18 1C oo mm
 
 BSR	Branch To Subroutine
+PC <- PC+2, (SP) <- PCL, SP--, (SP) <- PCH, SP--, PC <- PC+rel
 -
  R 3 8D rr
 
-BVC	{}
+BVC	Branch if Overflow Clear
+if(!V): PC <- PC + 2 + rr
 -
  R 3 28 rr
 
-BVS	{}
+BVS	Branch if Overflow Set
+if(V): PC <- PC + 2 + rr
 -
  R 3 29 rr
 
 CBA	Compare A to B
-NZVC
+Update flags with result of A - B as shown on top
  N 2 11
 
 CLC	Clear Carry
+C <- 0
 C0
  N 2 0C
 
 CLI	Clear Interrupt mask (Enable)
+I <- 0
 I0
  N 2 0E
 
-CLR	(mem) <= 0	Clear Memory Byte
+CLR	Clear Memory Byte
+(M) <- 0
 N0 Z1 V0 C0
  E 6 7F hh ll
  X 6 6F oo
  Y 7 18 6F oo
 
-CLRA	A <= 0	Clear Accumulator
+CLRA	Clear A
+A <- 0
 N0 Z1 V0 C0
  N 2 4F
 
-CLRB	B <= 0	Clear Accumulator
+CLRB	Clear B
+B <- 0
 N0 Z1 V0 C0
  N 2 5F
 
-CLV	{}
+CLV	Clear Overflow
+V <- 0
 V0
  N 2 0A
 
-CMPA	{}
+CMPA	Compare memory with A
+Update flags with result of A - (M) as shown on top
 NZVC
  I 2 81 ii
  D 3 91 dd
@@ -272,7 +317,8 @@ NZVC
  X 4 A1 oo
  Y 5 18 A1 oo
 
-CMPB	{}
+CMPB	Compare memory with B
+Update flags with result of B - (M) as shown on top
 NZVC
  I 2 C1 ii
  D 3 D1 dd
@@ -280,21 +326,25 @@ NZVC
  X 4 E1 oo
  Y 5 18 E1 oo
 
-COM	{}
-NZ V0 C1
+COM	One complement Memory
+(M) <- 0xFF - (M)
+NZ V0 C1(For compat with MC6800)
  E 6 73 hh ll
  X 6 63 oo
  Y 7 18 83 oo
 
-COMA	{}
-NZ V0 C1
+COMA	One Complement A
+A <- 0xFF - A
+NZ V0 C1(For compat with MC6800)
  N 2 43
 
-COMB	{}
-NZ V0 C1
+COMB	One Complement B
+B <- 0xFF - B
+NZ V0 C1(For compat with MC6800)
  N 2 53
 
-CPD	{}
+CPD	Compare D with memory
+Update flags with result of D - (M:M+1) as shown on top
 NZVC
  I 5 1A 83 jj kk
  D 6 1A 93 dd
@@ -302,7 +352,8 @@ NZVC
  X 7 1A A3 oo
  Y 7 CD A3 oo
 
-CPX	{}
+CPX	Compare X with memory
+Update flags with result of X - (M:M+1) as shown on top
 NZVC
  I 4 8C jj kk
  D 5 9C dd
@@ -311,6 +362,7 @@ NZVC
  Y 7 CD AC oo
 
 CPY	{}
+Update flags with result of Y - (M:M+1) as shown on top
 NZVC
  I 5 18 8C jj kk
  D 6 18 9C dd
@@ -319,36 +371,44 @@ NZVC
  Y 7 18 AC oo
 
 DAA	Decimal Adjust Accum A
+Fix A so it represents the BCD encoded sum of two BCD encoded operands, after execution of ABA,ADD or ADC.
 NZVC
  N 2 19
 
-DEC	{}
+DEC	Decrement memory
+(M) <- (M) - 1
 NZV
  E 6 7A hh ll
  X 6 6A oo
  Y 7 18 6A oo
 
-DECA	{}
+DECA	Decrement A
+A <- A - 0x01
 NZV
  N 2 4A
 
-DECB	{}
+DECB	Decrement B
+B <- B - 0x01
 NZV
  N 2 5A
 
-DES	{}
+DES	Decrement SP
+SP <- SP - 0x0001
 -
  N 3 34
 
-DEX	{}
+DEX	Decrement X
+X <- X - 0x0001
 Z
  N 3 09
 
-DEY	{}
+DEY	Decrement Y
+Y <- Y - 0x0001
 Z
  N 4 18 09
 
-EORA	{}
+EORA	Exclusive Or A with memory
+A <- A XOR (M)
 NZ V0
  I 2 88 ii
  D 3 98 dd
@@ -356,7 +416,8 @@ NZ V0
  X 4 A8 oo
  Y 5 18 A8 oo
 
-EORB	{}
+EORB	Exclusive Or B with memory
+B <- B XOR (M)
 NZ V0
  I 2 C8 ii
  D 3 D8 dd
@@ -364,53 +425,64 @@ NZ V0
  X 4 E8 oo
  Y 5 18 E8 oo
 
-FDIV	{}
+FDIV	Fractional Division, radix point at same place in X and D, left of X15 in quotient.
+Perform D/X, X <- Quotient, D <- Remainder, V set if X<=D Z set and X <- FFFFh if X was zero
 ZVC
  N 41 03
 
-IDIV	{}
+IDIV	Integer Division, radix point at same place in X and D, right of X0 in quotient.
+Perform D/X, X <- Quotient, D <- Remainder, Z set and X <- FFFFh if X was zero
 Z V0 C
  N 41 02
 
-INC	{}
+INC	Increment memory
+(M) <- (M) + 0x01
 NZV
  E 6 7C hh ll
  X 6 6C oo
  Y 7 18 6C oo
 
-INCA	{}
+INCA	Increment A
+A <- A + 0x01
 NZV
  N 2 4C
 
-INCB	{}
+INCB	Increment B
+B <- B + 0x01
 NZV
  N 2 5C
 
-INS	{}
+INS	Increment SP
+SP <- SP + 0x0001
  N 3 31
 
-INX	{}
+INX	Increment X
+X <- X + 0x0001
 Z
  N 3 08
 
-INY	{}
+INY	Increment Y
+Y <- Y + 0x0001
 Z
  N 4 18 08
 
 JMP	Jump
+PC <- hhll or PC <- X/Y + ff
 -
  E 3 7E hh ll
  X 3 6E ff
  Y 4 18 6E ff
 
-JSR	(SP) <= PCL, SP--, (SP) <= PCH, SP--
+JSR	Jump to Subroutine
+PC <- PC+Y?3:2, (SP) <- PCL, SP--, (SP) <- PCH, SP--, PC<- dd/hhll/X+oo/Y+oo
 -
  D 5 9D dd
  E 6 BD hh ll
  X 6 AD oo
  Y 7 18 AD oo
 
-LDAA	A <= (mem)
+LDAA	Load Accumulator A
+A <- (mem)
 NZ V0
  I 2 86 ii
  D 3 96 dd
@@ -418,7 +490,8 @@ NZ V0
  X 4 A6 oo
  Y 5 18 A6 oo
 
-LDAB	B <= (mem)
+LDAB	Load Accumulator B
+B <- (mem)
 NZ V0
  I 2 C6 ii
  D 3 D6 dd
@@ -426,7 +499,8 @@ NZ V0
  X 4 E6 oo
  Y 5 18 E6 oo
 
-LDD	{}
+LDD	Load Double Acumulator D
+D <- (mem16)
 NZ V0
  I 3 CC jj kk
  D 4 DC dd
@@ -434,7 +508,8 @@ NZ V0
  X 5 EC oo
  Y 6 18 EC oo
 
-LDS	SP <= (mem)
+LDS	Load Stack Pointer
+SP <- (mem16)
 NZ V0
  I 3 8E jj kk
  D 4 9E dd
@@ -442,7 +517,8 @@ NZ V0
  X 5 AE oo
  Y 6 18 AE oo
 
-LDX	X <= (mem)
+LDX	Load Register X
+X <- (mem16)
 NZ V0
  I 3 CE jj kk
  D 4 DE dd
@@ -450,7 +526,8 @@ NZ V0
  X 5 EE oo
  Y 6 CD EE oo
 
-LDY	Y <= (mem)
+LDY	Load register Y
+Y <- (mem16)
 NZ V0
  I 4 18 CE jj kk
  D 5 18 DE dd
@@ -458,65 +535,79 @@ NZ V0
  X 6 1A EE oo
  Y 6 18 EE oo
 
-LSL	{}
+LSL	Logical Shift Left Memory
+C <- M7, M7..1 <- M6..0, M0 <-0
 NZVC
  E 6 78 hh ll
  X 6 68 oo
  Y 7 18 68 oo
 
-LSLA	{}
+LSLA	Logical Shift Left A
+C <- A7, A7..1 <- A6..0, A0 <-0
 NZVC
  N 2 48
 
-LSLB	{}
+LSLB	Logical Shift Left B
+C <- B7, B7..1 <- B6..0, B0 <- 0
 NZVC
  N 2 58
 
-LSLD	{}
+LSLD	Logical Shift Left D
+C <- D15, D15..1 <- D14..0, D0 <- 0
 NZVC
  N 3 05
 
-LSR	{}
+LSR	Logical Shift Right Memory
+C <- M0, M6..0 <- M7..1, M7 <- 0
 N0 ZVC
  E 6 74 hh ll
  X 6 64 oo
  Y 7 18 64 oo
 
-LSRA	{}
+LSRA	Logical Shift Right A
+C <- A0, A6..0 <- A7..1, A7 <- 0
 N0 ZVC
  N 2 44
 
-LSRB	{}
+LSRB	Logical Shift Right B
+C <- B0, B6..0 <- B7..1, B7 <- 0
 N0 ZVC
  N 2 54
 
-LSRD	{}
+LSRD	Logical Shift Right D
+C <- D0, D14..0 <- D15..1, D15 <- 0
 N0 ZVC
  N 3 04
 
-MUL	{}
-C
+MUL	Multiply unsigned
+D <- A x B
+C(R7)
  N 10 3D
 
-NEG	{}
+NEG	Negate Memory (twos complement, 0x80 is unchanged)
+(M) <- 0x00 - (M) = -(M)
 NZVC
  E 6 70 hh ll
  X 6 60 oo
  Y 7 18 60 oo
 
-NEGA	{}
+NEGA	Negate A
+A <- 0x00 - A
 NZVC
  N 2 40
 
-NEGB	{}
+NEGB	Negate B
+B <- 0x00 - B
 NZVC
  N 2 50
 
-NOP	{}
+NOP	No Operation
+(nothing)
 -
  N 2 01
 
-ORAA	A <= A OR (mem)
+ORAA	Inclusive OR A with memory
+A <- A OR (M)
 NZ V0
  I 2 8A ii
  D 3 9A dd
@@ -524,7 +615,8 @@ NZ V0
  X 4 AA oo
  Y 5 18 AA oo
 
-ORAB	{}
+ORAB	Inclusive OR B with mem
+B <- B OR (M)
 NZ V0
  I 2 CA ii
  D 3 DA dd
@@ -532,78 +624,97 @@ NZ V0
  X 4 EA oo
  Y 5 18 EA oo
 
-PSHA	{}
+PSHA	Push A
+(SP) <- A, SP--
 -
  N 3 36
 
-PSHB	{}
+PSHB	Push B
+(SP) <- B, SP--
 -
  N 3 37
 
-PSHX	{}
+PSHX	Push X
+(SP) <- XL, SP--, (SP) <- XH, SP--
 -
  N 4 3C
 
-PSHY	{}
+PSHY	Push Y
+(SP) <- YL, SP--, (SP) <- YH, SP--
 -
  N 5 18 3C
 
-PULA	{}
+PULA	Pull A
+SP++, A <- (SP)
 -
  N 4 32
 
-PULB	{}
+PULB	Pull B
+SP++, B <- (SP)
 -
  N 4 33
 
-PULX	{}
+PULX	Pull X
+SP++, XH <- (SP), SP++, XL <- (SP)
 -
  N 5 38
 
 PULY	{}
+SP++, YH <- (SP), SP++, YL <- (SP)
 -
  N 6 18 38
 
-ROL	{}
+ROL	Rotate Left Memory
+C <- M7, M7..1 <- M6..0, M0 <- C
 NZVC
  E 6 79 hh ll
  X 6 69 oo
  Y 7 18 69 oo
 
-ROLA	{}
+ROLA	Rotate Left A
+C <- A7, A7..1 <- A6..0, A0 <- C
 NZVC
  N 2 49
 
-ROLB	{}
+ROLB	Rotate Left B
+C <- B7, B7..1 <- B6..0, B0 <- C
 NZVC
  N 2 59
 
-ROR	{}
+ROR	Rotate Right Memory
+C <- M0, M6..0 <- M7..1, M7 <- C
 NZVC
  E 6 76 hh ll
  X 6 66 oo
  Y 7 18 66 oo
 
-RORA	{}
+RORA	Rotate Right A
+C <- A0, A6..0 <- A7..1, A7 <- C
 NZVC
  N 2 46
 
-RORB	{}
+RORB	Rotate Right B
+C <- B0, B6..0 <- B7..1, B7 <- C
 NZVC
  N 2 56
 
 RTI	Return From Interrupt
+SP++, CCR <- (SP), SP++,  B <- (SP), SP++,  A <- (SP), 
+SP++,  XH <- (SP), SP++, XL <- (SP), SP++, YH <- (SP), SP++, YL <- (SP), SP++, PCH <- (SP), SP++, PCL <- (SP)
 S Xc HINZVC
  N 12 3B
 
-RTS	SP++, PCH <= (SP), SP++, PCL <= (SP)
+RTS	Return From Subroutine
+SP++, PCH <- (SP), SP++, PCL <- (SP)
  N 5 39
 
-SBA	{}
+SBA	Subtract Accumulators
+A <- A - B
 NZVC
  N 2 10
 
-SBCA	{}
+SBCA	Subtract Memory from A with Carry
+A <- A - (M) - C
 NZVC
  I 2 82 ii
  D 3 92 dd
@@ -611,7 +722,8 @@ NZVC
  X 4 A2 oo
  Y 5 18 A2 oo
 
-SBCB	{}
+SBCB	Subtract Memory from B with Carry
+B <- B - (M) - C
 NZVC
  I 2 C2 ii
  D 3 D2 dd
@@ -619,65 +731,78 @@ NZVC
  X 4 E2 oo
  Y 5 18 E2 oo
 
-SEC	{}
+SEC	Set Carry
+C <- 1
 C1
  N 2 0D
 
 SEI	Set Interrupt mask (Disable)
+I <- 1
 I1
  N 2 0F
 
-SEV	{}
+SEV	Set Overflow
+V <- 1
 V1
  N 2 0B
 
-STAA	(mem) <= A
+STAA	Store Accumulator A
+(M) <- A
 NZ V0
  D 3 97 dd
  E 4 B7 hh ll
  X 4 A7 oo
  Y 5 18 A7 oo
 
-STAB	(mem) <= B
+STAB	Store Accumulator B
+(M) <- B
 NZ V0
  D 3 D7 dd
  E 4 F7 hh ll
  X 4 E7 oo
  Y 5 18 E7 oo
 
-STD	{}
+STD	Store Accumulator D
+(M) <- A, (M+1) <- B // (M..M+1) <- D
 NZ V0
  D 4 DD dd
  E 5 FD hh ll
  X 5 ED oo
  Y 6 18 ED oo
 
-STOP	{}
+STOP	Stop and wait for RESET, XIRQ or IRQ. Registers, mem, IO pins unaffected.
+if(S): NOP, else Halt clocks and go to standby mode.
+On restart, if X is clear, service XIRQ, else normal opcode fetch.
+On some HC11 it is better to have a NOP right before a STOP.
 -
  N 2 CF
 
-STS	{}
+STS	Store Stack pointer
+(M) <- SPH, (M+1) <- SPL
 NZ V0
  D 4 9F dd
  E 5 BF hh ll
  X 5 AF oo
  Y 6 18 AF oo
 
-STX	(mem) <= X
+STX	Store X
+(M) <- X
 NZ V0
  D 4 DF dd
  E 5 FF hh ll
  X 5 EF oo
  Y 6 CD EF oo
 
-STY	(mem) <= Y
+STY	Store Y
+(M) <- Y
 NZ V0
  D 4 18 DF dd
  E 5 18 FF hh ll
  X 5 1A EF oo
  Y 6 18 EF oo
 
-SUBA	{}
+SUBA	Subtract Memory from A
+A <- A - (M)
 NZVC
  I 2 80 ii
  D 3 90 dd
@@ -685,7 +810,8 @@ NZVC
  X 4 A0 oo
  Y 5 18 A0 oo
 
-SUBB	{}
+SUBB	Subtract Memory from B
+B <- B - (M)
 NZVC
  I 2 C0 ii
  D 3 D0 dd
@@ -693,7 +819,8 @@ NZVC
  X 4 E0 oo
  Y 5 18 E0 oo
 
-SUBD	{}
+SUBD	Subtract memory from D
+D <- D - (M:M+1)
 NZVC
  I 4 83 jj kk
  D 5 93 dd
@@ -702,70 +829,87 @@ NZVC
  Y 7 18 A3 oo
 
 SWI	Software Interrupt
+PC++, (SP) <- PCL, SP++, (SP) <- PCH, SP++,
+(SP) <- YL, SP++, (SP) <- YH, SP++, (SP) <- XL, SP++, (SP) <- XH,
+SP++, (SP) <- A, SP++, (SP) <- B, SP++, (SP) <- CCR, I <- 1, PC <- SWI vector
 I1
  N 14 3F
 
-TAB	{}
+TAB	Transfer A to B
+B <- A
 NZ V0
  N 2 16
 
-TAP	{}
+TAP	Transfer A to CCR
+CCR <- A
 S Xc HINZVC
  N 2 06
 
-TBA	{}
+TBA	Transfer B to A
+A <- B
 NZ V0
  N 2 17
 
-TEST	{}
+TEST	Infinitely increment Address Bus until reset. Usable in test mode only.
 -
  N * 00
 
-TPA	{}
+TPA	Transfer CCR to A
+A <- CCR
 -
  N 2 07
 
-TST	{}
+TST	Test memory
+Compute flags from (M) - 0x00
 NZ V0 C0
  E 6 7D hh ll
  X 6 6D oo
  Y 7 18 6D oo
 
-TSTA	{}
+TSTA	Test Accumulator A
+Compute flags from A - 0x00
 NZ V0 C0
  N 2 4D
 
-TSTB	{}
+TSTB	Test Accumulator B
+Compute flags from B - 0x00
 NZ V0 C0
  N 2 5D
 
-TSX	{}
+TSX	Transfer SP to X
+X <- SP
 -
  N 3 30
 
-TSY	{}
+TSY	Transfer SP to Y
+Y <- SP
 -
  N 4 18 30
 
-TXS	{}
+TXS	Transfer X to SP
+SP <- X
 -
  N 3 35
 
-TYS	{}
+TYS	Transfer Y to SP
+SP <- Y
 -
  N 4 18 35
 
-WAI	{}
+WAI	Wait for interrupt in low power mode
+PC++, (SP) <- PCL, SP++, (SP) <- PCH, SP++,
+(SP) <- YL, SP++, (SP) <- YH, SP++, (SP) <- XL, SP++, (SP) <- XH,
+SP++, (SP) <- A, SP++, (SP) <- B, SP++, (SP) <- CCR
 -
  N ** 3E
 
 XGDX	Exchange D and X
-X <=> D
+X <-> D
 -
  N 3 8F
 
 XGDY	Exchange D and Y
-Y <=> D
+Y <-> D
 -
  N 4 18 8F
 
