@@ -1224,20 +1224,6 @@ F 3 "" H 600 2250 60  0000 C CNN
 $EndComp
 Text Label 12000 4600 0    50   ~ 0
 bS0
-Text Label 11500 4600 2    50   ~ 0
-bS1
-Text Label 12000 4500 0    50   ~ 0
-bS2
-Text Label 11500 4500 2    50   ~ 0
-bS3
-Text Label 12000 4400 0    50   ~ 0
-bS4
-Text Label 11500 4400 2    50   ~ 0
-bS5
-Text Label 12000 4300 0    50   ~ 0
-bS6
-Text Label 11500 4300 2    50   ~ 0
-bS7
 Wire Wire Line
 	11350 4600 11500 4600
 Wire Wire Line
@@ -1254,20 +1240,6 @@ Wire Wire Line
 	11350 4000 11500 4000
 Text Label 11500 3900 2    50   ~ 0
 bD7
-Text Label 12000 3900 0    50   ~ 0
-bD6
-Text Label 11500 4000 2    50   ~ 0
-bD5
-Text Label 12000 4000 0    50   ~ 0
-bD4
-Text Label 11500 4100 2    50   ~ 0
-bD3
-Text Label 12000 4100 0    50   ~ 0
-bD2
-Text Label 11500 4200 2    50   ~ 0
-bD1
-Text Label 12000 4200 0    50   ~ 0
-bD0
 Wire Wire Line
 	6650 5150 6750 5150
 Wire Wire Line
@@ -1510,22 +1482,6 @@ Connection ~ 7000 4100
 Wire Bus Line
 	7000 4100 7250 4100
 Connection ~ 7250 4100
-Text Label 12000 3800 0    50   ~ 0
-bA0
-Text Label 11500 3800 2    50   ~ 0
-bA1
-Text Label 12000 3700 0    50   ~ 0
-bA2
-Text Label 11500 3700 2    50   ~ 0
-bA3
-Text Label 12000 3600 0    50   ~ 0
-bA4
-Text Label 11500 3600 2    50   ~ 0
-bA5
-Text Label 12000 3500 0    50   ~ 0
-bA6
-Text Label 11500 3500 2    50   ~ 0
-bA7
 Entry Wire Line
 	11250 3900 11350 3800
 Entry Wire Line
@@ -1708,16 +1664,6 @@ Connection ~ 11250 4750
 Connection ~ 11550 4750
 Wire Bus Line
 	11550 4750 12250 4750
-Text Label 12000 3400 0    50   ~ 0
-bA8
-Text Label 11500 3400 2    50   ~ 0
-bA9
-Text Label 12000 3300 0    50   ~ 0
-bA10
-Text Label 11500 3300 2    50   ~ 0
-bA11
-Text Label 12000 3200 0    50   ~ 0
-bA12
 Entry Wire Line
 	12150 3800 12250 3900
 Entry Wire Line
@@ -1932,8 +1878,6 @@ Text Label 10150 5950 3    50   ~ 0
 ~CSXRAM
 Text Label 12000 2700 0    50   ~ 0
 bE
-Text Label 11500 3100 2    50   ~ 0
-b~CSRAM
 Entry Wire Line
 	12150 3300 12250 3400
 Entry Wire Line
@@ -1944,8 +1888,6 @@ Text Label 12000 3000 0    50   ~ 0
 bRST
 Text Label 11250 2900 2    50   ~ 0
 bXIRQ
-Text Label 12000 3100 0    50   ~ 0
-bR~W
 Text Label 3500 5850 2    50   ~ 0
 ~CSIO
 $Comp
@@ -2935,8 +2877,6 @@ Wire Wire Line
 	11050 3000 11050 3100
 Wire Wire Line
 	10950 2900 10950 3100
-Text Label 11500 3200 2    50   ~ 0
-bA13
 Wire Wire Line
 	12000 2900 12200 2900
 Wire Wire Line
@@ -3334,4 +3274,64 @@ Wire Bus Line
 	11250 3200 11250 4750
 Wire Bus Line
 	3350 1750 3350 4300
+Text Label 12000 3100 0    50   ~ 0
+bR~W
+Text Label 12000 3300 0    50   ~ 0
+bA10
+Text Label 12000 3400 0    50   ~ 0
+bA8
+Text Label 12000 3500 0    50   ~ 0
+bA6
+Text Label 12000 3600 0    50   ~ 0
+bA4
+Text Label 12000 3700 0    50   ~ 0
+bA2
+Text Label 12000 3800 0    50   ~ 0
+bA0
+Text Label 12000 3200 0    50   ~ 0
+bA12
+Text Label 11500 3100 2    50   ~ 0
+b~CSRAM
+Text Label 11500 3200 2    50   ~ 0
+bA13
+Text Label 11500 3300 2    50   ~ 0
+bA11
+Text Label 11500 3400 2    50   ~ 0
+bA9
+Text Label 11500 3500 2    50   ~ 0
+bA7
+Text Label 11500 3600 2    50   ~ 0
+bA5
+Text Label 11500 3700 2    50   ~ 0
+bA3
+Text Label 11500 3800 2    50   ~ 0
+bA1
+Text Label 11500 4000 2    50   ~ 0
+bD5
+Text Label 11500 4100 2    50   ~ 0
+bD3
+Text Label 11500 4200 2    50   ~ 0
+bD1
+Text Label 11500 4300 2    50   ~ 0
+bS7
+Text Label 11500 4500 2    50   ~ 0
+bS3
+Text Label 11500 4400 2    50   ~ 0
+bS5
+Text Label 11500 4600 2    50   ~ 0
+bS1
+Text Label 12000 3900 0    50   ~ 0
+bD6
+Text Label 12000 4000 0    50   ~ 0
+bD4
+Text Label 12000 4100 0    50   ~ 0
+bD2
+Text Label 12000 4200 0    50   ~ 0
+bD0
+Text Label 12000 4300 0    50   ~ 0
+bS6
+Text Label 12000 4400 0    50   ~ 0
+bS4
+Text Label 12000 4500 0    50   ~ 0
+bS2
 $EndSCHEMATC

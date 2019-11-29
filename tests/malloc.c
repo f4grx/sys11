@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MEMSTART 0x100
 #define MEMSIZE 256
-uint8_t memory[MEMSIZE];
+uint8_t memory[65536];
 uint16_t head;
 
 #define SIZE 0
@@ -16,11 +17,6 @@ uint16_t head;
 /* ************************************************************************* */
 static inline void POKE_U16BE(uint16_t addr, uint16_t val)
   {
-    if(addr >= MEMSIZE)
-      {
-        printf("ERROR trying to store at addr %04X\n",addr);
-        return;
-      }
     memory[addr+0] = val>>8;
     memory[addr+1] = val&0xFF;
   }
@@ -28,20 +24,15 @@ static inline void POKE_U16BE(uint16_t addr, uint16_t val)
 /* ************************************************************************* */
 static inline uint16_t PEEK_U16BE(uint16_t addr)
   {
-    if(addr >= MEMSIZE)
-      {
-        printf("ERROR trying to load at addr %04X\n",addr);
-        return 0xFFFF;
-      }
     return (((uint16_t)memory[addr]) << 8) | ((uint16_t)memory[addr+1]);
   }
 
 /* ************************************************************************* */
 void mem_init(void)
   {
-  POKE_U16BE(SIZE, MEMSIZE-2);
-  POKE_U16BE(NEXT, EOL);
-  head = 0;
+  POKE_U16BE(MEMSTART+SIZE, MEMSIZE-2);
+  POKE_U16BE(MEMSTART+NEXT, EOL);
+  head = MEMSTART;
   }
 
 /* ************************************************************************* */
@@ -49,7 +40,7 @@ void mem_status(void)
   {
     uint16_t adr;
     printf("mem status\n");
-    for(adr=0; adr < MEMSIZE; adr+=2)
+    for(adr=MEMSTART; adr < MEMSTART+MEMSIZE; adr+=2)
       {
         if( (adr & 0x1F) == 0x00)
           printf("%04X: ",adr);
@@ -104,7 +95,8 @@ uint16_t mem_alloc(uint16_t size)
             //Remove from free list
             if(adr == head)
               head = nxtadr;
-            return adr+2;
+            POKE_U16BE(adr+NEXT, 0);
+            return adr+NEXT;
           }
         adr = nxtadr;
       }

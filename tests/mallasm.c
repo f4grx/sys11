@@ -22,11 +22,16 @@ struct {
 
 void calc_flags_16(uint16_t a, uint16_t b)
   {
-  int32_t res32 = (int32_t)a - (int32_t)b;
-  flags.Z = (res32 == 0);
-  flags.N = (res32<0);
-  flags.C = (res32>>16);
-  flags.V = 0;
+//N=R7
+//Z=!R0&!R1&!R2&!R3&!R4&!R5&!R6&!R7
+//V=A7&!B7&!R7+!A7&B7&R7
+//C=!A7&B7+B7&R7+R7&!A7
+
+  int16_t res = a - b;
+  flags.Z = (res == 0);
+  flags.N = (res >> 15);
+  flags.C = (!(a>>15)&&(b>>15))||((b>>15)&&(res>>15))|((res>>15)&&!(a>>15));
+  flags.V = ((a>>15)&&!(b>>15)&&!(res>>15))+(!(a>>15)&&(b>>15)&&(res>>15));
   }
 
 uint16_t X,Y,D,comp;
@@ -56,9 +61,9 @@ uint16_t X,Y,D,comp;
 #define BRA(lbl)         goto lbl;
 #define BEQ(lbl)         if(flags.Z) goto lbl;
 #define BNE(lbl)         if(!flags.Z) goto lbl;
-#define BLO(lbl)         if(false) goto lbl;
-#define BHS(lbl)         if(false) goto lbl;
-#define BHI(lbl)         if(false) goto lbl;
+#define BLO(lbl)         if(flags.C) goto lbl;
+#define BHS(lbl)         if(!flags.C) goto lbl;
+#define BHI(lbl)         if(!(flags.Z || flags.C)) goto lbl;
 
 #define ADDD_IMM(val)    D = D + (val);
 #define ADDD_DIR(adr)    D = D + PEEK_U16BE(adr);
@@ -190,6 +195,8 @@ Lalloc:
 Lretblock:
 	INX()			/* X still has *sr3(adr), skip size */
 	INX()			/* skip size */
+	LDD_IMM(0)
+	STD_IND(0,X)
 	XGDX()			/* put in D, X gets garbage */
 	BRA(	Lend)		/* We're done! */
 
