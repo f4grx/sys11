@@ -222,7 +222,7 @@ enum
     OP_DECB_INH = 0x5A,
     OP_RSVD_5B  = 0x5B,
     OP_INCB_INH = 0x5C,
-    OP_TSTA_INH = 0x5D,
+    OP_TSTB_INH = 0x5D,
     OP_RSVD_5E  = 0x5E,
     OP_CLRB_INH = 0x5F,
 
@@ -323,7 +323,7 @@ enum
     OP_ADCA_EXT = 0xB9,
     OP_ORAA_EXT = 0xBA,
     OP_ADDA_EXT = 0xBB,
-    OP_CPXY_IND  = 0xBC,
+    OP_CPXY_EXT = 0xBC,
     OP_JSR_EXT  = 0xBD,
     OP_LDS_EXT  = 0xBE,
     OP_STS_EXT  = 0xBF,
@@ -414,6 +414,7 @@ static uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
     struct hc11_mapping *cur;
     uint8_t ret;
 
+    printf("[%8ld] ", core->clocks); fflush(stdout);
     //prio: fist IO, then internal mem [ram], then ext mem [maps]
     if(adr >= core->iobase && adr < (core->iobase + 0x40))
       {
@@ -670,12 +671,14 @@ void hc11_core_clock(struct hc11_core *core)
           break;
 
         case STATE_EXECUTE:
-          printf("STATE_EXECUTE pf %02X op %02X imm %02X ea %02X\n", core->prefix, core->opcode, core->imm, core->ea);
+          printf("STATE_EXECUTE pf %02X op %02X operand %02X\n", core->prefix, core->opcode, core->operand);
           switch(core->opcode)
             {
-              case OP_CLRA_INH: core->regs.d = core->regs.d & 0xFF00; break;
+              case OP_CLRA_INH: core->regs.d = core->regs.d & 0x00FF; printf("CLRA\n"); break;
+              case OP_CLRB_INH: core->regs.d = core->regs.d & 0xFF00; printf("CLRB\n"); break;
             }
           core->prefix = 0; //last action
+          core->state = STATE_FETCHOPCODE;
           break;
       }//switch
   }

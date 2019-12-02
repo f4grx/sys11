@@ -152,6 +152,7 @@ int main(int argc, char **argv)
 
     hc11_sci_init(&core);
 
+    remote.port = 4444;
     gdbremote_init(&remote);
 
     hc11_core_reset(&core);

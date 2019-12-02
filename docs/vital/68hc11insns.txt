@@ -4,8 +4,8 @@ Registers
 X 16-bit index
 Y 16-bit index
 D double accumulator
-A byte of D
-B byte of D
+  A MS byte of D [15..8]
+  B MS byte of D [7..0]
 CCR 8-bit logic flags
 7 6 5 4 3 2 1 0
 S X H I N W V C
