@@ -70,8 +70,8 @@ struct hc11_regs
 struct hc11_io
   {
     void    *ctx;
-    read_f  rd;
-    write_f wr;
+    read_f  rdf;
+    write_f wrf;
   };
 
 struct hc11_core
@@ -80,19 +80,21 @@ struct hc11_core
     struct hc11_io       io[64];
     uint8_t              iram[256];
     struct hc11_mapping *maps;    
-    uint16_t rambase;
-    uint16_t iobase;
-    uint16_t  vector; //vector address to fetch in state
-    uint16_t state; //core state machine
-    uint64_t clocks;
-    uint8_t  prefix;
-    uint8_t  opcode;
+    uint16_t             rambase;
+    uint16_t             iobase;
+    uint16_t             vector; //vector address to fetch in state
+    uint16_t             state; //core state machine
+    uint64_t             clocks;
+    uint8_t              prefix;
+    uint8_t              opcode;
   };
 
 void hc11_core_init(struct hc11_core *core);
-void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count, void *ctx, read_f rd, write_f wr);
+void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
+                   void *ctx, read_f rd, write_f wr);
 void hc11_core_map_ram(struct hc11_core *core, uint16_t start, uint16_t count);
-void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count, void *ctx, read_f rd, write_f wr);
+void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
+                          void *ctx, read_f rd, write_f wr);
 
 void hc11_sci_init(struct hc11_core *core);
 

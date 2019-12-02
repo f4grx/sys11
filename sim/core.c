@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "core.h"
 
@@ -19,14 +20,63 @@ static void ram_write(void* ctx, uint16_t off, uint8_t val)
 
 static uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
   {
-  //prio: fist IO, then internal mem [ram], then ext mem [maps]
+    printf("CORE read @ 0x%04X\n", adr);
+    //prio: fist IO, then internal mem [ram], then ext mem [maps]
+    if(adr >= core->iobase && adr < core->iobase + 0x40)
+      {
+        //reading a reg
+        struct hc11_io *reg = &core->io[adr - core->iobase];
+        if(reg->rdf == NULL)
+          {
+            printf("reading unimplemented reg\n");
+            return 0xFF;
+          }
+        else
+          {
+            return reg->rdf(reg->ctx, adr - core->iobase);
+          }
+      }
+
+    //not reading a reg. try iram
+    if(adr >= core->rambase && adr < core->rambase + 256)
+      {
+        return core->iram[adr - core->rambase];
+      }
+
+    //not io, not iram -> find adr in mappings
+    printf("uninitialized read\n");
+    return 0xFF;
   }
 
-static uint8_t hc11_core_writeb(struct hc11_core *core, uint16_t adr, uint8_t *val)
+static uint8_t hc11_core_writeb(struct hc11_core *core, uint16_t adr,
+                                uint8_t val)
   {
+    printf("CORE read @ 0x%04X (%02X)\n", adr, val);
+    if(adr >= core->iobase && adr < core->iobase + 0x40)
+      {
+        //reading a reg
+        struct hc11_io *reg = &core->io[adr - core->iobase];
+        if(reg->wrf == NULL)
+          {
+            printf("writing readonly/unimplemented reg\n");
+          }
+        else
+          {
+            reg->wrf(reg->ctx, adr - core->iobase, val);
+          }
+      }
+
+    //not reading a reg. try iram
+    if(adr >= core->rambase && adr < core->rambase + 256)
+      {
+        core->iram[adr - core->rambase] = val;
+      }
+
+    printf("Write to undefined address ignored\n");
   }
 
-void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count, void *ctx, read_f rd, write_f wr)
+void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
+                   void *ctx, read_f rd, write_f wr)
   {
     struct hc11_mapping *map = malloc(sizeof(struct hc11_mapping));
     struct hc11_mapping *cur, *next;
@@ -63,7 +113,8 @@ void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count, void 
       }
   }
 
-void hc11_core_memmap_ram(struct hc11_core *core, uint16_t start, uint16_t count)
+void hc11_core_memmap_ram(struct hc11_core *core, uint16_t start,
+                          uint16_t count)
   {
     uint8_t *ram;
     ram = malloc(count);
@@ -71,14 +122,15 @@ void hc11_core_memmap_ram(struct hc11_core *core, uint16_t start, uint16_t count
     hc11_core_map(core, start, count, ram, ram_read, ram_write);
   }
 
-void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count, void *ctx, read_f rd, write_f wr)
+void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
+                          void *ctx, read_f rd, write_f wr)
   {
     uint8_t i;
     for(i=0;i<count;i++)
       {
         core->io[off].ctx = ctx;
-        core->io[off].rd  = rd;
-        core->io[off].wr  = wr;
+        core->io[off].rdf = rd;
+        core->io[off].wrf = wr;
         off++;
       }
   }
@@ -89,8 +141,8 @@ void hc11_core_init(struct hc11_core *core)
     core->maps = NULL;
     for(i=0;i<64;i++)
       {
-        core->io[i].rd = NULL;
-        core->io[i].wr = NULL;
+        core->io[i].rdf = NULL;
+        core->io[i].wrf = NULL;
       }
   }
 
