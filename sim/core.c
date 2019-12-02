@@ -6,6 +6,110 @@
 
 #include "core.h"
 
+// Define addressing modes
+enum
+  {
+    ILL, //illegal opcode
+    INH, //inherent (no operand, direct execution
+    IM1, //immediate, one byte
+    IM2, //immediate, two bytes
+    DIR, //direct (one byte abs address)
+    REL, //relative (branches)
+    EXT, //extended (two bytes absolute address)
+    INX, //indexed relative to X
+    INY, //indexed relative to Y
+    TDI, //direct, triple for brset/clr dd/mm/rr
+    TIX, //indirect X, triple for brset/clr ff/mm/rr
+    TIY, //indirect Y, triple for brset/clr ff/mm/rr
+    DDI, //direct, double for bset/clr dd/mm/rr
+    DIX, //indirect X, double for bset/clr ff/mm/rr
+    DIY, //indirect Y, double for bset/clr ff/mm/rr
+  };
+//last 18ad
+static const uint8_t opmodes = 
+  {
+/*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
+  INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,0,  INH,INH,INH,INH, /* 00-0F */
+  INH,INH,TDI,TDI,DDI,DDI,INH,INH,0,  INH,0,  INH,DIX,DIX,TIX,TIX, /* 10-1F */
+  REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL, /* 20-2F */
+  INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH, /* 30-3F */
+  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH INH,0,  INH, /* 40-4F */
+  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH,INH,0,  INH, /* 50-5F */
+  INX,0,  0,  INX,INX,0,  INX,INX,INX,INX,INX,0,  INX,INX,INX,INX, /* 60-5F */
+  EXT,0,  0,  EXT,EXT,0,  EXT,EXT,EXT,EXT,EXT,0,  EXT,EXT,EXT,EXT, /* 70-7F */
+  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0,  IM1,IM1,IM1,IM1,IM2,REL,IM2,INH, /* 80-8F */
+  DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR, /* 90-9F */
+  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX, /* A0-AF */
+  EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT, /* B0-BF */
+  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0,  IM1,IM1,IM1,IM1,IM2,0,  IM2,INH, /* C0-CF */
+  DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR, /* D0-DF */
+  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX, /* E0-EF */
+  EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT, /* F0-FF */
+  };
+
+static const uint8_t opmodes_18 = 
+  {
+/*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
+  0,  0,  0,  0,  0,  0,  0,  0,  INH,INH,0,  0,  0,  0,  0,  0, /* 00-0F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DIY,DIY,TIY,TIY, /* 10-1F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 20-2F */
+  INH,0,  0,  0,  0,  INH,0,  0,  INH,0,  INH,0,  INH,0,  0,  0, /* 30-3F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
+  INY,0,  0,  INY,INY,0,  INY,INY,INY,INY,INY,0,  INY,INY,INY,INY, /* 60-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0,  0,  INH, /* 80-8F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DIR,0,  0,  0, /* 90-9F */
+  INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY, /* A0-AF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EXT,0,  0,  0, /* B0-BF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0, /* C0-CF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DIR,DIR, /* D0-DF */
+  INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY,INY, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EXT,EXT, /* F0-FF */
+  };
+
+static const uint8_t opmodes_1A = 
+  {
+/*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 00-0F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 10-1F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 20-2F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 30-3F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
+  0,  0,  0,  IM2,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 80-8F */
+  0,  0,  0,  DIR,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
+  0,  0,  0,  INX,0,  0,  0,  0,  0,  0,  0,  0,  INX,0,  0,  0, /* A0-AF */
+  0,  0,  0,  EXT,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  INX,INX, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
+  };
+
+static const uint8_t opmodes_CD = 
+  {
+/*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 00-0F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 10-1F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 20-2F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 30-3F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 80-8F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
+  0,  0,  0,  INY,0,  0,  0,  0,  0,  0,  0,  0,  INY,0,  0,  0, /* A0-AF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  INY,INY, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
+  };
+
 static uint8_t ram_read(void *ctx, uint16_t off)
   {
     uint8_t *mem = ctx;
