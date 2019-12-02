@@ -1,5 +1,18 @@
 68hc11 instruction set
 
+Registers
+X 16-bit index
+Y 16-bit index
+D double accumulator
+A byte of D
+B byte of D
+CCR 8-bit logic flags
+7 6 5 4 3 2 1 0
+S X H I N W V C
+
+PC 16-bit program counter
+SP 16-bit stack pointer
+
 Used names
 
 OPCODE	Operation

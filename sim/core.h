@@ -35,15 +35,6 @@ enum hc11vectors
     VECTOR_RESET   = 0xFFFE
   };
 
-enum hc11states
-  {
-    STATE_VECTORFETCH_H, //fetch high byte of vector address
-    STATE_VECTORFETCH_L, //fetch low byte of vector address
-    STATE_FETCHOPCODE,   //fetch the opcode or the prefix
-    //more state for operand fetch
-    STATE_EXECUTE,       //execute opcode
-  };
-
 typedef uint8_t (*read_f )(void *ctx, uint16_t off);
 typedef void    (*write_f)(void *ctx, uint16_t off, uint8_t val);
 
@@ -87,6 +78,8 @@ struct hc11_core
     uint64_t             clocks;
     uint8_t              prefix;
     uint8_t              opcode;
+    uint8_t              addmode;
+    uint16_t             operand;
   };
 
 void hc11_core_init(struct hc11_core *core);

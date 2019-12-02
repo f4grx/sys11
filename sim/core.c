@@ -6,6 +6,17 @@
 
 #include "core.h"
 
+// Define internal core execution states
+enum hc11states
+  {
+    STATE_VECTORFETCH_H, //fetch high byte of vector address
+    STATE_VECTORFETCH_L, //fetch low byte of vector address
+    STATE_FETCHOPCODE,   //fetch the opcode or the prefix
+    STATE_OPERAND_H,
+    STATE_OPERAND_L,
+    STATE_EXECUTE,       //execute opcode
+  };
+
 // Define addressing modes
 enum
   {
@@ -26,14 +37,14 @@ enum
     DIY, //indirect Y, double for bset/clr ff/mm/rr
   };
 //last 18ad
-static const uint8_t opmodes = 
+static const uint8_t opmodes[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,0,  INH,INH,INH,INH, /* 00-0F */
   INH,INH,TDI,TDI,DDI,DDI,INH,INH,0,  INH,0,  INH,DIX,DIX,TIX,TIX, /* 10-1F */
   REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL, /* 20-2F */
   INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH, /* 30-3F */
-  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH INH,0,  INH, /* 40-4F */
+  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH,INH,0,  INH, /* 40-4F */
   INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH,INH,0,  INH, /* 50-5F */
   INX,0,  0,  INX,INX,0,  INX,INX,INX,INX,INX,0,  INX,INX,INX,INX, /* 60-5F */
   EXT,0,  0,  EXT,EXT,0,  EXT,EXT,EXT,EXT,EXT,0,  EXT,EXT,EXT,EXT, /* 70-7F */
@@ -47,7 +58,7 @@ static const uint8_t opmodes =
   EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT, /* F0-FF */
   };
 
-static const uint8_t opmodes_18 = 
+static const uint8_t opmodes_18[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   0,  0,  0,  0,  0,  0,  0,  0,  INH,INH,0,  0,  0,  0,  0,  0, /* 00-0F */
@@ -68,7 +79,7 @@ static const uint8_t opmodes_18 =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EXT,EXT, /* F0-FF */
   };
 
-static const uint8_t opmodes_1A = 
+static const uint8_t opmodes_1A[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 00-0F */
@@ -89,7 +100,7 @@ static const uint8_t opmodes_1A =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
   };
 
-static const uint8_t opmodes_CD = 
+static const uint8_t opmodes_CD[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 00-0F */
@@ -108,6 +119,282 @@ static const uint8_t opmodes_CD =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  INY,INY, /* E0-EF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
+  };
+
+//Define opcodes
+enum
+  {
+    OP_TEST_INH = 0x00,
+    OP_NOP_INH  = 0x01,
+    OP_IDIV_INH = 0x02,
+    OP_FDIV_INH = 0x03,
+    OP_LSRD_INH = 0x04,
+    OP_ASLD_INH = 0x05,
+    OP_TAP_INH  = 0x06,
+    OP_TPA_INH  = 0x07,
+    OP_INXY_INH = 0x08,
+    OP_DEXY_INH = 0x09,
+    OP_CLV_INH  = 0x0A,
+    OP_SEV_INH  = 0x0B,
+    OP_CLC_INH  = 0x0C,
+    OP_SEC_INH  = 0x0D,
+    OP_CLI_INH  = 0x0E,
+    OP_SEI_INH  = 0x0F,
+
+    OP_SBA_INH   = 0x10,
+    OP_CBA_INH   = 0x11,
+    OP_BRSET_TDI = 0x12,
+    OP_BRCLR_TDI = 0x13,
+    OP_BSET_DDI  = 0x14,
+    OP_BCLR_DDI  = 0x15,
+    OP_TAB_INH   = 0x16,
+    OP_TBA_INH   = 0x17,
+    OP_PFX_18    = 0x18,
+    OP_DAA_INH   = 0x19,
+    OP_PFX_1A    = 0x1A,
+    OP_ABA_INH   = 0x1B,
+    OP_BSET_DIN  = 0x1C,
+    OP_BCLR_DIN  = 0x1D,
+    OP_BRSET_TIN = 0x1E,
+    OP_BRCLR_TIN = 0x1F,
+
+    OP_BRA_REL  = 0x20,
+    OP_BRN_REL  = 0x21,
+    OP_BHI_REL  = 0x22,
+    OP_BLS_REL  = 0x23,
+    OP_BHS_REL  = 0x24,
+    OP_BLO_REL  = 0x25,
+    OP_BNE_REL  = 0x26,
+    OP_BEQ_REL  = 0x27,
+    OP_BVC_REL  = 0x28,
+    OP_BVS_REL  = 0x29,
+    OP_BPL_REL  = 0x2A,
+    OP_BMI_REL  = 0x2B,
+    OP_BGE_REL  = 0x2C,
+    OP_BLT_REL  = 0x2D,
+    OP_BGT_REL  = 0x2E,
+    OP_BLE_REL  = 0x2F,
+
+    OP_TSXY_INH  = 0x30,
+    OP_INS_INH   = 0x31,
+    OP_PULA_INH  = 0x32,
+    OP_PULB_INH  = 0x33,
+    OP_DES_INH   = 0x34,
+    OP_TXYS_INH  = 0x35,
+    OP_PSHA_INH  = 0x36,
+    OP_PSHB_INH  = 0x37,
+    OP_PULXY_INH = 0x38,
+    OP_RTS_INH   = 0x39,
+    OP_ABXY_INH  = 0x3A,
+    OP_RTI_INH   = 0x3B,
+    OP_PSHXY_INH = 0x3C,
+    OP_MUL_INH   = 0x3D,
+    OP_WAI_INH   = 0x3E,
+    OP_SWI_INH   = 0x3F,
+
+    OP_NEGA_INH = 0x40,
+    OP_RSVD_41  = 0x41,
+    OP_RSVD_42  = 0x42,
+    OP_COMA_INH = 0x43,
+    OP_LSRA_INH = 0x44,
+    OP_RSVD_45  = 0x45,
+    OP_RORA_INH = 0x46,
+    OP_ASRA_INH = 0x47,
+    OP_ASLA_INH = 0x48,
+    OP_ROLA_INH = 0x49,
+    OP_DECA_INH = 0x4A,
+    OP_RSVD_4B  = 0x4B,
+    OP_INCA_INH = 0x4C,
+    OP_TSTA_INH = 0x4D,
+    OP_RSVD_4E  = 0x4E,
+    OP_CLRA_INH = 0x4F,
+
+    OP_NEGB_INH = 0x50,
+    OP_RSVD_51  = 0x51,
+    OP_RSVD_52  = 0x52,
+    OP_COMB_INH = 0x53,
+    OP_LSRB_INH = 0x54,
+    OP_RSVD_55  = 0x55,
+    OP_RORB_INH = 0x56,
+    OP_ASRB_INH = 0x57,
+    OP_ASLB_INH = 0x58,
+    OP_ROLB_INH = 0x59,
+    OP_DECB_INH = 0x5A,
+    OP_RSVD_5B  = 0x5B,
+    OP_INCB_INH = 0x5C,
+    OP_TSTA_INH = 0x5D,
+    OP_RSVD_5E  = 0x5E,
+    OP_CLRB_INH = 0x5F,
+
+    OP_NEG_IND = 0x60,
+    OP_RSVD_61 = 0x61,
+    OP_RSVD_62 = 0x62,
+    OP_COM_IND = 0x63,
+    OP_LSR_IND = 0x64,
+    OP_RSVD_65 = 0x65,
+    OP_ROR_IND = 0x66,
+    OP_ASR_IND = 0x67,
+    OP_ASL_IND = 0x68,
+    OP_ROL_IND = 0x69,
+    OP_DEC_IND = 0x6A,
+    OP_RSVD_6B = 0x6B,
+    OP_INC_IND = 0x6C,
+    OP_TST_IND = 0x6D,
+    OP_JMP_IND = 0x6E,
+    OP_CLR_IND = 0x6F,
+
+    OP_NEG_EXT = 0x70,
+    OP_RSVD_71 = 0x71,
+    OP_RSVD_72 = 0x72,
+    OP_COM_EXT = 0x73,
+    OP_LSR_EXT = 0x74,
+    OP_RSVD_75 = 0x75,
+    OP_ROR_EXT = 0x76,
+    OP_ASR_EXT = 0x77,
+    OP_ASL_EXT = 0x78,
+    OP_ROL_EXT = 0x79,
+    OP_DEC_EXT = 0x7A,
+    OP_RSVD_7B = 0x7B,
+    OP_INC_EXT = 0x7C,
+    OP_TST_EXT = 0x7D,
+    OP_JMP_EXT = 0x7E,
+    OP_CLR_EXT = 0x7F,
+
+    OP_SUBA_IMM  = 0x80,
+    OP_CMPA_IMM  = 0x81,
+    OP_SBCA_IMM  = 0x82,
+    OP_CPD_SUBD_IMM = 0x83,
+    OP_ANDA_IMM  = 0x84,
+    OP_BITA_IMM  = 0x85,
+    OP_LDAA_IMM  = 0x86,
+    OP_RSVD_87   = 0x87,
+    OP_EORA_IMM  = 0x88,
+    OP_ADCA_IMM  = 0x89,
+    OP_ORAA_IMM  = 0x8A,
+    OP_ADDA_IMM  = 0x8B,
+    OP_CPXY_IMM  = 0x8C,
+    OP_BSR_REL   = 0x8D,
+    OP_LDS_IMM   = 0x8E,
+    OP_XGDXY_INH = 0x8F,
+
+    OP_SUBA_DIR = 0x90,
+    OP_CMPA_DIR = 0x91,
+    OP_SBCA_DIR = 0x92,
+    OP_CPD_SUBD_DIR = 0x93,
+    OP_ANDA_DIR = 0x94,
+    OP_BITA_DIR = 0x95,
+    OP_LDAA_DIR = 0x96,
+    OP_STAA_DIR = 0x97,
+    OP_EORA_DIR = 0x98,
+    OP_ADCA_DIR = 0x99,
+    OP_ORAA_DIR = 0x9A,
+    OP_ADDA_DIR = 0x9B,
+    OP_CPXY_DIR = 0x9C,
+    OP_JSR_DIR  = 0x9D,
+    OP_LDS_DIR  = 0x9E,
+    OP_STS_DIR  = 0x9F,
+
+    OP_SUBA_IND = 0xA0,
+    OP_CMPA_IND = 0xA1,
+    OP_SBCA_IND = 0xA2,
+    OP_CPD_SUBD_IND = 0xA3,
+    OP_ANDA_IND = 0xA4,
+    OP_BITA_IND = 0xA5,
+    OP_LDAA_IND = 0xA6,
+    OP_STAA_IND = 0xA7,
+    OP_EORA_IND = 0xA8,
+    OP_ADCA_IND = 0xA9,
+    OP_ORAA_IND = 0xAA,
+    OP_ADDA_IND = 0xAB,
+    OP_CPXY_IND = 0xAC,
+    OP_JSR_IND  = 0xAD,
+    OP_LDS_IND  = 0xAE,
+    OP_STS_IND  = 0xAF,
+
+    OP_SUBA_EXT = 0xB0,
+    OP_CMPA_EXT = 0xB1,
+    OP_SBCA_EXT = 0xB2,
+    OP_CPD_SUBD_EXT = 0xB3,
+    OP_ANDA_EXT = 0xB4,
+    OP_BITA_EXT = 0xB5,
+    OP_LDAA_EXT = 0xB6,
+    OP_STAA_EXT = 0xB7,
+    OP_EORA_EXT = 0xB8,
+    OP_ADCA_EXT = 0xB9,
+    OP_ORAA_EXT = 0xBA,
+    OP_ADDA_EXT = 0xBB,
+    OP_CPXY_IND  = 0xBC,
+    OP_JSR_EXT  = 0xBD,
+    OP_LDS_EXT  = 0xBE,
+    OP_STS_EXT  = 0xBF,
+
+    OP_SUBB_IMM = 0xC0,
+    OP_CMPB_IMM = 0xC1,
+    OP_SBCB_IMM = 0xC2,
+    OP_ADDD_IMM = 0xC3,
+    OP_ANDB_IMM = 0xC4,
+    OP_BITB_IMM = 0xC5,
+    OP_LDAB_IMM = 0xC6,
+    OP_RSVD_C7  = 0xC7,
+    OP_EORB_IMM = 0xC8,
+    OP_ADCB_IMM = 0xC9,
+    OP_ORAB_IMM = 0xCA,
+    OP_ADDB_IMM = 0xCB,
+    OP_LDD_IMM  = 0xCC,
+    OP_PFX_CD   = 0xCD,
+    OP_LDXY_IMM = 0xCE,
+    OP_STOP_INH = 0xCF,
+
+    OP_SUBB_DIR = 0xD0,
+    OP_CMPB_DIR = 0xD1,
+    OP_SBCB_DIR = 0xD2,
+    OP_ADDD_DIR = 0xD3,
+    OP_ANDB_DIR = 0xD4,
+    OP_BITB_DIR = 0xD5,
+    OP_LDAB_DIR = 0xD6,
+    OP_STAB_DIR = 0xD7,
+    OP_EORB_DIR = 0xD8,
+    OP_ADCB_DIR = 0xD9,
+    OP_ORAB_DIR = 0xDA,
+    OP_ADDB_DIR = 0xDB,
+    OP_LDD_DIR  = 0xDC,
+    OP_STD_DIR  = 0xDD,
+    OP_LDXY_DIR = 0xDE,
+    OP_STXY_DIR = 0xDF,
+
+    OP_SUBB_IND = 0xE0,
+    OP_CMPB_IND = 0xE1,
+    OP_SBCB_IND = 0xE2,
+    OP_ADDD_IND = 0xE3,
+    OP_ANDB_IND = 0xE4,
+    OP_BITB_IND = 0xE5,
+    OP_LDAB_IND = 0xE6,
+    OP_STAB_IND = 0xE7,
+    OP_EORB_IND = 0xE8,
+    OP_ADCB_IND = 0xE9,
+    OP_ORAB_IND = 0xEA,
+    OP_ADDB_IND = 0xEB,
+    OP_LDD_IND  = 0xEC,
+    OP_STD_IND  = 0xED,
+    OP_LDXY_IND = 0xEE,
+    OP_STXY_IND = 0xEF,
+
+    OP_SUBB_EXT = 0xF0,
+    OP_CMPB_EXT = 0xF1,
+    OP_SBCB_EXT = 0xF2,
+    OP_ADDD_EXT = 0xF3,
+    OP_ANDB_EXT = 0xF4,
+    OP_BITB_EXT = 0xF5,
+    OP_LDAB_EXT = 0xF6,
+    OP_STAB_EXT = 0xF7,
+    OP_EORB_EXT = 0xF8,
+    OP_ADCB_EXT = 0xF9,
+    OP_ORAB_EXT = 0xFA,
+    OP_ADDB_EXT = 0xFB,
+    OP_LDD_EXT  = 0xFC,
+    OP_STD_EXT  = 0xFD,
+    OP_LDXY_EXT = 0xFE,
+    OP_STXY_EXT = 0xFF,
   };
 
 static uint8_t ram_read(void *ctx, uint16_t off)
@@ -323,14 +610,73 @@ void hc11_core_clock(struct hc11_core *core)
           else
             {
             //not a prefix
+            uint8_t addmode;
+            const uint8_t *modtable = opmodes;
             core->opcode = tmp;
-            core->state = STATE_EXECUTE; //actual next state depends on adressing mode
+            if(core->prefix == 0x18) modtable = opmodes_18;
+            if(core->prefix == 0x1A) modtable = opmodes_1A;
+            if(core->prefix == 0xCD) modtable = opmodes_CD;
+            addmode = modtable[core->opcode];
+            printf("add mode: %d\n", addmode);
+            switch(addmode)
+              {
+                case ILL: //illegal opcode
+                  core->vector  = VECTOR_ILLEGAL;
+                  core->state   = STATE_VECTORFETCH_H;
+                  break;
+
+                case INH: //inherent (no operand, direct execution
+                  core->state = STATE_EXECUTE; //actual next state depends on adressing mode
+                  break;
+
+                case IM1: //immediate, one byte
+                case DIR: //direct (one byte abs address)
+                case REL: //relative (branches)
+                case INX: //indexed relative to X
+                case INY: //indexed relative to Y
+                  core->operand = 0;
+                  core->state = STATE_OPERAND_L;
+                  break;
+
+                case IM2: //immediate, two bytes
+                case EXT: //extended (two bytes absolute address)
+                  core->state = STATE_OPERAND_H;
+                  break;
+
+                case TDI: //direct, triple for brset/clr dd/mm/rr
+                case TIX: //indirect X, triple for brset/clr ff/mm/rr
+                case TIY: //indirect Y, triple for brset/clr ff/mm/rr
+                case DDI: //direct, double for bset/clr dd/mm
+                case DIX: //indirect X, double for bset/clr ff/mm
+                case DIY: //indirect Y, double for bset/clr ff/mm
+                  printf("unsupported op mode\n");
+                break;
+              }
             }
-          break;          
-        case STATE_EXECUTE:
-          core->prefix = 0; //last action
           break;
 
+        case STATE_OPERAND_H:
+          tmp = hc11_core_readb(core,core->regs.pc);
+          core->regs.pc = core->regs.pc + 1;
+          core->operand = tmp << 8;
+          core->state = STATE_OPERAND_L;
+          break;
+
+        case STATE_OPERAND_L:
+          tmp = hc11_core_readb(core,core->regs.pc);
+          core->regs.pc = core->regs.pc + 1;
+          core->operand |= tmp;
+          core->state = STATE_EXECUTE;
+          break;
+
+        case STATE_EXECUTE:
+          printf("STATE_EXECUTE pf %02X op %02X imm %02X ea %02X\n", core->prefix, core->opcode, core->imm, core->ea);
+          switch(core->opcode)
+            {
+              case OP_CLRA_INH: core->regs.d = core->regs.d & 0xFF00; break;
+            }
+          core->prefix = 0; //last action
+          break;
       }//switch
   }
 
