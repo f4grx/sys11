@@ -93,6 +93,7 @@ void hc11_core_init(struct hc11_core *core);
 void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
                    void *ctx, read_f rd, write_f wr);
 void hc11_core_map_ram(struct hc11_core *core, uint16_t start, uint16_t count);
+void hc11_core_map_rom(struct hc11_core *core, uint16_t start, uint16_t count, uint8_t *rom);
 void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
                           void *ctx, read_f rd, write_f wr);
 

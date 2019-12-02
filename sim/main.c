@@ -2,81 +2,137 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <getopt.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "core.h"
 #include "gdbremote.h"
 
 static struct option long_options[] =
   {
-    {"add",     required_argument, 0,  0 },
-    {"append",  no_argument,       0,  0 },
-    {"delete",  required_argument, 0,  0 },
-    {"verbose", no_argument,       0,  0 },
-    {"create",  required_argument, 0, 'c'},
-    {"file",    required_argument, 0,  0 },
+//    {"add",     required_argument, 0,  0 },
+//    {"append",  no_argument,       0,  0 },
+    {"bin"   ,  required_argument, 0,  'b' },
+    {"s19"   ,  required_argument, 0,  's' },
+//    {"verbose", no_argument,       0,  0 },
+//    {"create",  required_argument, 0, 'c'},
+//    {"file",    required_argument, 0,  0 },
     {0,         0,                 0,  0 }
   };
+
+static uint8_t* loadbin(const char *fname, uint16_t *size)
+  {
+    FILE *f;
+    uint32_t lsize;
+    uint8_t *blob;
+
+    f = fopen(fname, "rb");
+
+    if(!f)
+      {
+        printf("Unable to open: %s\n",fname);
+        return NULL;
+      }
+
+    fseek(f, 0, SEEK_END);
+    lsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if(lsize > 65536)
+      {
+        printf("file %s is too big\n", fname);
+err:
+        fclose(f);
+        return NULL;
+      }
+    blob = malloc(lsize);
+    if(!blob)
+      {
+        printf("cannot alloc mem for %s\n", fname);
+        goto err;
+      }
+    if(fread(blob, 1, lsize, f) != lsize)
+      {
+        printf("cannot read: %s\n", fname);
+        free(blob);
+        goto err;
+      }
+
+    fclose(f);
+    *size = (uint16_t)lsize;
+    return blob;
+  }
+
+void help(void)
+  {
+    printf("sim [-s,--s19 <file>] [-b,--bin <adr,file>]\n"
+           "\n"
+           "  -s --s19 <file>      Load S-record file\n"
+           "  -b --bin <adr,file>  Load binary file at address\n"
+         );
+  }
 
 int main(int argc, char **argv)
   {
     struct hc11_core core;
     struct gdbremote_t remote;
     int c;
-    int digit_optind = 0;
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
 
+    hc11_core_init(&core);
+
     while (1)
       {
-        int this_option_optind = optind ? optind : 1;
         int option_index = 0;
-        c = getopt_long(argc, argv, "abc:d:012",
-                        long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:", long_options, &option_index);
         if (c == -1)
           {
             break;
           }
         switch (c)
           {
-            case 0:
-              printf("option %s", long_options[option_index].name);
-              if (optarg)
-                {
-                  printf(" with arg %s", optarg);
-                }
-              printf("\n");
-              break;
-
-            case '0':
-            case '1':
-            case '2':
-              if (digit_optind != 0 && digit_optind != this_option_optind)
-                {
-                  printf("digits occur in two different argv-elements.\n");
-                }
-              digit_optind = this_option_optind;
-              printf("option %c\n", c);
-              break;
-
-            case 'a':
-              printf("option a\n");
-              break;
-
             case 'b':
-              printf("option b\n");
-              break;
+              {
+                char *ptr;
+                uint16_t adr;
+                uint16_t size;
+                uint8_t *bin;
+                ptr = strchr(optarg, ',');
+                if(!ptr)
+                  {
+                    printf("--mapbin adr,binfile\n");
+                    return -1;
+                  }
+                *ptr = 0;
+                ptr++;
+                printf("map something: file %s @ %s\n", ptr, optarg);
+                bin = loadbin(ptr,&size);
+                if(!bin)
+                  {
+                    printf("map failed\n");
+                    return -1;
+                  }
+                adr = (uint16_t)strtoul(optarg, NULL, 0);
+                hc11_core_map_rom(&core, adr, size, bin);
+                break;
+              }
 
-            case 'c':
-              printf("option c with value '%s'\n", optarg);
-              break;
-
-            case 'd':
-              printf("option d with value '%s'\n", optarg);
-              break;
+            case 's':
+              {
+                printf("TODO load S19 file\n");
+                return -1;
+              }
 
             case '?':
-              break;
+              {
+                help();
+                return -1;
+                break;
+              }
 
             default:
               printf("?? getopt returned character code 0%o ??\n", c);
@@ -93,7 +149,7 @@ int main(int argc, char **argv)
           }
         printf("\n");
       }
-    hc11_core_init(&core);
+
     hc11_sci_init(&core);
 
     gdbremote_init(&remote);

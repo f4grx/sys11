@@ -20,38 +20,58 @@ static void ram_write(void* ctx, uint16_t off, uint8_t val)
 
 static uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
   {
-    printf("CORE read @ 0x%04X\n", adr);
+    struct hc11_mapping *cur;
+    uint8_t ret;
+
     //prio: fist IO, then internal mem [ram], then ext mem [maps]
-    if(adr >= core->iobase && adr < core->iobase + 0x40)
+    if(adr >= core->iobase && adr < (core->iobase + 0x40))
       {
         //reading a reg
         struct hc11_io *reg = &core->io[adr - core->iobase];
         if(reg->rdf == NULL)
           {
-            printf("reading unimplemented reg\n");
+            printf("READ @ 0x%04X -> 0xFF [reg-none]\n", adr);
             return 0xFF;
           }
         else
           {
-            return reg->rdf(reg->ctx, adr - core->iobase);
+            ret = reg->rdf(reg->ctx, adr - core->iobase);
+            printf("READ @ 0x%04X -> %02X [reg]\n", adr, ret);
+            return ret;
           }
       }
 
     //not reading a reg. try iram
-    if(adr >= core->rambase && adr < core->rambase + 256)
+    if(adr >= core->rambase && adr < (core->rambase + 256))
       {
-        return core->iram[adr - core->rambase];
+        ret = core->iram[adr - core->rambase];
+        printf("READ @ 0x%04X -> %02X [iram]\n", adr, ret);
+        return ret;
+      }
+
+    cur = core->maps;
+    while(cur != NULL)
+      {
+        if(adr >= cur->start && adr < (cur->start + cur->len))
+          {
+            ret = cur->rdf(cur->ctx, adr - cur->start);
+            printf("READ @ 0x%04X -> %02X [xmem]\n", adr, ret);
+            return ret;
+          }
+        cur = cur->next;
       }
 
     //not io, not iram -> find adr in mappings
-    printf("uninitialized read\n");
+    printf("READ @ 0x%04X -> 0xFF [none]\n", adr);
     return 0xFF;
   }
 
 static uint8_t hc11_core_writeb(struct hc11_core *core, uint16_t adr,
                                 uint8_t val)
   {
-    printf("CORE read @ 0x%04X (%02X)\n", adr, val);
+    struct hc11_mapping *cur;
+
+    printf("CORE write @ 0x%04X (%02X)\n", adr, val);
     if(adr >= core->iobase && adr < core->iobase + 0x40)
       {
         //reading a reg
@@ -113,13 +133,18 @@ void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
       }
   }
 
-void hc11_core_memmap_ram(struct hc11_core *core, uint16_t start,
+void hc11_core_map_ram(struct hc11_core *core, uint16_t start,
                           uint16_t count)
   {
     uint8_t *ram;
     ram = malloc(count);
     memset(ram,0,count);
     hc11_core_map(core, start, count, ram, ram_read, ram_write);
+  }
+
+void hc11_core_map_rom(struct hc11_core *core, uint16_t start, uint16_t count, uint8_t *rom)
+  {
+    hc11_core_map(core, start, count, rom, ram_read, NULL);
   }
 
 void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
@@ -163,6 +188,7 @@ void hc11_core_clock(struct hc11_core *core)
     switch(core->state)
       {
         case STATE_VECTORFETCH_H:
+          printf("VECTOR fetch @ 0x%04X\n", core->vector);
           core->regs.pc = hc11_core_readb(core,core->vector) << 8;
           core->state = STATE_VECTORFETCH_L;
           break;
