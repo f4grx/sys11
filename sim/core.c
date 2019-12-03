@@ -22,6 +22,8 @@ enum hc11states
     STATE_EXECUTE_CD,     //execute opcode with CDh prefix
     STATE_WRITEOP_H,      //write operand value (hi byte)
     STATE_WRITEOP_L,      //write operand value (single or lo byte)
+    STATE_PUSHPC_L,
+    STATE_PUSHPC_H,
   };
 
 // Define addressing modes
@@ -64,9 +66,9 @@ static const uint8_t opmodes[256] =
   INX,INX,INX,IX2,INX,INX,INX,INX,INX,INX,INX,INX,IX2,INX,IX2,INX, /* A0-AF */
   EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EXT, /* B0-BF */
   IM1,IM1,IM1,IM2,IM1,IM1,IM1,0,  IM1,IM1,IM1,IM1,IM2,0,  IM2,INH, /* C0-CF */
-  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DI2,DIR,DI2,DIR, /* D0-DF */
-  INX,INX,INX,IX2,INX,INX,INX,INX,INX,INX,INX,INX,IX2,INX,IX2,INX, /* E0-EF */
-  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EXT, /* F0-FF */
+  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DI2,DIR,DI2,DI2, /* D0-DF */
+  INX,INX,INX,IX2,INX,INX,INX,INX,INX,INX,INX,INX,IX2,INX,IX2,IX2, /* E0-EF */
+  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EX2, /* F0-FF */
   };
 
 static const uint8_t opmodes_18[256] =
@@ -82,12 +84,12 @@ static const uint8_t opmodes_18[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0,  0,  INH, /* 80-8F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DI2,0,  0,  0, /* 90-9F */
-  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,INY,IY2,INY, /* A0-AF */
+  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,INY,IY2,IY2, /* A0-AF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EX2,0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0, /* C0-CF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DI2,DIR, /* D0-DF */
-  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,INY,IY2,INY, /* E0-EF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EX2,EXT, /* F0-FF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DI2,DI2, /* D0-DF */
+  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,IY2,IY2,IY2, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EX2,EX2, /* F0-FF */
   };
 
 static const uint8_t opmodes_1A[256] =
@@ -107,7 +109,7 @@ static const uint8_t opmodes_1A[256] =
   0,  0,  0,  EXT,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  INX,INX, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IX2,IX2, /* E0-EF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
   };
 
@@ -128,7 +130,7 @@ static const uint8_t opmodes_CD[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  INY,INY, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IY2,IY2, /* E0-EF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
   };
 
@@ -533,7 +535,6 @@ void hc11_core_clock(struct hc11_core *core)
           break;
 
         case STATE_OPERAND_TRIPLE:
-printf("OP_TRPL\n");
           core->busadr = core->regs.pc;
           core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;
@@ -568,14 +569,13 @@ printf("OP_TRPL\n");
             {
               uint8_t tmp;
               case DDI:
-printf("DDI\n");
                 //reverse ops
                 tmp = core->op2;
                 core->op2 = core->operand;
                 core->operand = tmp;
               case DIR:
               case EXT:
-                core->state = STATE_READOP_L;
+                core->state = STATE_READOP_L; //read value not used for jsr and jmp, but still acquired
                 break;
 
               case DI2:
@@ -603,6 +603,7 @@ printf("DDI\n");
                 core->state = STATE_READOP_H;
                 break;
             }
+          core->busadr = core->operand;
           if(core->state != STATE_EXECUTE)
             {
               break; //Something to do before execution
@@ -613,15 +614,13 @@ printf("DDI\n");
           break;
 
         case STATE_READOP_H: //Get value in busdat (not operand, required for writeback)
-          core->busadr = core->operand >> 8;
           core->busdat = hc11_core_readb(core,core->busadr) << 8;
           core->busadr = core->busadr + 1;
           core->state = STATE_READOP_L;
           break;
 
         case STATE_READOP_L:
-          core->busadr = core->operand & 0xFF;
-          core->busdat |= hc11_core_readb(core,core->busadr);
+          core->busdat |= (uint16_t)hc11_core_readb(core,core->busadr);
           core->state = STATE_EXECUTE;
           if(core->prefix == 0x18) core->state = STATE_EXECUTE_18;
           if(core->prefix == 0x1A) core->state = STATE_EXECUTE_1A;
@@ -635,6 +634,7 @@ printf("DDI\n");
 
           switch(core->opcode)
             {
+              uint8_t tmp;
               case OP_TEST_INH :
                 printf("TEST instruction not available in sim\n");
                 break;
@@ -669,9 +669,25 @@ printf("DDI\n");
                 core->state = STATE_WRITEOP_L;
                 break;
 
-              case OP_BCLR_DDI  : break;
-              case OP_TAB_INH   : break;
-              case OP_TBA_INH   : break;
+              case OP_BCLR_DDI  :
+                printf("BCLR_DIR OP2 %02X\n", core->op2);
+                core->busadr = core->operand;
+                core->busdat = core->busdat & (!core->op2);
+                core->state = STATE_WRITEOP_L;
+                break;
+
+              case OP_TAB_INH   :
+                tmp = core->regs.d >> 8; //get A
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                printf("TAB\n");
+                break;
+
+              case OP_TBA_INH   :
+                tmp = core->regs.d & 0xFF; //get B
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                printf("TBA\n");
+                break;
+
               case OP_DAA_INH   : break;
               case OP_ABA_INH   : break;
               case OP_BSET_DIN  : break;
@@ -841,8 +857,15 @@ printf("DDI\n");
               case OP_ADDA_EXT : break;
               case OP_CPXY_DIR :
               case OP_CPXY_EXT : break;
+
               case OP_JSR_DIR  :
-              case OP_JSR_EXT  : break;
+              case OP_JSR_EXT  :
+                printf("JSR_EXT ea=%04X\n", core->operand);
+                core->busdat  = core->regs.pc;
+                core->regs.pc = core->operand;
+                core->state = STATE_PUSHPC_L; // not H, push happens L first
+                break;
+
               case OP_LDS_DIR  :
               case OP_LDS_EXT  : break;
               case OP_STS_DIR  :
@@ -950,10 +973,23 @@ printf("DDI\n");
           break;
 
         case STATE_WRITEOP_L:
-          hc11_core_writeb(core,core->busadr, core->busdat);
+          hc11_core_writeb(core,core->busadr, core->busdat & 0xFF);
           core->state = STATE_FETCHOPCODE;
           break;
 
+        case STATE_PUSHPC_L:
+          core->busadr = core->regs.sp;
+          hc11_core_writeb(core, core->busadr, core->busdat & 0xFF);
+          core->regs.sp = core->regs.sp - 1;
+          core->state = STATE_PUSHPC_H;
+          break;
+
+        case STATE_PUSHPC_H:
+          core->busadr = core->regs.sp;
+          hc11_core_writeb(core, core->busadr, core->busdat >> 8);
+          core->regs.sp = core->regs.sp - 1;
+          core->state = STATE_FETCHOPCODE;
+          break;
       }//switch
   }
 
