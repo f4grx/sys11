@@ -93,6 +93,10 @@ void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
 
 void hc11_sci_init(struct hc11_core *core);
 
+uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr);
+void    hc11_core_writeb(struct hc11_core *core, uint16_t adr,
+                         uint8_t val);
+
 void hc11_core_reset(struct hc11_core *core);
 void hc11_core_clock(struct hc11_core *core);
 

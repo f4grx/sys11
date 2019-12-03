@@ -1,7 +1,5 @@
 #include <stdint.h>
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 
 #include "core.h"
@@ -408,159 +406,18 @@ enum
     OP_STXY_EXT = 0xFF,
   };
 
-static uint8_t ram_read(void *ctx, uint16_t off)
+uint8_t init_read(void *ctx, uint16_t off)
   {
-    uint8_t *mem = ctx;
-    return mem[off];
+    struct hc11_core *core = ctx;
+    return ((core->rambase >> 12) << 4) | (core->iobase >> 12);
   }
 
-static void ram_write(void* ctx, uint16_t off, uint8_t val)
+void init_write(void *ctx, uint16_t off, uint8_t val)
   {
-    uint8_t *mem = ctx;
-    mem[off] = val;
-  }
-
-static uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
-  {
-    struct hc11_mapping *cur;
-    uint8_t ret;
-
-    printf("[%8ld] ", core->clocks); fflush(stdout);
-    //prio: fist IO, then internal mem [ram], then ext mem [maps]
-    if(adr >= core->iobase && adr < (core->iobase + 0x40))
-      {
-        //reading a reg
-        struct hc11_io *reg = &core->io[adr - core->iobase];
-        if(reg->rdf == NULL)
-          {
-            printf("READ @ 0x%04X -> 0xFF [reg-none]\n", adr);
-            return 0xFF;
-          }
-        else
-          {
-            ret = reg->rdf(reg->ctx, adr - core->iobase);
-            printf("READ @ 0x%04X -> %02X [reg]\n", adr, ret);
-            return ret;
-          }
-      }
-
-    //not reading a reg. try iram
-    if(adr >= core->rambase && adr < (core->rambase + 256))
-      {
-        ret = core->iram[adr - core->rambase];
-        printf("READ @ 0x%04X -> %02X [iram]\n", adr, ret);
-        return ret;
-      }
-
-    cur = core->maps;
-    while(cur != NULL)
-      {
-        if(adr >= cur->start && adr < (cur->start + cur->len))
-          {
-            ret = cur->rdf(cur->ctx, adr - cur->start);
-            printf("READ @ 0x%04X -> %02X [xmem]\n", adr, ret);
-            return ret;
-          }
-        cur = cur->next;
-      }
-
-    //not io, not iram -> find adr in mappings
-    printf("READ @ 0x%04X -> 0xFF [none]\n", adr);
-    return 0xFF;
-  }
-
-static uint8_t hc11_core_writeb(struct hc11_core *core, uint16_t adr,
-                                uint8_t val)
-  {
-    struct hc11_mapping *cur;
-
-    printf("CORE write @ 0x%04X (%02X)\n", adr, val);
-    if(adr >= core->iobase && adr < core->iobase + 0x40)
-      {
-        //reading a reg
-        struct hc11_io *reg = &core->io[adr - core->iobase];
-        if(reg->wrf == NULL)
-          {
-            printf("writing readonly/unimplemented reg\n");
-          }
-        else
-          {
-            reg->wrf(reg->ctx, adr - core->iobase, val);
-          }
-      }
-
-    //not reading a reg. try iram
-    if(adr >= core->rambase && adr < core->rambase + 256)
-      {
-        core->iram[adr - core->rambase] = val;
-      }
-
-    printf("Write to undefined address ignored\n");
-  }
-
-void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
-                   void *ctx, read_f rd, write_f wr)
-  {
-    struct hc11_mapping *map = malloc(sizeof(struct hc11_mapping));
-    struct hc11_mapping *cur, *next;
-
-    map->next  = NULL;
-    map->start = start;
-    map->len   = count;
-    map->ctx   = ctx;
-    map->rdf   = rd;
-    map->wrf   = wr;
-
-    cur = core->maps;
-    if(!cur)
-      {
-        core->maps = map;
-        return;
-      }
-    else if(start < cur->start)
-      {
-        map->next = cur;
-        core->maps = map;
-        return;
-      }
-
-    while(cur != NULL)
-      {
-        if(start > cur->start)
-          {
-            map->next = cur->next;
-            cur->next = map;
-            break;
-          }
-        cur = cur->next;
-      }
-  }
-
-void hc11_core_map_ram(struct hc11_core *core, uint16_t start,
-                          uint16_t count)
-  {
-    uint8_t *ram;
-    ram = malloc(count);
-    memset(ram,0,count);
-    hc11_core_map(core, start, count, ram, ram_read, ram_write);
-  }
-
-void hc11_core_map_rom(struct hc11_core *core, uint16_t start, uint16_t count, uint8_t *rom)
-  {
-    hc11_core_map(core, start, count, rom, ram_read, NULL);
-  }
-
-void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
-                          void *ctx, read_f rd, write_f wr)
-  {
-    uint8_t i;
-    for(i=0;i<count;i++)
-      {
-        core->io[off].ctx = ctx;
-        core->io[off].rdf = rd;
-        core->io[off].wrf = wr;
-        off++;
-      }
+    struct hc11_core *core = ctx;
+    core->rambase = (val >> 4   ) << 12;
+    core->iobase  = (val &  0x0F) << 12;
+    printf("INIT: rambase %04X iobase %04X\n", core->rambase, core->iobase);
   }
 
 void hc11_core_init(struct hc11_core *core)
@@ -572,6 +429,7 @@ void hc11_core_init(struct hc11_core *core)
         core->io[i].rdf = NULL;
         core->io[i].wrf = NULL;
       }
+    hc11_core_iocallback(core, REG_INIT, 1, core, init_read, init_write);
   }
 
 void hc11_core_reset(struct hc11_core *core)
@@ -601,6 +459,7 @@ void hc11_core_clock(struct hc11_core *core)
           break;
 
         case STATE_FETCHOPCODE:
+          printf("----------------------------------------\n");
           core->busadr = core->regs.pc;
           core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;           
