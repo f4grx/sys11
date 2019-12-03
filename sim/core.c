@@ -15,6 +15,9 @@ enum hc11states
     STATE_OPERAND_H,
     STATE_OPERAND_L,
     STATE_EXECUTE,       //execute opcode
+    STATE_EXECUTE_18,
+    STATE_EXCUTE_1A,
+    STATE_EXECUTE_CD,
   };
 
 // Define addressing modes
@@ -567,7 +570,7 @@ void hc11_core_reset(struct hc11_core *core)
   {
     core->rambase = 0x0000;
     core->iobase  = 0x1000;
-    core->vector  = VECTOR_RESET;
+    core->busadr  = VECTOR_RESET;
     core->state   = STATE_VECTORFETCH_H;
     core->prefix  = 0x00;
     core->clocks = 0;
@@ -575,35 +578,35 @@ void hc11_core_reset(struct hc11_core *core)
 
 void hc11_core_clock(struct hc11_core *core)
   {
-    uint8_t tmp;
     core->clocks += 1;
     switch(core->state)
       {
         case STATE_VECTORFETCH_H:
-          printf("VECTOR fetch @ 0x%04X\n", core->vector);
-          core->regs.pc = hc11_core_readb(core,core->vector) << 8;
+          printf("VECTOR fetch @ 0x%04X\n", core->busadr);
+          core->regs.pc = hc11_core_readb(core,core->busadr) << 8;
           core->state = STATE_VECTORFETCH_L;
           break;
 
         case STATE_VECTORFETCH_L:
-          core->regs.pc |= hc11_core_readb(core,core->vector+1);
+          core->regs.pc |= hc11_core_readb(core,core->busadr+1);
           core->state = STATE_FETCHOPCODE;
           break;
 
         case STATE_FETCHOPCODE:
-          tmp = hc11_core_readb(core,core->regs.pc);
+          core->busadr = core->regs.pc;
+          core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;           
-          if(tmp == 0x18 || tmp == 0x1A || tmp == 0xCD)
+          if(core->busdat == 0x18 || core->busdat == 0x1A || core->busdat == 0xCD)
             {
               if(core->prefix == 0)
                 {
-                  core->prefix = tmp;
+                  core->prefix = core->busdat;
                   break; //stay in this state
                 }
               else
                 {
                   //prefix already set: illegal
-                  core->vector  = VECTOR_ILLEGAL;
+                  core->busadr  = VECTOR_ILLEGAL;
                   core->state   = STATE_VECTORFETCH_H;
                   break;
                 }
@@ -613,7 +616,7 @@ void hc11_core_clock(struct hc11_core *core)
             //not a prefix
             uint8_t addmode;
             const uint8_t *modtable = opmodes;
-            core->opcode = tmp;
+            core->opcode = core->busdat;
             if(core->prefix == 0x18) modtable = opmodes_18;
             if(core->prefix == 0x1A) modtable = opmodes_1A;
             if(core->prefix == 0xCD) modtable = opmodes_CD;
@@ -622,7 +625,7 @@ void hc11_core_clock(struct hc11_core *core)
             switch(addmode)
               {
                 case ILL: //illegal opcode
-                  core->vector  = VECTOR_ILLEGAL;
+                  core->busadr  = VECTOR_ILLEGAL;
                   core->state   = STATE_VECTORFETCH_H;
                   break;
 
@@ -657,16 +660,21 @@ void hc11_core_clock(struct hc11_core *core)
           break;
 
         case STATE_OPERAND_H:
-          tmp = hc11_core_readb(core,core->regs.pc);
+          core->busadr = core->regs.pc;
+          core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;
-          core->operand = tmp << 8;
+          core->operand = core->busdat << 8;
           core->state = STATE_OPERAND_L;
           break;
 
         case STATE_OPERAND_L:
-          tmp = hc11_core_readb(core,core->regs.pc);
+          core->busadr = core->regs.pc;
+          core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;
-          core->operand |= tmp;
+          core->operand |= core->busdat;
+          if(core->prefix == 0x18) core->state = STATE_EXECUTE_18;
+          if(core->prefix == 0x1A) core->state = STATE_EXECUTE_1A;
+          if(core->prefix == 0xCD) core->state = STATE_EXECUTE_CD;
           core->state = STATE_EXECUTE;
           break;
 
@@ -674,8 +682,262 @@ void hc11_core_clock(struct hc11_core *core)
           printf("STATE_EXECUTE pf %02X op %02X operand %02X\n", core->prefix, core->opcode, core->operand);
           switch(core->opcode)
             {
+              case OP_TEST_INH : printf("TEST instruction not available in sim\n"); break;
+              case OP_NOP_INH  : printf("NOP\n"); break;
+    case OP_IDIV_INH : break;
+    case OP_FDIV_INH : break;
+    case OP_LSRD_INH : break;
+    case OP_ASLD_INH : break;
+    case OP_TAP_INH  : break;
+    case OP_TPA_INH  : break;
+    case OP_INXY_INH : break;
+    case OP_DEXY_INH : break;
+    case OP_CLV_INH  : break;
+    case OP_SEV_INH  : break;
+    case OP_CLC_INH  : break;
+    case OP_SEC_INH  : break;
+    case OP_CLI_INH  : break;
+    case OP_SEI_INH  : break;
+
+    case OP_SBA_INH   : break;
+    case OP_CBA_INH   : break;
+    case OP_BRSET_TDI : break;
+    case OP_BRCLR_TDI : break;
+    case OP_BSET_DDI  : break;
+    case OP_BCLR_DDI  : break;
+    case OP_TAB_INH   : break;
+    case OP_TBA_INH   : break;
+    case OP_PFX_18    : break;
+    case OP_DAA_INH   : break;
+    case OP_PFX_1A    : break;
+    case OP_ABA_INH   : break;
+    case OP_BSET_DIN  : break;
+    case OP_BCLR_DIN  : break;
+    case OP_BRSET_TIN : break;
+    case OP_BRCLR_TIN : break;
+
+    case OP_BRA_REL  : break;
+              case OP_BRN_REL  : printf("BRN\n"); break;
+    case OP_BHI_REL  : break;
+    case OP_BLS_REL  : break;
+    case OP_BHS_REL  : break;
+    case OP_BLO_REL  : break;
+    case OP_BNE_REL  : break;
+    case OP_BEQ_REL  : break;
+    case OP_BVC_REL  : break;
+    case OP_BVS_REL  : break;
+    case OP_BPL_REL  : break;
+    case OP_BMI_REL  : break;
+    case OP_BGE_REL  : break;
+    case OP_BLT_REL  : break;
+    case OP_BGT_REL  : break;
+    case OP_BLE_REL  : break;
+
+    case OP_TSXY_INH  : break;
+    case OP_INS_INH   : break;
+    case OP_PULA_INH  : break;
+    case OP_PULB_INH  : break;
+    case OP_DES_INH   : break;
+    case OP_TXYS_INH  : break;
+    case OP_PSHA_INH  : break;
+    case OP_PSHB_INH  : break;
+    case OP_PULXY_INH : break;
+    case OP_RTS_INH   : break;
+    case OP_ABXY_INH  : break;
+    case OP_RTI_INH   : break;
+    case OP_PSHXY_INH : break;
+    case OP_MUL_INH   : break;
+    case OP_WAI_INH   : break;
+    case OP_SWI_INH   : break;
+
+    case OP_NEGA_INH : break;
+    case OP_COMA_INH : break;
+    case OP_LSRA_INH : break;
+    case OP_RORA_INH : break;
+    case OP_ASRA_INH : break;
+    case OP_ASLA_INH : break;
+    case OP_ROLA_INH : break;
+    case OP_DECA_INH : break;
+    case OP_INCA_INH : break;
+    case OP_TSTA_INH : break;
               case OP_CLRA_INH: core->regs.d = core->regs.d & 0x00FF; printf("CLRA\n"); break;
+
+    case OP_NEGB_INH : break;
+    case OP_COMB_INH : break;
+    case OP_LSRB_INH : break;
+    case OP_RORB_INH : break;
+    case OP_ASRB_INH : break;
+    case OP_ASLB_INH : break;
+    case OP_ROLB_INH : break;
+    case OP_DECB_INH : break;
+    case OP_RSVD_5B  : break;
+    case OP_INCB_INH : break;
+    case OP_TSTB_INH : break;
               case OP_CLRB_INH: core->regs.d = core->regs.d & 0xFF00; printf("CLRB\n"); break;
+
+    case OP_NEG_IND : break;
+    case OP_COM_IND : break;
+    case OP_LSR_IND : break;
+    case OP_ROR_IND : break;
+    case OP_ASR_IND : break;
+    case OP_ASL_IND : break;
+    case OP_ROL_IND : break;
+    case OP_DEC_IND : break;
+    case OP_INC_IND : break;
+    case OP_TST_IND : break;
+    case OP_JMP_IND : break;
+    case OP_CLR_IND : break;
+
+    case OP_NEG_EXT : break;
+    case OP_COM_EXT : break;
+    case OP_LSR_EXT : break;
+    case OP_ROR_EXT : break;
+    case OP_ASR_EXT : break;
+    case OP_ASL_EXT : break;
+    case OP_ROL_EXT : break;
+    case OP_DEC_EXT : break;
+    case OP_INC_EXT : break;
+    case OP_TST_EXT : break;
+    case OP_JMP_EXT : break;
+    case OP_CLR_EXT : break;
+
+    case OP_SUBA_IMM  : break;
+    case OP_CMPA_IMM  : break;
+    case OP_SBCA_IMM  : break;
+    case OP_CPD_SUBD_IMM : break;
+    case OP_ANDA_IMM  : break;
+    case OP_BITA_IMM  : break;
+    case OP_LDAA_IMM  : break;
+    case OP_EORA_IMM  : break;
+    case OP_ADCA_IMM  : break;
+    case OP_ORAA_IMM  : break;
+    case OP_ADDA_IMM  : break;
+    case OP_CPXY_IMM  : break;
+    case OP_BSR_REL   : break;
+    case OP_LDS_IMM   : break;
+    case OP_XGDXY_INH : break;
+
+    case OP_SUBA_IND : break;
+    case OP_CMPA_IND : break;
+    case OP_SBCA_IND : break;
+    case OP_CPD_SUBD_IND : break;
+    case OP_ANDA_IND : break;
+    case OP_BITA_IND : break;
+    case OP_LDAA_IND : break;
+    case OP_STAA_IND : break;
+    case OP_EORA_IND : break;
+    case OP_ADCA_IND : break;
+    case OP_ORAA_IND : break;
+    case OP_ADDA_IND : break;
+    case OP_CPXY_IND : break;
+    case OP_JSR_IND  : break;
+    case OP_LDS_IND  : break;
+    case OP_STS_IND  : break;
+
+    case OP_SUBA_DIR :
+    case OP_SUBA_EXT : break;
+    case OP_CMPA_DIR :
+    case OP_CMPA_EXT : break;
+    case OP_SBCA_DIR :
+    case OP_SBCA_EXT : break;
+    case OP_CPD_SUBD_DIR :
+    case OP_CPD_SUBD_EXT : break;
+    case OP_ANDA_DIR :
+    case OP_ANDA_EXT : break;
+    case OP_BITA_DIR :
+    case OP_BITA_EXT : break;
+    case OP_LDAA_DIR :
+    case OP_LDAA_EXT : break;
+    case OP_STAA_DIR :
+    case OP_STAA_EXT : core->wraddr = core->operand; core->wrdat = core->regs.d >> 8; core->state = STATE_STORE_L; printf("STAA_EXT\n"); break;
+    case OP_EORA_DIR :
+    case OP_EORA_EXT : break;
+    case OP_ADCA_DIR :
+    case OP_ADCA_EXT : break;
+    case OP_ORAA_DIR :
+    case OP_ORAA_EXT : break;
+    case OP_ADDA_DIR :
+    case OP_ADDA_EXT : break;
+    case OP_CPXY_DIR :
+    case OP_CPXY_EXT : break;
+    case OP_JSR_DIR  :
+    case OP_JSR_EXT  : break;
+    case OP_LDS_DIR  :
+    case OP_LDS_EXT  : break;
+    case OP_STS_DIR  :
+    case OP_STS_EXT  : break;
+
+    case OP_SUBB_IMM : break;
+    case OP_CMPB_IMM : break;
+    case OP_SBCB_IMM : break;
+    case OP_ADDD_IMM : break;
+    case OP_ANDB_IMM : break;
+    case OP_BITB_IMM : break;
+    case OP_LDAB_IMM : break;
+    case OP_RSVD_C7  : break;
+    case OP_EORB_IMM : break;
+    case OP_ADCB_IMM : break;
+    case OP_ORAB_IMM : break;
+    case OP_ADDB_IMM : break;
+    case OP_LDD_IMM  : break;
+    case OP_PFX_CD   : break;
+    case OP_LDXY_IMM : break;
+    case OP_STcase OP_INH : break;
+
+    case OP_SUBB_DIR : break;
+    case OP_CMPB_DIR : break;
+    case OP_SBCB_DIR : break;
+    case OP_ADDD_DIR : break;
+    case OP_ANDB_DIR : break;
+    case OP_BITB_DIR : break;
+    case OP_LDAB_DIR : break;
+    case OP_STAB_DIR : break;
+    case OP_EORB_DIR : break;
+    case OP_ADCB_DIR : break;
+    case OP_ORAB_DIR : break;
+    case OP_ADDB_DIR : break;
+    case OP_LDD_DIR  : break;
+    case OP_STD_DIR  : break;
+    case OP_LDXY_DIR : break;
+    case OP_STXY_DIR : break;
+
+    case OP_SUBB_IND : break;
+    case OP_CMPB_IND : break;
+    case OP_SBCB_IND : break;
+    case OP_ADDD_IND : break;
+    case OP_ANDB_IND : break;
+    case OP_BITB_IND : break;
+    case OP_LDAB_IND : break;
+    case OP_STAB_IND : break;
+    case OP_EORB_IND : break;
+    case OP_ADCB_IND : break;
+    case OP_ORAB_IND : break;
+    case OP_ADDB_IND : break;
+    case OP_LDD_IND  : break;
+    case OP_STD_IND  : break;
+    case OP_LDXY_IND : break;
+    case OP_STXY_IND : break;
+
+    case OP_SUBB_EXT : break;
+    case OP_CMPB_EXT : break;
+    case OP_SBCB_EXT : break;
+    case OP_ADDD_EXT : break;
+    case OP_ANDB_EXT : break;
+    case OP_BITB_EXT : break;
+    case OP_LDAB_EXT : break;
+    case OP_STAB_EXT : break;
+    case OP_EORB_EXT : break;
+    case OP_ADCB_EXT : break;
+    case OP_ORAB_EXT : break;
+    case OP_ADDB_EXT : break;
+    case OP_LDD_EXT  : break;
+    case OP_STD_EXT  : break;
+    case OP_LDXY_EXT : break;
+    case OP_STXY_EXT : break;
+
+        case STATE_EXECUTE_18:
+        case STATE_EXECUTE_1A:
+        case STATE_EXECUTE_CD:
             }
           core->prefix = 0; //last action
           core->state = STATE_FETCHOPCODE;

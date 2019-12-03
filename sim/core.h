@@ -73,9 +73,10 @@ struct hc11_core
     struct hc11_mapping *maps;    
     uint16_t             rambase;
     uint16_t             iobase;
-    uint16_t             vector; //vector address to fetch in state
     uint16_t             state; //core state machine
     uint64_t             clocks;
+    uint16_t             busadr;
+    uint16_t             busdat;
     uint8_t              prefix;
     uint8_t              opcode;
     uint8_t              addmode;
