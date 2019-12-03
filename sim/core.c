@@ -24,6 +24,8 @@ enum hc11states
     STATE_WRITEOP_L,      //write operand value (single or lo byte)
     STATE_PUSHPC_L,
     STATE_PUSHPC_H,
+    STATE_PULPC_L,
+    STATE_PULPC_H,
   };
 
 // Define addressing modes
@@ -33,15 +35,19 @@ enum
     INH, //inherent (no operand, direct execution
     IM1, //immediate, one byte
     IM2, //immediate, two bytes
-    DIR, //direct (one byte abs address), value on 8 bits
-    DI2, //direct, value on 16 bits (X,Y,D)
+    DIR, //direct (one byte abs address), read 8 bits of data
+    DI2, //direct (one byte abs address), read 16 bits of data (X,Y,D)
+    DIS, //direct (one byte abs address), no read of data (store only)
     REL, //relative (branches)
-    EXT, //extended (two bytes absolute address), value on 8 buts
-    EX2, //extended, value on 16 bits (X,Y,D)
+    EXT, //extended (two bytes absolute address), read 8 bits of data
+    EX2, //extended (two bytes absolute address), read 16 bits of data (X,Y,D)
+    EXS, //extended (two bytes absolute address), no read of data (store only)
     INX, //indexed relative to X, 8-bit value
     IX2, //indexed relative to X, 16-bit value
+    IXS, //indexed relative to X, no value read
     INY, //indexed relative to Y, 8-bit value
     IY2, //indexed relative to Y, 16-bit value
+    IYS, //indexed relative to Y, no value read
     TDI, //direct, triple for brset/clr dd/mm/rr
     TIX, //indirect X, triple for brset/clr ff/mm/rr
     TIY, //indirect Y, triple for brset/clr ff/mm/rr
@@ -53,43 +59,43 @@ enum
 static const uint8_t opmodes[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
-  INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,0,  INH,INH,INH,INH, /* 00-0F */
-  INH,INH,TDI,TDI,DDI,DDI,INH,INH,0,  INH,0,  INH,DIX,DIX,TIX,TIX, /* 10-1F */
+  INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,0  ,INH,INH,INH,INH, /* 00-0F */
+  INH,INH,TDI,TDI,DDI,DDI,INH,INH,0  ,INH,0  ,INH,DIX,DIX,TIX,TIX, /* 10-1F */
   REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL, /* 20-2F */
   INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH, /* 30-3F */
-  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH,INH,0,  INH, /* 40-4F */
-  INH,0,  0,  INH,INH,0,  INH,INH,INH,INH,INH,0,  INH,INH,0,  INH, /* 50-5F */
-  INX,0,  0,  INX,INX,0,  INX,INX,INX,INX,INX,0,  INX,INX,INX,INX, /* 60-5F */
-  EXT,0,  0,  EXT,EXT,0,  EXT,EXT,EXT,EXT,EXT,0,  EXT,EXT,EXT,EXT, /* 70-7F */
-  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0,  IM1,IM1,IM1,IM1,IM2,REL,IM2,INH, /* 80-8F */
-  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DI2,DIR,DI2,DIR, /* 90-9F */
-  INX,INX,INX,IX2,INX,INX,INX,INX,INX,INX,INX,INX,IX2,INX,IX2,INX, /* A0-AF */
-  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EXT, /* B0-BF */
-  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0,  IM1,IM1,IM1,IM1,IM2,0,  IM2,INH, /* C0-CF */
-  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DIR,DI2,DIR,DI2,DI2, /* D0-DF */
-  INX,INX,INX,IX2,INX,INX,INX,INX,INX,INX,INX,INX,IX2,INX,IX2,IX2, /* E0-EF */
-  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EX2, /* F0-FF */
+  INH,0  ,0  ,INH,INH,0  ,INH,INH,INH,INH,INH,0  ,INH,INH,0  ,INH, /* 40-4F */
+  INH,0  ,0  ,INH,INH,0  ,INH,INH,INH,INH,INH,0  ,INH,INH,0  ,INH, /* 50-5F */
+  INX,0  ,0  ,INX,INX,0  ,INX,INX,INX,INX,INX,0  ,INX,INX,IXS,INX, /* 60-6F */
+  EXT,0  ,0  ,EXT,EXT,0  ,EXT,EXT,EXT,EXT,EXT,0  ,EXT,EXT,EXS,EXT, /* 70-7F */
+  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0  ,IM1,IM1,IM1,IM1,IM2,REL,IM2,INH, /* 80-8F */
+  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIS,DIR,DIR,DIR,DIR,DI2,DIR,DI2,DIS, /* 90-9F */
+  INX,INX,INX,IX2,INX,INX,INX,IXS,INX,INX,INX,INX,IX2,INX,IX2,IXS, /* A0-AF */
+  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXS,EXT,EXT,EXT,EXT,EX2,EXT,EX2,EXS, /* B0-BF */
+  IM1,IM1,IM1,IM2,IM1,IM1,IM1,0  ,IM1,IM1,IM1,IM1,IM2,0,  IM2,INH, /* C0-CF */
+  DIR,DIR,DIR,DI2,DIR,DIR,DIR,DIS,DIR,DIR,DIR,DIR,DI2,DIS,DI2,DIS, /* D0-DF */
+  INX,INX,INX,IX2,INX,INX,INX,IXS,INX,INX,INX,INX,IX2,IXS,IX2,IXS, /* E0-EF */
+  EXT,EXT,EXT,EX2,EXT,EXT,EXT,EXS,EXT,EXT,EXT,EXT,EX2,EXS,EX2,EXS, /* F0-FF */
   };
 
 static const uint8_t opmodes_18[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
-  0,  0,  0,  0,  0,  0,  0,  0,  INH,INH,0,  0,  0,  0,  0,  0, /* 00-0F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DIY,DIY,TIY,TIY, /* 10-1F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 20-2F */
-  INH,0,  0,  0,  0,  INH,0,  0,  INH,0,  INH,0,  INH,0,  0,  0, /* 30-3F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
-  INY,0,  0,  INY,INY,0,  INY,INY,INY,INY,INY,0,  INY,INY,INY,INY, /* 60-5F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0,  0,  INH, /* 80-8F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DI2,0,  0,  0, /* 90-9F */
-  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,INY,IY2,IY2, /* A0-AF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EX2,0,  0,  0, /* B0-BF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IM2,0, /* C0-CF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  DI2,DI2, /* D0-DF */
-  INY,INY,INY,IY2,INY,INY,INY,INY,INY,INY,INY,INY,IY2,IY2,IY2,IY2, /* E0-EF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  EX2,EX2, /* F0-FF */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,INH,INH,0  ,0  ,0  ,0  ,0  ,0  , /* 00-0F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,DIY,DIY,TIY,TIY, /* 10-1F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 20-2F */
+  INH,0  ,0  ,0  ,0  ,INH,0  ,0  ,INH,0  ,INH,0  ,INH,0  ,0  ,0  , /* 30-3F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 40-4F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 50-5F */
+  INY,0  ,0  ,INY,INY,0  ,INY,INY,INY,INY,INY,0  ,INY,INY,IYS,INY, /* 60-6F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 70-7F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,IM2,0  ,0  ,INH, /* 80-8F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,DI2,0  ,0  ,0  , /* 90-9F */
+  INY,INY,INY,IY2,INY,INY,INY,IYS,INY,INY,INY,INY,IY2,INY,IY2,IYS, /* A0-AF */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,EX2,0  ,0  ,0  , /* B0-BF */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,IM2,0  , /* C0-CF */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,DI2,DIS, /* D0-DF */
+  INY,INY,INY,IY2,INY,INY,INY,IYS,INY,INY,INY,INY,IY2,IYS,IY2,IYS, /* E0-EF */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,EX2,EXS, /* F0-FF */
   };
 
 static const uint8_t opmodes_1A[256] =
@@ -101,7 +107,7 @@ static const uint8_t opmodes_1A[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 30-3F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-6F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
   0,  0,  0,  IM2,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 80-8F */
   0,  0,  0,  DIR,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
@@ -109,7 +115,7 @@ static const uint8_t opmodes_1A[256] =
   0,  0,  0,  EXT,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IX2,IX2, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IX2,IXS, /* E0-EF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
   };
 
@@ -122,7 +128,7 @@ static const uint8_t opmodes_CD[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 30-3F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 40-4F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 50-5F */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-5F */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-6F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 80-8F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
@@ -130,81 +136,21 @@ static const uint8_t opmodes_CD[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
-  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IY2,IY2, /* E0-EF */
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IY2,IYS, /* E0-EF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* F0-FF */
   };
 
 //Define opcodes
 enum
   {
-    OP_TEST_INH = 0x00,
-    OP_NOP_INH  = 0x01,
-    OP_IDIV_INH = 0x02,
-    OP_FDIV_INH = 0x03,
-    OP_LSRD_INH = 0x04,
-    OP_ASLD_INH = 0x05,
-    OP_TAP_INH  = 0x06,
-    OP_TPA_INH  = 0x07,
-    OP_INXY_INH = 0x08,
-    OP_DEXY_INH = 0x09,
-    OP_CLV_INH  = 0x0A,
-    OP_SEV_INH  = 0x0B,
-    OP_CLC_INH  = 0x0C,
-    OP_SEC_INH  = 0x0D,
-    OP_CLI_INH  = 0x0E,
-    OP_SEI_INH  = 0x0F,
-
-    OP_SBA_INH   = 0x10,
-    OP_CBA_INH   = 0x11,
-    OP_BRSET_TDI = 0x12,
-    OP_BRCLR_TDI = 0x13,
-    OP_BSET_DDI  = 0x14,
-    OP_BCLR_DDI  = 0x15,
-    OP_TAB_INH   = 0x16,
-    OP_TBA_INH   = 0x17,
-    OP_PFX_18    = 0x18,
-    OP_DAA_INH   = 0x19,
-    OP_PFX_1A    = 0x1A,
-    OP_ABA_INH   = 0x1B,
-    OP_BSET_DIN  = 0x1C,
-    OP_BCLR_DIN  = 0x1D,
-    OP_BRSET_TIN = 0x1E,
-    OP_BRCLR_TIN = 0x1F,
-
-    OP_BRA_REL  = 0x20,
-    OP_BRN_REL  = 0x21,
-    OP_BHI_REL  = 0x22,
-    OP_BLS_REL  = 0x23,
-    OP_BHS_REL  = 0x24,
-    OP_BLO_REL  = 0x25,
-    OP_BNE_REL  = 0x26,
-    OP_BEQ_REL  = 0x27,
-    OP_BVC_REL  = 0x28,
-    OP_BVS_REL  = 0x29,
-    OP_BPL_REL  = 0x2A,
-    OP_BMI_REL  = 0x2B,
-    OP_BGE_REL  = 0x2C,
-    OP_BLT_REL  = 0x2D,
-    OP_BGT_REL  = 0x2E,
-    OP_BLE_REL  = 0x2F,
-
-    OP_TSXY_INH  = 0x30,
-    OP_INS_INH   = 0x31,
-    OP_PULA_INH  = 0x32,
-    OP_PULB_INH  = 0x33,
-    OP_DES_INH   = 0x34,
-    OP_TXYS_INH  = 0x35,
-    OP_PSHA_INH  = 0x36,
-    OP_PSHB_INH  = 0x37,
-    OP_PULXY_INH = 0x38,
-    OP_RTS_INH   = 0x39,
-    OP_ABXY_INH  = 0x3A,
-    OP_RTI_INH   = 0x3B,
-    OP_PSHXY_INH = 0x3C,
-    OP_MUL_INH   = 0x3D,
-    OP_WAI_INH   = 0x3E,
-    OP_SWI_INH   = 0x3F,
-
+    OP_TEST_INH  = 0x00, OP_NOP_INH, OP_IDIV_INH, OP_FDIV_INH, OP_LSRD_INH, OP_ASLD_INH, OP_TAP_INH, OP_TPA_INH,
+    OP_INXY_INH  = 0x08, OP_DEXY_INH, OP_CLV_INH, OP_SEV_INH, OP_CLC_INH, OP_SEC_INH, OP_CLI_INH, OP_SEI_INH,
+    OP_SBA_INH   = 0x10, OP_CBA_INH, OP_BRSET_TDI, OP_BRCLR_TDI, OP_BSET_DDI, OP_BCLR_DDI, OP_TAB_INH, OP_TBA_INH,
+    OP_PFX_18    = 0x18, OP_DAA_INH, OP_PFX_1A, OP_ABA_INH, OP_BSET_DIN, OP_BCLR_DIN, OP_BRSET_TIN, OP_BRCLR_TIN,
+    OP_BRA_REL   = 0x20, OP_BRN_REL, OP_BHI_REL, OP_BLS_REL, OP_BHS_REL, OP_BLO_REL, OP_BNE_REL, OP_BEQ_REL,
+    OP_BVC_REL   = 0x28, OP_BVS_REL, OP_BPL_REL, OP_BMI_REL, OP_BGE_REL, OP_BLT_REL, OP_BGT_REL, OP_BLE_REL,
+    OP_TSXY_INH  = 0x30, OP_INS_INH, OP_PULA_INH, OP_PULB_INH, OP_DES_INH, OP_TXYS_INH, OP_PSHA_INH, OP_PSHB_INH,
+    OP_PULXY_INH = 0x38, OP_RTS_INH, OP_ABXY_INH, OP_RTI_INH, OP_PSHXY_INH, OP_MUL_INH, OP_WAI_INH, OP_SWI_INH,
     OP_NEGA_INH = 0x40,
     OP_RSVD_41  = 0x41,
     OP_RSVD_42  = 0x42,
@@ -507,16 +453,25 @@ void hc11_core_clock(struct hc11_core *core)
 
                 case IM1: //immediate, one byte
                 case DIR: //direct (one byte abs address)
+                case DIS: //direct (one byte abs address, no data fetched)
                 case REL: //relative (branches)
                 case INX: //indexed relative to X
                 case INY: //indexed relative to Y
+                case IX2: //indexed relative to X, two bytes fetch
+                case IY2: //indexed relative to Y, two bytes fetch
+                case IXS: //indexed relative to X, no fetch
+                case IYS: //indexed relative to Y, no fetch
                   core->state = STATE_OPERAND_L;
                   break;
 
                 case IM2: //immediate, two bytes
                 case EXT: //extended (two bytes absolute address)
+                case EX2: //extended (two bytes absolute address, 2 bytes fetch)
+                case EXS: //extended (two bytes absolute address, no data fetch)
                   core->state = STATE_OPERAND_H;
                   break;
+
+// TODO rework this so it looks like a normal direct/ix/iy, and restart bus fetch after first op. see HC11 RM bus states.
 
                 case TDI: //direct, triple for brset/clr dd/mm/rr
                 case TIX: //indirect X, triple for brset/clr ff/mm/rr
@@ -564,18 +519,20 @@ void hc11_core_clock(struct hc11_core *core)
           core->regs.pc = core->regs.pc + 1;
           core->operand |= core->busdat;
           core->busdat = 0;
-          core->state = STATE_EXECUTE; //preset
+          core->state = STATE_EXECUTE; //preset action to just execute without operand value fetch
+          //fetch operand value if we need to act on it during the exec phase
+          // this is not required for stores and jmps.
           switch(core->addmode)
             {
               uint8_t tmp;
               case DDI:
-                //reverse ops
+                //reverse ops - should not be necessary after bset is reworked.
                 tmp = core->op2;
                 core->op2 = core->operand;
                 core->operand = tmp;
               case DIR:
               case EXT:
-                core->state = STATE_READOP_L; //read value not used for jsr and jmp, but still acquired
+                core->state = STATE_READOP_L; //read value not used for jsr and bsr, but still acquired
                 break;
 
               case DI2:
@@ -724,7 +681,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_PSHA_INH  : break;
               case OP_PSHB_INH  : break;
               case OP_PULXY_INH : break;
-              case OP_RTS_INH   : break;
+              case OP_RTS_INH:
+                core->state = STATE_PULPC_H;
+                printf("RTS\n");
+                break;
+
               case OP_ABXY_INH  : break;
               case OP_RTI_INH   : break;
               case OP_PSHXY_INH : break;
@@ -794,7 +755,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_CPD_SUBD_IMM : break;
               case OP_ANDA_IMM  : break;
               case OP_BITA_IMM  : break;
-              case OP_LDAA_IMM  : break;
+              case OP_LDAA_IMM  :
+                core->regs.d = (core->regs.d & 0x00FF) | (core->operand & 0xFF) << 8;
+                printf("LDAA_IMM #%02X\n", core->operand & 0xFF);
+                break;
+
               case OP_EORA_IMM  : break;
               case OP_ADCA_IMM  : break;
               case OP_ORAA_IMM  : break;
@@ -803,7 +768,7 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BSR_REL   : break;
               case OP_LDS_IMM   :
                 core->regs.sp = core->operand;
-                printf("LDS_IMM\n");
+                printf("LDS_IMM %04X\n", core->operand);
                 break;
 
               case OP_XGDXY_INH : break;
@@ -871,71 +836,75 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_STS_DIR  :
               case OP_STS_EXT  : break;
 
-    case OP_SUBB_IMM : break;
-    case OP_CMPB_IMM : break;
-    case OP_SBCB_IMM : break;
-    case OP_ADDD_IMM : break;
-    case OP_ANDB_IMM : break;
-    case OP_BITB_IMM : break;
-    case OP_LDAB_IMM : break;
-    case OP_EORB_IMM : break;
-    case OP_ADCB_IMM : break;
-    case OP_ORAB_IMM : break;
-    case OP_ADDB_IMM : break;
-    case OP_LDD_IMM  : break;
-    case OP_LDXY_IMM : break;
-    case OP_STOP_INH : break;
+              case OP_SUBB_IMM : break;
+              case OP_CMPB_IMM : break;
+              case OP_SBCB_IMM : break;
+              case OP_ADDD_IMM : break;
+              case OP_ANDB_IMM : break;
+              case OP_BITB_IMM : break;
+              case OP_LDAB_IMM :
+                core->regs.d = (core->regs.d & 0x00FF) | (core->operand & 0xFF) << 8;
+                printf("LDAA_IMM #%02X\n", core->operand & 0xFF);
+                break;
 
-    case OP_SUBB_DIR : break;
-    case OP_CMPB_DIR : break;
-    case OP_SBCB_DIR : break;
-    case OP_ADDD_DIR : break;
-    case OP_ANDB_DIR : break;
-    case OP_BITB_DIR : break;
-    case OP_LDAB_DIR : break;
-    case OP_STAB_DIR : break;
-    case OP_EORB_DIR : break;
-    case OP_ADCB_DIR : break;
-    case OP_ORAB_DIR : break;
-    case OP_ADDB_DIR : break;
-    case OP_LDD_DIR  : break;
-    case OP_STD_DIR  : break;
-    case OP_LDXY_DIR : break;
-    case OP_STXY_DIR : break;
+              case OP_EORB_IMM : break;
+              case OP_ADCB_IMM : break;
+              case OP_ORAB_IMM : break;
+              case OP_ADDB_IMM : break;
+              case OP_LDD_IMM  : break;
+              case OP_LDXY_IMM : break;
+              case OP_STOP_INH : break;
 
-    case OP_SUBB_IND : break;
-    case OP_CMPB_IND : break;
-    case OP_SBCB_IND : break;
-    case OP_ADDD_IND : break;
-    case OP_ANDB_IND : break;
-    case OP_BITB_IND : break;
-    case OP_LDAB_IND : break;
-    case OP_STAB_IND : break;
-    case OP_EORB_IND : break;
-    case OP_ADCB_IND : break;
-    case OP_ORAB_IND : break;
-    case OP_ADDB_IND : break;
-    case OP_LDD_IND  : break;
-    case OP_STD_IND  : break;
-    case OP_LDXY_IND : break;
-    case OP_STXY_IND : break;
+              case OP_SUBB_DIR : break;
+              case OP_CMPB_DIR : break;
+              case OP_SBCB_DIR : break;
+              case OP_ADDD_DIR : break;
+              case OP_ANDB_DIR : break;
+              case OP_BITB_DIR : break;
+              case OP_LDAB_DIR : break;
+              case OP_STAB_DIR : break;
+              case OP_EORB_DIR : break;
+              case OP_ADCB_DIR : break;
+              case OP_ORAB_DIR : break;
+              case OP_ADDB_DIR : break;
+              case OP_LDD_DIR  : break;
+              case OP_STD_DIR  : break;
+              case OP_LDXY_DIR : break;
+              case OP_STXY_DIR : break;
 
-    case OP_SUBB_EXT : break;
-    case OP_CMPB_EXT : break;
-    case OP_SBCB_EXT : break;
-    case OP_ADDD_EXT : break;
-    case OP_ANDB_EXT : break;
-    case OP_BITB_EXT : break;
-    case OP_LDAB_EXT : break;
-    case OP_STAB_EXT : break;
-    case OP_EORB_EXT : break;
-    case OP_ADCB_EXT : break;
-    case OP_ORAB_EXT : break;
-    case OP_ADDB_EXT : break;
-    case OP_LDD_EXT  : break;
-    case OP_STD_EXT  : break;
-    case OP_LDXY_EXT : break;
-    case OP_STXY_EXT : break;
+              case OP_SUBB_IND : break;
+              case OP_CMPB_IND : break;
+              case OP_SBCB_IND : break;
+              case OP_ADDD_IND : break;
+              case OP_ANDB_IND : break;
+              case OP_BITB_IND : break;
+              case OP_LDAB_IND : break;
+              case OP_STAB_IND : break;
+              case OP_EORB_IND : break;
+              case OP_ADCB_IND : break;
+              case OP_ORAB_IND : break;
+              case OP_ADDB_IND : break;
+              case OP_LDD_IND  : break;
+              case OP_STD_IND  : break;
+              case OP_LDXY_IND : break;
+              case OP_STXY_IND : break;
+
+              case OP_SUBB_EXT : break;
+              case OP_CMPB_EXT : break;
+              case OP_SBCB_EXT : break;
+              case OP_ADDD_EXT : break;
+              case OP_ANDB_EXT : break;
+              case OP_BITB_EXT : break;
+              case OP_LDAB_EXT : break;
+              case OP_STAB_EXT : break;
+              case OP_EORB_EXT : break;
+              case OP_ADCB_EXT : break;
+              case OP_ORAB_EXT : break;
+              case OP_ADDB_EXT : break;
+              case OP_LDD_EXT  : break;
+              case OP_STD_EXT  : break;
+              case OP_LDXY_EXT : break;
+              case OP_STXY_EXT : break;
 
             } //normal opcodes
           break;
@@ -988,6 +957,21 @@ void hc11_core_clock(struct hc11_core *core)
           core->busadr = core->regs.sp;
           hc11_core_writeb(core, core->busadr, core->busdat >> 8);
           core->regs.sp = core->regs.sp - 1;
+          core->state = STATE_FETCHOPCODE;
+          break;
+
+        case STATE_PULPC_H:
+          core->regs.sp = core->regs.sp + 1;
+          core->busadr = core->regs.sp;
+          core->busdat = hc11_core_readb(core, core->busadr) << 8;
+          core->state = STATE_PULPC_L;
+          break;
+
+        case STATE_PULPC_L:
+          core->regs.sp = core->regs.sp + 1;
+          core->busadr = core->regs.sp;
+          core->busdat = core->busdat | hc11_core_readb(core, core->busadr);
+          core->regs.pc = core->busdat;
           core->state = STATE_FETCHOPCODE;
           break;
       }//switch
