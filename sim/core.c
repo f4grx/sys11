@@ -7,19 +7,21 @@
 // Define internal core execution states
 enum hc11states
   {
-    STATE_VECTORFETCH_H, //fetch high byte of vector address
-    STATE_VECTORFETCH_L, //fetch low byte of vector address
-    STATE_FETCHOPCODE,   //fetch the opcode or the prefix
-    STATE_OPERAND_H,     //fetch operand (hi bytes)
-    STATE_OPERAND_L,     //fetch operand (single or lo byte)
-    STATE_READOP_H,      //read operand value (hi byte)
-    STATE_READOP_L,      //read operand value (single or lo byte)
-    STATE_EXECUTE,       //execute opcode
-    STATE_EXECUTE_18,    //execute opcode with 18h prefix
-    STATE_EXECUTE_1A,    //execute opcode with 1Ah prefix
-    STATE_EXECUTE_CD,    //execute opcode with CDh prefix
-    STATE_WRITEOP_H,     //write operand value (hi byte)
-    STATE_WRITEOP_L,     //write operand value (single or lo byte)
+    STATE_VECTORFETCH_H,  //fetch high byte of vector address
+    STATE_VECTORFETCH_L,  //fetch low byte of vector address
+    STATE_FETCHOPCODE,    //fetch the opcode or the prefix
+    STATE_OPERAND_H,      //fetch operand (hi bytes)
+    STATE_OPERAND_L,      //fetch operand (single or lo byte)
+    STATE_OPERAND_DOUBLE, //Special mode for BSET/BCLR
+    STATE_OPERAND_TRIPLE, //Special mode for BRCLR
+    STATE_READOP_H,       //read operand value (hi byte)
+    STATE_READOP_L,       //read operand value (single or lo byte)
+    STATE_EXECUTE,        //execute opcode
+    STATE_EXECUTE_18,     //execute opcode with 18h prefix
+    STATE_EXECUTE_1A,     //execute opcode with 1Ah prefix
+    STATE_EXECUTE_CD,     //execute opcode with CDh prefix
+    STATE_WRITEOP_H,      //write operand value (hi byte)
+    STATE_WRITEOP_L,      //write operand value (single or lo byte)
   };
 
 // Define addressing modes
@@ -448,6 +450,7 @@ void hc11_core_clock(struct hc11_core *core)
     switch(core->state)
       {
         case STATE_VECTORFETCH_H:
+          printf("----------------------------------------\n");
           printf("VECTOR fetch @ 0x%04X\n", core->busadr);
           core->regs.pc = hc11_core_readb(core,core->busadr) << 8;
           core->state = STATE_VECTORFETCH_L;
@@ -462,7 +465,8 @@ void hc11_core_clock(struct hc11_core *core)
           printf("----------------------------------------\n");
           core->busadr = core->regs.pc;
           core->busdat = hc11_core_readb(core,core->busadr);
-          core->regs.pc = core->regs.pc + 1;           
+          core->regs.pc = core->regs.pc + 1;
+          core->operand = 0;         
           if(core->busdat == 0x18 || core->busdat == 0x1A || core->busdat == 0xCD)
             {
               if(core->prefix == 0)
@@ -504,7 +508,6 @@ void hc11_core_clock(struct hc11_core *core)
                 case REL: //relative (branches)
                 case INX: //indexed relative to X
                 case INY: //indexed relative to Y
-                  core->operand = 0;
                   core->state = STATE_OPERAND_L;
                   break;
 
@@ -516,13 +519,34 @@ void hc11_core_clock(struct hc11_core *core)
                 case TDI: //direct, triple for brset/clr dd/mm/rr
                 case TIX: //indirect X, triple for brset/clr ff/mm/rr
                 case TIY: //indirect Y, triple for brset/clr ff/mm/rr
+                  core->state = STATE_OPERAND_TRIPLE;
+                  break;
+
                 case DDI: //direct, double for bset/clr dd/mm
                 case DIX: //indirect X, double for bset/clr ff/mm
                 case DIY: //indirect Y, double for bset/clr ff/mm
-                  printf("unsupported op mode\n");
-                break;
+                  core->state = STATE_OPERAND_DOUBLE;
+                  break;
+
               }
             }
+          break;
+
+        case STATE_OPERAND_TRIPLE:
+printf("OP_TRPL\n");
+          core->busadr = core->regs.pc;
+          core->busdat = hc11_core_readb(core,core->busadr);
+          core->regs.pc = core->regs.pc + 1;
+          core->op3 = core->busdat & 0xFF;
+          core->state = STATE_OPERAND_DOUBLE;
+          break;
+
+        case STATE_OPERAND_DOUBLE:
+          core->busadr = core->regs.pc;
+          core->busdat = hc11_core_readb(core,core->busadr);
+          core->regs.pc = core->regs.pc + 1;
+          core->op2 = core->busdat & 0xFF;
+          core->state = STATE_OPERAND_L;
           break;
 
         case STATE_OPERAND_H:
@@ -538,52 +562,66 @@ void hc11_core_clock(struct hc11_core *core)
           core->busdat = hc11_core_readb(core,core->busadr);
           core->regs.pc = core->regs.pc + 1;
           core->operand |= core->busdat;
+          core->busdat = 0;
+          core->state = STATE_EXECUTE; //preset
           switch(core->addmode)
             {
+              uint8_t tmp;
+              case DDI:
+printf("DDI\n");
+                //reverse ops
+                tmp = core->op2;
+                core->op2 = core->operand;
+                core->operand = tmp;
               case DIR:
               case EXT:
                 core->state = STATE_READOP_L;
                 break;
+
               case DI2:
               case EX2:
                 core->state = STATE_READOP_H;
                 break;
+
               case INX:
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_L;
                 break;
+
               case INY:
                 core->operand = core->regs.y + core->operand;
                 core->state = STATE_READOP_L;
                 break;
+
               case IX2:
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_H;
                 break;
+
               case IY2:
                 core->operand = core->regs.y + core->operand;
                 core->state = STATE_READOP_H;
                 break;
             }
-
-          core->state = STATE_EXECUTE;
+          if(core->state != STATE_EXECUTE)
+            {
+              break; //Something to do before execution
+            }
           if(core->prefix == 0x18) core->state = STATE_EXECUTE_18;
           if(core->prefix == 0x1A) core->state = STATE_EXECUTE_1A;
           if(core->prefix == 0xCD) core->state = STATE_EXECUTE_CD;
           break;
 
-        case STATE_READOP_H:
+        case STATE_READOP_H: //Get value in busdat (not operand, required for writeback)
           core->busadr = core->operand >> 8;
-          core->busdat = hc11_core_readb(core,core->busadr);
+          core->busdat = hc11_core_readb(core,core->busadr) << 8;
           core->busadr = core->busadr + 1;
-          core->operand = (core->busdat<<8) | core->operand & 0xFF;
           core->state = STATE_READOP_L;
           break;
 
         case STATE_READOP_L:
           core->busadr = core->operand & 0xFF;
-          core->busdat = hc11_core_readb(core,core->busadr);
-          core->operand = (core->operand & 0xFF00) | core->busdat;
+          core->busdat |= hc11_core_readb(core,core->busadr);
           core->state = STATE_EXECUTE;
           if(core->prefix == 0x18) core->state = STATE_EXECUTE_18;
           if(core->prefix == 0x1A) core->state = STATE_EXECUTE_1A;
@@ -591,7 +629,7 @@ void hc11_core_clock(struct hc11_core *core)
           break;
 
         case STATE_EXECUTE:
-          printf("STATE_EXECUTE op %02X operand %02X\n", core->opcode, core->operand);
+          printf("[%8ld] EXEC  %02X operand %04X\n", core->clocks, core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
 
@@ -624,7 +662,13 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_CBA_INH   : break;
               case OP_BRSET_TDI : break;
               case OP_BRCLR_TDI : break;
-              case OP_BSET_DDI  : break;
+              case OP_BSET_DDI  :
+                printf("BSET_DIR OP2 %02X\n", core->op2);
+                core->busadr = core->operand;
+                core->busdat = core->busdat | core->op2;
+                core->state = STATE_WRITEOP_L;
+                break;
+
               case OP_BCLR_DDI  : break;
               case OP_TAB_INH   : break;
               case OP_TBA_INH   : break;
@@ -741,7 +785,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDA_IMM  : break;
               case OP_CPXY_IMM  : break;
               case OP_BSR_REL   : break;
-              case OP_LDS_IMM   : break;
+              case OP_LDS_IMM   :
+                core->regs.sp = core->operand;
+                printf("LDS_IMM\n");
+                break;
+
               case OP_XGDXY_INH : break;
 
               case OP_SUBA_IND : break;
@@ -782,6 +830,7 @@ void hc11_core_clock(struct hc11_core *core)
                 core->state = STATE_WRITEOP_L;
                 printf("STAA_DIR_EXT\n");
                 break;
+
               case OP_EORA_DIR :
               case OP_EORA_EXT : break;
               case OP_ADCA_DIR :
@@ -868,7 +917,7 @@ void hc11_core_clock(struct hc11_core *core)
             } //normal opcodes
           break;
         case STATE_EXECUTE_18:
-          printf("STATE_EXECUTE_18 op %02X operand %02X\n", core->opcode, core->operand);
+          printf("STATE_EXECUTE_18 op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
@@ -877,7 +926,7 @@ void hc11_core_clock(struct hc11_core *core)
             break;
 
         case STATE_EXECUTE_1A:
-          printf("STATE_EXECUTE_1A op %02X operand %02X\n", core->opcode, core->operand);
+          printf("STATE_EXECUTE_1A op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
@@ -886,7 +935,7 @@ void hc11_core_clock(struct hc11_core *core)
             break;
 
         case STATE_EXECUTE_CD:
-          printf("STATE_EXECUTE_CD op %02X operand %02X\n", core->opcode, core->operand);
+          printf("STATE_EXECUTE_CD op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)

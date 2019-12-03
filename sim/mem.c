@@ -29,15 +29,10 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
       {
         //reading a reg
         struct hc11_io *reg = &core->io[adr - core->iobase];
-        if(reg->rdf == NULL)
-          {
-            printf("READ @ 0x%04X -> 0xFF [reg-none]\n", adr);
-            return 0xFF;
-          }
-        else
+        if(reg->rdf != NULL)
           {
             ret = reg->rdf(reg->ctx, adr - core->iobase);
-            printf("READ @ 0x%04X -> %02X [reg]\n", adr, ret);
+            printf("READ  @ 0x%04X -> %02X [reg]\n", adr, ret);
             return ret;
           }
       }
@@ -46,7 +41,7 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
     if(adr >= core->rambase && adr < (core->rambase + 256))
       {
         ret = core->iram[adr - core->rambase];
-        printf("READ @ 0x%04X -> %02X [iram]\n", adr, ret);
+        printf("READ  @ 0x%04X -> %02X [iram]\n", adr, ret);
         return ret;
       }
 
@@ -56,14 +51,14 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
         if(adr >= cur->start && adr < (cur->start + cur->len))
           {
             ret = cur->rdf(cur->ctx, adr - cur->start);
-            printf("READ @ 0x%04X -> %02X [xmem]\n", adr, ret);
+            printf("READ  @ 0x%04X -> %02X [xmem]\n", adr, ret);
             return ret;
           }
         cur = cur->next;
       }
 
     //not io, not iram -> find adr in mappings
-    printf("READ @ 0x%04X -> 0xFF [none]\n", adr);
+    printf("READ  @ 0x%04X -> 0xFF [none]\n", adr);
     return 0xFF;
   }
 
@@ -72,17 +67,14 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
   {
     struct hc11_mapping *cur;
 
-    printf("CORE write @ 0x%04X (%02X)\n", adr, val);
+    printf("[%8ld] ", core->clocks); fflush(stdout);
     if(adr >= core->iobase && adr < core->iobase + 0x40)
       {
         //reading a reg
         struct hc11_io *reg = &core->io[adr - core->iobase];
-        if(reg->wrf == NULL)
+        if(reg->wrf != NULL)
           {
-            printf("writing readonly/unimplemented reg\n");
-          }
-        else
-          {
+            printf("WRITE @ 0x%04X <- %02X [reg]\n", adr, val);
             reg->wrf(reg->ctx, adr - core->iobase, val);
             return;
           }
@@ -91,11 +83,12 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
     //not reading a reg. try iram
     if(adr >= core->rambase && adr < core->rambase + 256)
       {
+        printf("WRITE @ 0x%04X <- %02X [iram]\n", adr, val);
         core->iram[adr - core->rambase] = val;
         return;
       }
 
-    printf("Write to undefined address ignored\n");
+    printf("WRITE @ 0x%04X <- %02X [none]\n", adr, val);
   }
 
 void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,

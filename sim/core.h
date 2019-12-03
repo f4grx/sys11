@@ -81,6 +81,7 @@ struct hc11_core
     uint8_t              opcode;
     uint8_t              addmode;
     uint16_t             operand;
+    uint8_t              op2,op3;
   };
 
 void hc11_core_init(struct hc11_core *core);
