@@ -537,10 +537,12 @@ void hc11_core_clock(struct hc11_core *core)
 
               case DI2:
               case EX2:
+printf("EX2/DI2\n");
                 core->state = STATE_READOP_H;
                 break;
 
               case INX:
+printf("INX X %04X op %02X\n", core->regs.x, core->operand);
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_L;
                 break;
@@ -779,7 +781,9 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_CPD_SUBD_IND : break;
               case OP_ANDA_IND : break;
               case OP_BITA_IND : break;
-              case OP_LDAA_IND : break;
+              case OP_LDAA_IND :
+                break;
+
               case OP_STAA_IND : break;
               case OP_EORA_IND : break;
               case OP_ADCA_IND : break;
@@ -843,8 +847,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ANDB_IMM : break;
               case OP_BITB_IMM : break;
               case OP_LDAB_IMM :
-                core->regs.d = (core->regs.d & 0x00FF) | (core->operand & 0xFF) << 8;
-                printf("LDAA_IMM #%02X\n", core->operand & 0xFF);
+                core->regs.d = (core->regs.d & 0xFF00) | (core->operand & 0xFF);
+                printf("LDAB_IMM #%02X\n", core->operand & 0xFF);
                 break;
 
               case OP_EORB_IMM : break;
@@ -852,25 +856,14 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ORAB_IMM : break;
               case OP_ADDB_IMM : break;
               case OP_LDD_IMM  : break;
-              case OP_LDXY_IMM : break;
-              case OP_STOP_INH : break;
+                core->regs.d = core->busdat;
+                printf("LDD_IMM #%04X\n", core->operand);
+                break;
 
-              case OP_SUBB_DIR : break;
-              case OP_CMPB_DIR : break;
-              case OP_SBCB_DIR : break;
-              case OP_ADDD_DIR : break;
-              case OP_ANDB_DIR : break;
-              case OP_BITB_DIR : break;
-              case OP_LDAB_DIR : break;
-              case OP_STAB_DIR : break;
-              case OP_EORB_DIR : break;
-              case OP_ADCB_DIR : break;
-              case OP_ORAB_DIR : break;
-              case OP_ADDB_DIR : break;
-              case OP_LDD_DIR  : break;
-              case OP_STD_DIR  : break;
-              case OP_LDXY_DIR : break;
-              case OP_STXY_DIR : break;
+              case OP_LDXY_IMM :
+                core->regs.x = core->busdat;
+                printf("LDX_IMM #%04X\n", core->operand);
+                break;
 
               case OP_SUBB_IND : break;
               case OP_CMPB_IND : break;
@@ -889,21 +882,45 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_LDXY_IND : break;
               case OP_STXY_IND : break;
 
+              case OP_SUBB_DIR :
               case OP_SUBB_EXT : break;
+              case OP_CMPB_DIR :
               case OP_CMPB_EXT : break;
+              case OP_SBCB_DIR :
               case OP_SBCB_EXT : break;
+              case OP_ADDD_DIR :
               case OP_ADDD_EXT : break;
+              case OP_ANDB_DIR :
               case OP_ANDB_EXT : break;
+              case OP_BITB_DIR :
               case OP_BITB_EXT : break;
+              case OP_LDAB_DIR :
               case OP_LDAB_EXT : break;
+              case OP_STAB_DIR :
               case OP_STAB_EXT : break;
+              case OP_EORB_DIR :
               case OP_EORB_EXT : break;
+              case OP_ADCB_DIR :
               case OP_ADCB_EXT : break;
+              case OP_ORAB_DIR :
               case OP_ORAB_EXT : break;
+              case OP_ADDB_DIR :
               case OP_ADDB_EXT : break;
-              case OP_LDD_EXT  : break;
+              case OP_LDD_DIR  :
+              case OP_LDD_EXT  :
+                core->regs.d = core->busdat;
+                printf("LDD_DIREXT %04X [%04X]\n", core->operand, core->busdat);
+                break;
+
+              case OP_STD_DIR  :
               case OP_STD_EXT  : break;
-              case OP_LDXY_EXT : break;
+              case OP_LDXY_DIR :
+              case OP_LDXY_EXT :
+                core->regs.x = core->busdat;
+                printf("LDX_DIREXT %04X [%04X]\n", core->operand, core->busdat);
+                break;
+
+              case OP_STXY_DIR :
               case OP_STXY_EXT : break;
 
             } //normal opcodes
