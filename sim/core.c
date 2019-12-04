@@ -600,57 +600,57 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("NOP\n");
                 break;
 
-              case OP_IDIV_INH : break;
-              case OP_FDIV_INH : break;
-              case OP_LSRD_INH : break;
-              case OP_ASLD_INH : break;
-              case OP_TAP_INH  : break;
-              case OP_TPA_INH  : break;
-              case OP_INXY_INH : break;
-              case OP_DEXY_INH : break;
-              case OP_CLV_INH  : break;
-              case OP_SEV_INH  : break;
-              case OP_CLC_INH  : break;
-              case OP_SEC_INH  : break;
-              case OP_CLI_INH  : break;
-              case OP_SEI_INH  : break;
+              case OP_IDIV_INH : /**/ break;
+              case OP_FDIV_INH : /**/ break;
+              case OP_LSRD_INH : /**/ break;
+              case OP_ASLD_INH : /**/ break;
+              case OP_TAP_INH  : /**/ break;
+              case OP_TPA_INH  : /**/ break;
+              case OP_INXY_INH : /**/ break;
+              case OP_DEXY_INH : /**/ break;
+              case OP_CLV_INH  : /**/ break;
+              case OP_SEV_INH  : /**/ break;
+              case OP_CLC_INH  : /**/ break;
+              case OP_SEC_INH  : /**/ break;
+              case OP_CLI_INH  : /**/ break;
+              case OP_SEI_INH  : /**/ break;
 
-              case OP_SBA_INH   : break;
-              case OP_CBA_INH   : break;
-              case OP_BRSET_TDI : break;
-              case OP_BRCLR_TDI : break;
-              case OP_BSET_DDI  :
+              case OP_SBA_INH   : /**/ break;
+              case OP_CBA_INH   : /**/ break;
+              case OP_BRSET_TDI : /**/ break;
+              case OP_BRCLR_TDI : /**/ break;
+              case OP_BSET_DDI  : /**/
                 printf("BSET_DIR OP2 %02X\n", core->op2);
                 core->busadr = core->operand;
                 core->busdat = core->busdat | core->op2;
                 core->state = STATE_WRITEOP_L;
                 break;
 
-              case OP_BCLR_DDI  :
+              case OP_BCLR_DDI  : /**/
                 printf("BCLR_DIR OP2 %02X\n", core->op2);
                 core->busadr = core->operand;
                 core->busdat = core->busdat & (!core->op2);
                 core->state = STATE_WRITEOP_L;
                 break;
 
-              case OP_TAB_INH   :
+              case OP_TAB_INH   : /**/
                 tmp = core->regs.d >> 8; //get A
                 core->regs.d = (core->regs.d & 0xFF00) | tmp;
                 printf("TAB\n");
                 break;
 
-              case OP_TBA_INH   :
+              case OP_TBA_INH   : /**/
                 tmp = core->regs.d & 0xFF; //get B
                 core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
                 printf("TBA\n");
                 break;
 
-              case OP_DAA_INH   : break;
-              case OP_ABA_INH   : break;
-              case OP_BSET_DIN  : break;
-              case OP_BCLR_DIN  : break;
-              case OP_BRSET_TIN : break;
-              case OP_BRCLR_TIN : break;
+              case OP_DAA_INH   : /**/ break;
+              case OP_ABA_INH   : /**/ break;
+              case OP_BSET_DIN  : /**/ break;
+              case OP_BCLR_DIN  : /**/ break;
+              case OP_BRSET_TIN : /**/ break;
+              case OP_BRCLR_TIN : /**/ break;
 
               case OP_BRA_REL  : break;
               case OP_BRN_REL  :
@@ -672,85 +672,95 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BGT_REL  : break;
               case OP_BLE_REL  : break;
 
-              case OP_TSXY_INH  : break;
-              case OP_INS_INH   : break;
-              case OP_PULA_INH  : break;
-              case OP_PULB_INH  : break;
-              case OP_DES_INH   : break;
-              case OP_TXYS_INH  : break;
-              case OP_PSHA_INH  : break;
-              case OP_PSHB_INH  : break;
-              case OP_PULXY_INH : break;
+              case OP_TSXY_INH  : /**/ break;
+              case OP_INS_INH   : /**/ break;
+              case OP_PULA_INH  : /**/ break;
+              case OP_PULB_INH  : /**/ break;
+              case OP_DES_INH   : /**/ break;
+              case OP_TXYS_INH  : /**/ break;
+              case OP_PSHA_INH  : /**/ break;
+              case OP_PSHB_INH  : /**/ break;
+              case OP_PULXY_INH : /**/ break;
               case OP_RTS_INH:
                 core->state = STATE_PULPC_H;
                 printf("RTS\n");
                 break;
 
-              case OP_ABXY_INH  : break;
-              case OP_RTI_INH   : break;
-              case OP_PSHXY_INH : break;
-              case OP_MUL_INH   : break;
-              case OP_WAI_INH   : break;
-              case OP_SWI_INH   : break;
+              case OP_ABXY_INH  : /**/ break;
+              case OP_RTI_INH   : /**/ break;
+              case OP_PSHXY_INH : /**/ break;
+              case OP_MUL_INH   : /**/ break;
+              case OP_WAI_INH   : /**/ break;
+              case OP_SWI_INH   : /**/ break;
 
-              case OP_NEGA_INH : break;
-              case OP_COMA_INH : break;
-              case OP_LSRA_INH : break;
-              case OP_RORA_INH : break;
-              case OP_ASRA_INH : break;
-              case OP_ASLA_INH : break;
-              case OP_ROLA_INH : break;
-              case OP_DECA_INH : break;
-              case OP_INCA_INH : break;
-              case OP_TSTA_INH : break;
-              case OP_CLRA_INH:
+              case OP_NEGA_INH : /**/ break;
+              case OP_COMA_INH : /**/ break;
+              case OP_LSRA_INH : /**/ break;
+              case OP_RORA_INH : /**/ break;
+              case OP_ASRA_INH : /**/ break;
+              case OP_ASLA_INH : /**/ break;
+              case OP_ROLA_INH : /**/ break;
+              case OP_DECA_INH : /**/ break;
+              case OP_INCA_INH : /**/ break;
+              case OP_TSTA_INH : /**/ break;
+              case OP_CLRA_INH : /**/
                 core->regs.d = core->regs.d & 0x00FF;
                 printf("CLRA\n");
                 break;
 
-              case OP_NEGB_INH : break;
-              case OP_COMB_INH : break;
-              case OP_LSRB_INH : break;
-              case OP_RORB_INH : break;
-              case OP_ASRB_INH : break;
-              case OP_ASLB_INH : break;
-              case OP_ROLB_INH : break;
-              case OP_DECB_INH : break;
-              case OP_INCB_INH : break;
-              case OP_TSTB_INH : break;
-              case OP_CLRB_INH:
+              case OP_NEGB_INH : /**/ break;
+              case OP_COMB_INH : /**/ break;
+              case OP_LSRB_INH : /**/ break;
+              case OP_RORB_INH : /**/ break;
+              case OP_ASRB_INH : /**/ break;
+              case OP_ASLB_INH : /**/ break;
+              case OP_ROLB_INH : /**/ break;
+              case OP_DECB_INH : /**/ break;
+              case OP_INCB_INH : /**/ break;
+              case OP_TSTB_INH : /**/ break;
+              case OP_CLRB_INH : /**/
                 core->regs.d = core->regs.d & 0xFF00;
                 printf("CLRB\n");
                 break;
 
+              case OP_NEG_EXT : /**/
               case OP_NEG_IND : break;
+
+              case OP_COM_EXT : /**/
               case OP_COM_IND : break;
+
+              case OP_LSR_EXT : /**/
               case OP_LSR_IND : break;
+
+              case OP_ROR_EXT :
               case OP_ROR_IND : break;
+
+              case OP_ASR_EXT :
               case OP_ASR_IND : break;
+
+              case OP_ASL_EXT :
               case OP_ASL_IND : break;
+
+              case OP_ROL_EXT :
               case OP_ROL_IND : break;
+
+              case OP_DEC_EXT :
               case OP_DEC_IND : break;
+
+              case OP_INC_EXT :
               case OP_INC_IND : break;
+
+              case OP_TST_EXT :
               case OP_TST_IND : break;
+
+              case OP_JMP_EXT :
               case OP_JMP_IND : break;
+
+              case OP_CLR_EXT :
               case OP_CLR_IND : break;
 
-              case OP_NEG_EXT : break;
-              case OP_COM_EXT : break;
-              case OP_LSR_EXT : break;
-              case OP_ROR_EXT : break;
-              case OP_ASR_EXT : break;
-              case OP_ASL_EXT : break;
-              case OP_ROL_EXT : break;
-              case OP_DEC_EXT : break;
-              case OP_INC_EXT : break;
-              case OP_TST_EXT : break;
-              case OP_JMP_EXT : break;
-              case OP_CLR_EXT : break;
-
-              case OP_SUBA_IMM  : break;
-              case OP_CMPA_IMM  : break;
+              case OP_SUBA_IMM : break;
+              case OP_CMPA_IMM : break;
               case OP_SBCA_IMM  : break;
               case OP_CPD_SUBD_IMM : break;
               case OP_ANDA_IMM  : break;
