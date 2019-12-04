@@ -537,12 +537,10 @@ void hc11_core_clock(struct hc11_core *core)
 
               case DI2:
               case EX2:
-printf("EX2/DI2\n");
                 core->state = STATE_READOP_H;
                 break;
 
               case INX:
-printf("INX X %04X op %02X\n", core->regs.x, core->operand);
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_L;
                 break;
@@ -781,8 +779,6 @@ printf("INX X %04X op %02X\n", core->regs.x, core->operand);
               case OP_CPD_SUBD_IND : break;
               case OP_ANDA_IND : break;
               case OP_BITA_IND : break;
-              case OP_LDAA_IND :
-                break;
 
               case OP_STAA_IND : break;
               case OP_EORA_IND : break;
@@ -806,8 +802,14 @@ printf("INX X %04X op %02X\n", core->regs.x, core->operand);
               case OP_ANDA_EXT : break;
               case OP_BITA_DIR :
               case OP_BITA_EXT : break;
+
+              case OP_LDAA_IND :
               case OP_LDAA_DIR :
-              case OP_LDAA_EXT : break;
+              case OP_LDAA_EXT :
+                core->regs.d = (core->regs.d & 0x00FF) | (core->busdat & 0xFF) << 8;
+                printf("LDAA_DIR_EXT_IND %02X\n", core->busdat & 0xFF);
+                break;
+
               case OP_STAA_DIR :
               case OP_STAA_EXT :
                 core->busadr = core->operand;
@@ -856,12 +858,12 @@ printf("INX X %04X op %02X\n", core->regs.x, core->operand);
               case OP_ORAB_IMM : break;
               case OP_ADDB_IMM : break;
               case OP_LDD_IMM  : break;
-                core->regs.d = core->busdat;
+                core->regs.d = core->operand;
                 printf("LDD_IMM #%04X\n", core->operand);
                 break;
 
               case OP_LDXY_IMM :
-                core->regs.x = core->busdat;
+                core->regs.x = core->operand;
                 printf("LDX_IMM #%04X\n", core->operand);
                 break;
 
