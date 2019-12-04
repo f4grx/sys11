@@ -16,10 +16,13 @@ enum hc11states
     STATE_OPERAND_TRIPLE, //Special mode for BRCLR
     STATE_READOP_H,       //read operand value (hi byte)
     STATE_READOP_L,       //read operand value (single or lo byte)
+    STATE_RDMASK,
+    STATE_RDREL,
     STATE_EXECUTE,        //execute opcode
     STATE_EXECUTE_18,     //execute opcode with 18h prefix
     STATE_EXECUTE_1A,     //execute opcode with 1Ah prefix
     STATE_EXECUTE_CD,     //execute opcode with CDh prefix
+    STATE_EXECUTENEXT,
     STATE_WRITEOP_H,      //write operand value (hi byte)
     STATE_WRITEOP_L,      //write operand value (single or lo byte)
     STATE_PUSHPC_L,
@@ -48,19 +51,13 @@ enum
     INY, //indexed relative to Y, 8-bit value
     IY2, //indexed relative to Y, 16-bit value
     IYS, //indexed relative to Y, no value read
-    TDI, //direct, triple for brset/clr dd/mm/rr
-    TIX, //indirect X, triple for brset/clr ff/mm/rr
-    TIY, //indirect Y, triple for brset/clr ff/mm/rr
-    DDI, //direct, double for bset/clr dd/mm/rr
-    DIX, //indirect X, double for bset/clr ff/mm/rr
-    DIY, //indirect Y, double for bset/clr ff/mm/rr
   };
 //last 18ad
 static const uint8_t opmodes[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,0  ,INH,INH,INH,INH, /* 00-0F */
-  INH,INH,TDI,TDI,DDI,DDI,INH,INH,0  ,INH,0  ,INH,DIX,DIX,TIX,TIX, /* 10-1F */
+  INH,INH,DIR,DIR,DIR,DIR,INH,INH,0  ,INH,0  ,INH,INX,INX,INX,INX, /* 10-1F */
   REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL,REL, /* 20-2F */
   INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH,INH, /* 30-3F */
   INH,0  ,0  ,INH,INH,0  ,INH,INH,INH,INH,INH,0  ,INH,INH,0  ,INH, /* 40-4F */
@@ -81,7 +78,7 @@ static const uint8_t opmodes_18[256] =
   {
 /*00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F*/
   0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,INH,INH,0  ,0  ,0  ,0  ,0  ,0  , /* 00-0F */
-  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,DIY,DIY,TIY,TIY, /* 10-1F */
+  0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,INY,INY,INY,INY, /* 10-1F */
   0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 20-2F */
   INH,0  ,0  ,0  ,0  ,INH,0  ,0  ,INH,0  ,INH,0  ,INH,0  ,0  ,0  , /* 30-3F */
   0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  , /* 40-4F */
@@ -145,8 +142,8 @@ enum
   {
     OP_TEST_INH  = 0x00, OP_NOP_INH, OP_IDIV_INH, OP_FDIV_INH, OP_LSRD_INH, OP_ASLD_INH, OP_TAP_INH, OP_TPA_INH,
     OP_INXY_INH  = 0x08, OP_DEXY_INH, OP_CLV_INH, OP_SEV_INH, OP_CLC_INH, OP_SEC_INH, OP_CLI_INH, OP_SEI_INH,
-    OP_SBA_INH   = 0x10, OP_CBA_INH, OP_BRSET_TDI, OP_BRCLR_TDI, OP_BSET_DDI, OP_BCLR_DDI, OP_TAB_INH, OP_TBA_INH,
-    OP_PFX_18    = 0x18, OP_DAA_INH, OP_PFX_1A, OP_ABA_INH, OP_BSET_DIN, OP_BCLR_DIN, OP_BRSET_TIN, OP_BRCLR_TIN,
+    OP_SBA_INH   = 0x10, OP_CBA_INH, OP_BRSET_DIR, OP_BRCLR_DIR, OP_BSET_DIR, OP_BCLR_DIR, OP_TAB_INH, OP_TBA_INH,
+    OP_PFX_18    = 0x18, OP_DAA_INH, OP_PFX_1A, OP_ABA_INH, OP_BSET_IND, OP_BCLR_IND, OP_BRSET_IND, OP_BRCLR_IND,
     OP_BRA_REL   = 0x20, OP_BRN_REL, OP_BHI_REL, OP_BLS_REL, OP_BHS_REL, OP_BLO_REL, OP_BNE_REL, OP_BEQ_REL,
     OP_BVC_REL   = 0x28, OP_BVS_REL, OP_BPL_REL, OP_BMI_REL, OP_BGE_REL, OP_BLT_REL, OP_BGT_REL, OP_BLE_REL,
     OP_TSXY_INH  = 0x30, OP_INS_INH, OP_PULA_INH, OP_PULB_INH, OP_DES_INH, OP_TXYS_INH, OP_PSHA_INH, OP_PSHB_INH,
@@ -470,39 +467,8 @@ void hc11_core_clock(struct hc11_core *core)
                 case EXS: //extended (two bytes absolute address, no data fetch)
                   core->state = STATE_OPERAND_H;
                   break;
-
-// TODO rework this so it looks like a normal direct/ix/iy, and restart bus fetch after first op. see HC11 RM bus states.
-
-                case TDI: //direct, triple for brset/clr dd/mm/rr
-                case TIX: //indirect X, triple for brset/clr ff/mm/rr
-                case TIY: //indirect Y, triple for brset/clr ff/mm/rr
-                  core->state = STATE_OPERAND_TRIPLE;
-                  break;
-
-                case DDI: //direct, double for bset/clr dd/mm
-                case DIX: //indirect X, double for bset/clr ff/mm
-                case DIY: //indirect Y, double for bset/clr ff/mm
-                  core->state = STATE_OPERAND_DOUBLE;
-                  break;
-
               }
             }
-          break;
-
-        case STATE_OPERAND_TRIPLE:
-          core->busadr = core->regs.pc;
-          core->busdat = hc11_core_readb(core,core->busadr);
-          core->regs.pc = core->regs.pc + 1;
-          core->op3 = core->busdat & 0xFF;
-          core->state = STATE_OPERAND_DOUBLE;
-          break;
-
-        case STATE_OPERAND_DOUBLE:
-          core->busadr = core->regs.pc;
-          core->busdat = hc11_core_readb(core,core->busadr);
-          core->regs.pc = core->regs.pc + 1;
-          core->op2 = core->busdat & 0xFF;
-          core->state = STATE_OPERAND_L;
           break;
 
         case STATE_OPERAND_H:
@@ -524,12 +490,6 @@ void hc11_core_clock(struct hc11_core *core)
           // this is not required for stores and jmps.
           switch(core->addmode)
             {
-              uint8_t tmp;
-              case DDI:
-                //reverse ops - should not be necessary after bset is reworked.
-                tmp = core->op2;
-                core->op2 = core->operand;
-                core->operand = tmp;
               case DIR:
               case EXT:
                 core->state = STATE_READOP_L; //read value not used for jsr and bsr, but still acquired
@@ -582,6 +542,85 @@ void hc11_core_clock(struct hc11_core *core)
           if(core->prefix == 0x18) core->state = STATE_EXECUTE_18;
           if(core->prefix == 0x1A) core->state = STATE_EXECUTE_1A;
           if(core->prefix == 0xCD) core->state = STATE_EXECUTE_CD;
+          break;
+
+        case STATE_RDMASK:
+          core->busadr = core->regs.pc;
+          core->op2 = hc11_core_readb(core,core->busadr) & 0xFF;
+          core->regs.pc = core->regs.pc + 1;
+          if(core->opcode == OP_BRSET_DIR || core->opcode == OP_BRCLR_DIR ||
+             core->opcode == OP_BRSET_IND || core->opcode == OP_BRCLR_IND)
+            {
+              core->state = STATE_RDREL;
+            }
+          else
+            {
+              core->state = STATE_EXECUTENEXT;
+            }
+
+          break;
+
+        case STATE_RDREL:
+          core->busadr = core->regs.pc;
+          core->op3 = hc11_core_readb(core,core->busadr) & 0xFF;
+          core->regs.pc = core->regs.pc + 1;
+          core->state = STATE_EXECUTENEXT;
+          break;
+
+        case STATE_EXECUTENEXT: //finish BRSET/BRCLR insns
+          core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
+          printf("[%8ld] EXEC_NEXT\n",core->clocks);
+          switch(core->opcode)
+            {
+              uint16_t tmp;
+              int16_t  rel;
+
+              case OP_BSET_DIR:
+              case OP_BSET_IND:
+                core->busadr = core->operand;
+                core->busdat = core->busdat | core->op2;
+                core->state = STATE_WRITEOP_L;
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
+                printf("BSET MASK %02X\n", core->op2);
+                break;
+
+              case OP_BCLR_DIR:
+              case OP_BCLR_IND:
+                core->busadr = core->operand;
+                core->busdat = core->busdat & (!core->op2);
+                core->state = STATE_WRITEOP_L;
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
+                printf("BCLR MASK %02X\n", core->op2);
+                break;
+
+              case OP_BRSET_DIR:
+              case OP_BRSET_IND:
+                tmp = (~(core->busdat) & core->op2) & 0xFF;
+                if(!tmp)
+                  {
+                    rel = (int16_t)((int8_t)core->op3);
+                    core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BRSET MASK %02X REL %02X PC %04X\n", core->op2, core->op3, core->regs.pc);
+                break;
+
+              case OP_BRCLR_DIR:
+              case OP_BRCLR_IND:
+                tmp = (core->busdat & core->op2) & 0xFF;
+                if(!tmp)
+                  {
+                    rel = (int16_t)((int8_t)core->op3);
+                    core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BRCLR MASK %02X REL %02X PC %04X\n", core->op2, core->op3, core->regs.pc);
+                break;
+            }
           break;
 
         case STATE_EXECUTE:
@@ -710,34 +749,30 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SWI_INH   : break;
 
 
-              case OP_BRSET_TDI : break;
-              case OP_BRCLR_TDI : break;
-              case OP_BSET_DDI  : /*NZV*/
-                printf("BSET_DIR OP2 %02X\n", core->op2);
-                core->busadr = core->operand;
-                core->busdat = core->busdat | core->op2;
-                core->state = STATE_WRITEOP_L;
-                tmp = core->busdat & 0xFF;
-                core->regs.flags.N = tmp >> 7;
-                core->regs.flags.Z = tmp == 0;
-                core->regs.flags.V = 0;
+              case OP_BRSET_IND :
+              case OP_BRSET_DIR :
+                printf("BRSET_DIR_IND %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
 
-              case OP_BCLR_DDI  : /*NZV*/
-                printf("BCLR_DIR OP2 %02X\n", core->op2);
-                core->busadr = core->operand;
-                core->busdat = core->busdat & (!core->op2);
-                core->state = STATE_WRITEOP_L;
-                tmp = core->busdat & 0xFF;
-                core->regs.flags.N = tmp >> 7;
-                core->regs.flags.Z = tmp == 0;
-                core->regs.flags.V = 0;
+              case OP_BRCLR_IND :
+              case OP_BRCLR_DIR :
+                printf("BRCLR_DIR_IND %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
 
-              case OP_BSET_DIN  : /*NZV*/ break;
-              case OP_BCLR_DIN  : /*NZV*/ break;
-              case OP_BRSET_TIN : break;
-              case OP_BRCLR_TIN : break;
+              case OP_BSET_DIR  : /*NZV*/
+              case OP_BSET_IND  :
+                printf("BSET_DIR_IND %04X\n", core->operand);
+                core->state = STATE_RDMASK;
+                break;
+
+              case OP_BCLR_DIR  : /*NZV*/
+              case OP_BCLR_IND  :
+                printf("BCLR_DIR_IND %04X\n", core->operand);
+                core->state = STATE_RDMASK;
+                break;
+
 
               case OP_BRA_REL  :
                 rel = (int16_t)((int8_t)core->operand);
@@ -1035,6 +1070,7 @@ void hc11_core_clock(struct hc11_core *core)
 
             } //normal opcodes
           break;
+
         case STATE_EXECUTE_18:
           printf("STATE_EXECUTE_18 op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
