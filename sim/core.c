@@ -591,7 +591,8 @@ void hc11_core_clock(struct hc11_core *core)
 
           switch(core->opcode)
             {
-              uint8_t tmp;
+              uint16_t tmp;
+              int16_t  rel;
               case OP_TEST_INH :
                 printf("TEST instruction not available in sim\n");
                 break;
@@ -610,12 +611,18 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_TAB_INH   : /*NZV*/
                 tmp = core->regs.d >> 8; //get A
                 core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
                 printf("TAB\n");
                 break;
 
               case OP_TBA_INH   : /*NZV*/
                 tmp = core->regs.d & 0xFF; //get B
                 core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
                 printf("TBA\n");
                 break;
 
@@ -636,13 +643,22 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_CLRA_INH : /*NZVC*/
                 core->regs.d = core->regs.d & 0x00FF;
+                core->regs.flags.N = 0;
+                core->regs.flags.Z = 1;
+                core->regs.flags.V = 0;
+                core->regs.flags.C = 0;
                 printf("CLRA\n");
                 break;
 
               case OP_CLRB_INH : /*NZVC*/
                 core->regs.d = core->regs.d & 0xFF00;
+                core->regs.flags.N = 0;
+                core->regs.flags.Z = 1;
+                core->regs.flags.V = 0;
+                core->regs.flags.C = 0;
                 printf("CLRB\n");
                 break;
+
               case OP_INCA_INH : /*NZV*/ break;
               case OP_INCB_INH : /*NZV*/ break;
               case OP_DECA_INH : /*NZV*/ break;
@@ -675,8 +691,13 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_TXYS_INH  : break;
               case OP_INS_INH   : break;
               case OP_DES_INH   : break;
-              case OP_INXY_INH : /*Z*/ break;
-              case OP_DEXY_INH : /*Z*/ break;
+
+              case OP_INXY_INH : /*Z*/
+                break;
+
+              case OP_DEXY_INH : /*Z*/
+                break;
+
               case OP_PSHXY_INH : break;
               case OP_PULXY_INH : break;
               case OP_RTS_INH:
@@ -696,6 +717,10 @@ void hc11_core_clock(struct hc11_core *core)
                 core->busadr = core->operand;
                 core->busdat = core->busdat | core->op2;
                 core->state = STATE_WRITEOP_L;
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
                 break;
 
               case OP_BCLR_DDI  : /*NZV*/
@@ -703,6 +728,10 @@ void hc11_core_clock(struct hc11_core *core)
                 core->busadr = core->operand;
                 core->busdat = core->busdat & (!core->op2);
                 core->state = STATE_WRITEOP_L;
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.V = 0;
                 break;
 
               case OP_BSET_DIN  : /*NZV*/ break;
@@ -710,7 +739,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BRSET_TIN : break;
               case OP_BRCLR_TIN : break;
 
-              case OP_BRA_REL  : break;
+              case OP_BRA_REL  :
+                rel = (int16_t)((int8_t)core->operand);
+                core->regs.pc = core->regs.pc + rel;
+                printf("BRA %04X\n", core->regs.pc);
+                break;
 
               case OP_BRN_REL  :
                 printf("BRN\n");
@@ -720,8 +753,26 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BLS_REL  : break;
               case OP_BHS_REL  : break;
               case OP_BLO_REL  : break;
+
               case OP_BNE_REL  : break;
-              case OP_BEQ_REL  : break;
+                if(!core->regs.flags.Z)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BNE -> Z=%d pc=%04X\n" , core->regs.flags.Z, core->regs.pc);
+                break;
+
+
+              case OP_BEQ_REL  :
+                if(core->regs.flags.Z)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BEQ -> Z=%d pc=%04X\n" , core->regs.flags.Z, core->regs.pc);
+                break;
+
               case OP_BVC_REL  : break;
               case OP_BVS_REL  : break;
               case OP_BPL_REL  : break;
@@ -730,7 +781,14 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BLT_REL  : break;
               case OP_BGT_REL  : break;
               case OP_BLE_REL  : break;
-              case OP_BSR_REL   : break;
+
+              case OP_BSR_REL  :
+                rel = (int16_t)((int8_t)core->operand);
+                core->busdat = core->regs.pc;
+                core->regs.pc = core->regs.pc + rel;
+                core->state = STATE_PUSHPC_L; // not H, push happens L first
+                printf("BSR %04X\n", core->regs.pc);
+                break;
 
               case OP_NEG_EXT : /*NZVC*/
               case OP_NEG_IND : break;
@@ -766,7 +824,16 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_JMP_IND : break;
 
               case OP_CLR_EXT :/*NZVC*/
-              case OP_CLR_IND : break;
+              case OP_CLR_IND :
+                core->regs.flags.N = 0;
+                core->regs.flags.Z = 1;
+                core->regs.flags.V = 0;
+                core->regs.flags.C = 0;
+                core->busadr = core->operand;
+                core->busdat = 0;
+                core->state = STATE_WRITEOP_L;
+                printf("CLR_DIR_EXT_IND\n");
+                break;
 
               case OP_SUBA_IMM : /*NZVC*/ break;
               case OP_CMPA_IMM : /*NZVC*/break;
@@ -776,6 +843,10 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BITA_IMM : /*NZV*/ break;
               case OP_LDAA_IMM : /*NZV*/
                 core->regs.d = (core->regs.d & 0x00FF) | (core->operand & 0xFF) << 8;
+                tmp = core->regs.d >> 8;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 printf("LDAA_IMM #%02X\n", core->operand & 0xFF);
                 break;
 
@@ -796,6 +867,10 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BITB_IMM : /*NZV*/ break;
               case OP_LDAB_IMM :/*NZV*/
                 core->regs.d = (core->regs.d & 0xFF00) | (core->operand & 0xFF);
+                tmp = core->regs.d && 0xFF;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 printf("LDAB_IMM #%02X\n", core->operand & 0xFF);
                 break;
 
@@ -891,6 +966,10 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_LDAA_DIR :
               case OP_LDAA_EXT :
                 core->regs.d = (core->regs.d & 0x00FF) | (core->busdat & 0xFF) << 8;
+                tmp = core->regs.d >> 8;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 printf("LDAA_DIR_EXT_IND %02X\n", core->busdat & 0xFF);
                 break;
 
@@ -898,12 +977,20 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_LDAB_DIR :
               case OP_LDAB_EXT :
                 core->regs.d = (core->regs.d & 0xFF00) | (core->busdat & 0xFF);
+                tmp = core->regs.d & 0xFF;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 printf("LDAB_DIR_EXT_IND %02X\n", core->busdat & 0xFF);
                 break;
               case OP_LDD_IND  :/*NZV*/
               case OP_LDD_DIR  :
               case OP_LDD_EXT  :
                 core->regs.d = core->busdat;
+                tmp = core->regs.d;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 printf("LDD_DIR_EXT_IND %04X [%04X]\n", core->operand, core->busdat);
                 break;
               case OP_LDXY_IND :/*NZV*/ 

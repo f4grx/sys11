@@ -55,7 +55,21 @@ struct hc11_regs
     uint16_t d;
     uint16_t x;
     uint16_t y;
-    uint8_t  ccr;
+    union
+      {
+        uint8_t  ccr;
+        struct
+          {
+            uint8_t C : 1;
+            uint8_t V : 1;
+            uint8_t Z : 1;
+            uint8_t N : 1;
+            uint8_t H : 1;
+            uint8_t I : 1;
+            uint8_t X : 1;
+            uint8_t S : 1;
+          } flags;
+      };
   };
 
 struct hc11_io
