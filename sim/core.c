@@ -732,9 +732,15 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_DES_INH   : break;
 
               case OP_INXY_INH : /*Z*/
+                core->regs.x = core->regs.x + 1;
+                core->regs.flags.Z = (core->regs.x == 0);
+                printf("INX -> %04X\n", core->regs.x );
                 break;
 
               case OP_DEXY_INH : /*Z*/
+                core->regs.x = core->regs.x - 1;
+                core->regs.flags.Z = (core->regs.x == 0);
+                printf("DEX -> %04X\n", core->regs.x );
                 break;
 
               case OP_PSHXY_INH : break;
