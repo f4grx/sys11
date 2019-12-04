@@ -32,7 +32,7 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
         if(reg->rdf != NULL)
           {
             ret = reg->rdf(reg->ctx, adr - core->iobase);
-            printf("READ  @ 0x%04X -> %02X [reg]\n", adr, ret);
+            printf("READ  @ 0x%04X -> %02X [reg] rdf=%p\n", adr, ret, reg->rdf);
             return ret;
           }
       }
@@ -74,7 +74,7 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
         struct hc11_io *reg = &core->io[adr - core->iobase];
         if(reg->wrf != NULL)
           {
-            printf("WRITE @ 0x%04X <- %02X [reg]\n", adr, val);
+            printf("WRITE @ 0x%04X <- %02X [reg] wrf=%p\n", adr, val, reg->wrf);
             reg->wrf(reg->ctx, adr - core->iobase, val);
             return;
           }
