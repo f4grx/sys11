@@ -8,13 +8,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <semaphore.h>
 
 struct gdbremote_t
   {
     uint16_t port;
     int sock;
+    sem_t startstop;
     bool running;
     pthread_t tid;
+    char rxbuf[1024];
   };
 
 int gdbremote_init(struct gdbremote_t *gr);
