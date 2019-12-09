@@ -731,8 +731,17 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("PSHB\n");
                 break;
 
-              case OP_PULA_INH  : break;
-              case OP_PULB_INH  : break;
+              case OP_PULA_INH  :
+                core->pulsel = PULL_A;
+                core->state = STATE_PULL_L;
+                printf("PULX\n");
+                break;
+
+              case OP_PULB_INH  :
+                core->pulsel = PULL_B;
+                core->state = STATE_PULL_L;
+                printf("PULX\n");
+                break;
 
               case OP_LSRD_INH : /*NZVC*/ break;
               case OP_ASLD_INH : /*NZVC*/ break;
@@ -760,7 +769,12 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("PSHX\n");
                 break;
 
-              case OP_PULXY_INH : break;
+              case OP_PULXY_INH :
+                core->pulsel = PULL_X;
+                core->state = STATE_PULL_H;
+                printf("PULX\n");
+                break;
+
               case OP_RTS_INH:
                 core->pulsel = PULL_PC;
                 core->state = STATE_PULL_H;
@@ -1048,30 +1062,48 @@ void hc11_core_clock(struct hc11_core *core)
                 core->regs.d = core->busdat;
                 tmp = core->regs.d;
                 core->regs.flags.Z = tmp == 0;
-                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.N = tmp >> 15;
                 core->regs.flags.V = 0;
-                printf("LDD_DIR_EXT_IND %04X [%04X]\n", core->operand, core->busdat);
+                printf("LDD_DIR_EXT_IND @%04X -> %04X\n", core->operand, core->busdat);
                 break;
+
               case OP_LDXY_IND :/*NZV*/ 
               case OP_LDXY_DIR :
               case OP_LDXY_EXT :
                 core->regs.x = core->busdat;
-                printf("LDX_DIR_EXT_IND %04X [%04X]\n", core->operand, core->busdat);
+                tmp = core->regs.x;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.V = 0;
+                printf("LDX_DIR_EXT_IND @%04X -> %04X\n", core->operand, core->busdat);
                 break;
-
 
               case OP_STAA_IND : /*NZV*/
               case OP_STAA_DIR :
               case OP_STAA_EXT :
                 core->busadr = core->operand;
-                core->busdat = core->regs.d >> 8;
+                tmp = core->regs.d >> 8;
+                core->busdat = tmp;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
                 core->state = STATE_WRITEOP_L;
                 printf("STAA_DIR_EXT_IND\n");
                 break;
 
               case OP_STAB_IND :/*NZV*/ 
               case OP_STAB_DIR :
-              case OP_STAB_EXT : break;
+              case OP_STAB_EXT :
+                core->busadr = core->operand;
+                tmp = core->regs.d & 0xFF;
+                core->busdat = tmp;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
+                core->state = STATE_WRITEOP_L;
+                printf("STAB_DIR_EXT_IND\n");
+                break;
+
               case OP_EORB_IND :/*NZV*/
               case OP_EORB_DIR :
               case OP_EORB_EXT : break;
@@ -1084,13 +1116,32 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDB_IND : /*HNZVC*/
               case OP_ADDB_DIR :
               case OP_ADDB_EXT : break;
+
               case OP_STD_IND  :/*NZV*/
               case OP_STD_DIR  :
-              case OP_STD_EXT  : break;
+              case OP_STD_EXT  :
+                core->busdat = core->regs.d;
+                core->busadr = core->opcode;
+                tmp = core->regs.d;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
+                core->state = STATE_WRITEOP_H;
+                printf("STD DIR_EXT_IND @%04X <- %04X\n", core->busadr, core->busdat);
+                break;
 
               case OP_STXY_IND :/*NZV*/
               case OP_STXY_DIR :
-              case OP_STXY_EXT : break;
+              case OP_STXY_EXT :
+                core->busdat = core->regs.x;
+                core->busadr = core->opcode;
+                tmp = core->regs.x;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.V = 0;
+                core->state = STATE_WRITEOP_H;
+                printf("STX DIR_EXT_IND @%04X <- %04X\n", core->busadr, core->busdat);
+                break;
 
             } //normal opcodes
           break;
@@ -1110,7 +1161,6 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
-              case OP_CPD_SUBD_IMM : /*CPD: NZVC*/break;
             }
             break;
 

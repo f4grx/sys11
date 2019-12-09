@@ -27,6 +27,7 @@ static void* gdbremote_thread(void *param)
 
     ret = listen(gr->sock, 0);
     gr->running = true;
+    printf("gdbremote: listen thread start\n");
     //TODO install signal handler for USR1
     while(gr->running)
       {
@@ -39,6 +40,7 @@ static void* gdbremote_thread(void *param)
       }
 
     close(gr->sock);
+    printf("gdbremote: listen thread done\n");
   }
 
 int gdbremote_init(struct gdbremote_t *gr)
@@ -51,7 +53,8 @@ int gdbremote_init(struct gdbremote_t *gr)
 int gdbremote_close(struct gdbremote_t *gr)
   {
     void *ret;
-    pthread_kill(gr->tid, SIGUSR1);
+//    pthread_kill(gr->tid, SIGUSR1);
+    gr->running = false;
     pthread_join(gr->tid, &ret);
   }
 

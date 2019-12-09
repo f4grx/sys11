@@ -15,12 +15,13 @@ static struct option long_options[] =
   {
 //    {"add",     required_argument, 0,  0 },
 //    {"append",  no_argument,       0,  0 },
-    {"bin"   ,  required_argument, 0,  'b' },
-    {"s19"   ,  required_argument, 0,  's' },
-//    {"verbose", no_argument,       0,  0 },
-//    {"create",  required_argument, 0, 'c'},
-//    {"file",    required_argument, 0,  0 },
-    {0,         0,                 0,  0 }
+    {"bin"   , required_argument, 0, 'b' },
+    {"s19"   , required_argument, 0, 's' },
+    {"cycles", required_argument, 0, 'c' },
+//    {"verbose", no_argument,        0,  0 },
+//    {"create",  required_argument,  0, 'c'},
+//    {"file",    required_argument,  0,  0 },
+    {0       , 0                , 0,  0  }
   };
 
 static uint8_t* loadbin(const char *fname, uint16_t *size)
@@ -80,6 +81,7 @@ int main(int argc, char **argv)
     struct hc11_core core;
     struct gdbremote_t remote;
     int c;
+    uint64_t cycles = 0;
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
 
@@ -127,6 +129,11 @@ int main(int argc, char **argv)
                 return -1;
               }
 
+            case 'c':
+              {
+                cycles = strtoull(optarg, NULL, 0);
+                break;
+              }
             case '?':
               {
                 help();
@@ -159,6 +166,7 @@ int main(int argc, char **argv)
     while(1)
       {
         hc11_core_clock(&core);
+        if(cycles != 0 && core.clocks > cycles) break;
       }
 
     gdbremote_close(&remote);
