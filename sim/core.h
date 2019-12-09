@@ -35,6 +35,17 @@ enum hc11vectors
     VECTOR_RESET   = 0xFFFE
   };
 
+//for pulsel
+enum
+  {
+  PULL_CCR,
+  PULL_B,
+  PULL_A,
+  PULL_X,
+  PULL_Y,
+  PULL_PC
+  };
+
 typedef uint8_t (*read_f )(void *ctx, uint16_t off);
 typedef void    (*write_f)(void *ctx, uint16_t off, uint8_t val);
 
@@ -95,7 +106,7 @@ struct hc11_core
     uint8_t              opcode;
     uint8_t              addmode;
     uint16_t             operand;
-    uint8_t              op2,op3;
+    uint8_t              op2,op3, pulsel;
   };
 
 void hc11_core_init(struct hc11_core *core);

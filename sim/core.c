@@ -25,10 +25,10 @@ enum hc11states
     STATE_EXECUTENEXT,
     STATE_WRITEOP_H,      //write operand value (hi byte)
     STATE_WRITEOP_L,      //write operand value (single or lo byte)
-    STATE_PUSHPC_L,
-    STATE_PUSHPC_H,
-    STATE_PULPC_L,
-    STATE_PULPC_H,
+    STATE_PUSH_L,
+    STATE_PUSH_H,
+    STATE_PULL_L,
+    STATE_PULL_H,
   };
 
 // Define addressing modes
@@ -718,8 +718,19 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_COMB_INH : /*NZVC*/ break;
               case OP_TSTA_INH : /*NZVC*/ break;
               case OP_TSTB_INH : /*NZVC*/ break;
-              case OP_PSHA_INH  : break;
-              case OP_PSHB_INH  : break;
+
+              case OP_PSHA_INH  :
+                core->busdat = (core->regs.d >> 8) << 8;
+                core->state = STATE_PUSH_H; // single wordm positioned in MSByte
+                printf("PSHA\n");
+                break;
+
+              case OP_PSHB_INH  :
+                core->busdat = (core->regs.d & 0xFF) << 8;
+                core->state = STATE_PUSH_H; // single word, positioned in MSByte
+                printf("PSHB\n");
+                break;
+
               case OP_PULA_INH  : break;
               case OP_PULB_INH  : break;
 
@@ -743,12 +754,19 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("DEX -> %04X\n", core->regs.x );
                 break;
 
-              case OP_PSHXY_INH : break;
+              case OP_PSHXY_INH :
+                core->busdat = core->regs.x;
+                core->state = STATE_PUSH_L; // not H, push happens L first
+                printf("PSHX\n");
+                break;
+
               case OP_PULXY_INH : break;
               case OP_RTS_INH:
-                core->state = STATE_PULPC_H;
+                core->pulsel = PULL_PC;
+                core->state = STATE_PULL_H;
                 printf("RTS\n");
                 break;
+
               case OP_RTI_INH   : /*SXHINZVC*/ break;
 
               case OP_WAI_INH   : break;
@@ -827,7 +845,7 @@ void hc11_core_clock(struct hc11_core *core)
                 rel = (int16_t)((int8_t)core->operand);
                 core->busdat = core->regs.pc;
                 core->regs.pc = core->regs.pc + rel;
-                core->state = STATE_PUSHPC_L; // not H, push happens L first
+                core->state = STATE_PUSH_L; // not H, push happens L first
                 printf("BSR %04X\n", core->regs.pc);
                 break;
 
@@ -973,7 +991,7 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("JSR_EXT ea=%04X\n", core->operand);
                 core->busdat  = core->regs.pc;
                 core->regs.pc = core->operand;
-                core->state = STATE_PUSHPC_L; // not H, push happens L first
+                core->state = STATE_PUSH_L; // not H, push happens L first
                 break;
 
               case OP_LDS_IND  : /*NZV*/
@@ -1116,32 +1134,40 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE;
           break;
 
-        case STATE_PUSHPC_L:
+        case STATE_PUSH_L:
           core->busadr = core->regs.sp;
           hc11_core_writeb(core, core->busadr, core->busdat & 0xFF);
           core->regs.sp = core->regs.sp - 1;
-          core->state = STATE_PUSHPC_H;
+          core->state = STATE_PUSH_H;
           break;
 
-        case STATE_PUSHPC_H:
+        case STATE_PUSH_H:
           core->busadr = core->regs.sp;
           hc11_core_writeb(core, core->busadr, core->busdat >> 8);
           core->regs.sp = core->regs.sp - 1;
           core->state = STATE_FETCHOPCODE;
           break;
 
-        case STATE_PULPC_H:
+        case STATE_PULL_H:
           core->regs.sp = core->regs.sp + 1;
           core->busadr = core->regs.sp;
           core->busdat = hc11_core_readb(core, core->busadr) << 8;
-          core->state = STATE_PULPC_L;
+          core->state = STATE_PULL_L;
           break;
 
-        case STATE_PULPC_L:
+        case STATE_PULL_L:
           core->regs.sp = core->regs.sp + 1;
           core->busadr = core->regs.sp;
           core->busdat = core->busdat | hc11_core_readb(core, core->busadr);
-          core->regs.pc = core->busdat;
+          switch(core->pulsel)
+            {
+              case PULL_CCR: core->regs.ccr = core->busdat & 0xFF; break;
+              case PULL_B  : core->regs.d  = (core->regs.d & 0xFF00) | (core->busdat & 0xFF);      break;
+              case PULL_A  : core->regs.d  = (core->regs.d & 0x00FF) | (core->busdat & 0xFF) << 8; break;
+              case PULL_X  : core->regs.x  = core->busdat; break;
+              case PULL_Y  : core->regs.y  = core->busdat; break;
+              case PULL_PC : core->regs.pc = core->busdat; break;
+            }
           core->state = STATE_FETCHOPCODE;
           break;
       }//switch
