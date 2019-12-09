@@ -24,9 +24,14 @@ the code that uses register. X is then free for other uses.
 
 Simulation
 ==========
-gdb 8.3.1 still supports 68hc11 simulation. Some init instructions are required to make it run with the sys11 monitor.
+gdb 8.3.1 still supports 68hc11 simulation. Program can be somewhat run using
+the sim target but single stepping does not work. See the ../sim/README.md
+document for how to use our custom simulator.
 
-the simulator currently has a bug that prevents me from remapping the I/O registers via a write to INIT, but I intend to fix that.
+The gdb simulator currently has a bug that prevents me from remapping the I/O
+registers via a write to INIT. It was reported to upstream with no feedback.
+
+register relocation works on our custom simulator.
 
 Application Binary Interface
 ============================
@@ -52,22 +57,35 @@ systematic.
 
 Soft registers
 --------------
-The HC11 definitely does not have enough registers. We will increase the number
-of available registers by statically allocating some internal RAM addresses as
-static registers. For the moment 4 16-bit soft regs are allocated, sr0 to sr3.
-They can be anywhere in the RAM but it's a good idea to have them in page0 to
-avoid the use of extended addressing mode.
+The HC11 definitely does not have enough registers for comfortable programming.
+We will increase the number of available registers by statically allocating some
+internal RAM addresses as static registers. For the moment 8 16-bit soft regs
+are allocated, sp0 to sp3 and st0 to st3. They can be anywhere in the RAM but
+it's a good idea to have them in page0 to avoid the use of extended addressing
+mode.
 
 Calling functions with stack params
 -----------------------------------
+NOTE: This convention currently does not work because BSR/JSR pushes the return
+PC. We would need a frame pointer, using X as a copy of SP is very wasteful.
+Using Y wastes program space.
+
 Parameters are pushed right to left on the stack by the caller.
 Parameters are popped from the stack by the callee.
 X is usually used as a copy of SP to access parameters in indexed mode.
 Return value is in D.
+
 Any other register (X,Y,sr0-3) are assumed to be destroyed by the call. If a
 register has to be preserved across a call, it has to be saved on the stack.
 
 This is a kind of stdcall convention.
+
+Caling functions with registers
+-------------------------------
+* Parameters in soft registers sp0..sp3, caller-saves (on the stack).
+* Return value in D
+* Any function can destroy any st0..st3 temp register without the need to save
+  them.
 
 Position independent executable format
 ======================================
