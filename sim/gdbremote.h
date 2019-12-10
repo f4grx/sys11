@@ -10,6 +10,11 @@
 #include <netinet/in.h>
 #include <semaphore.h>
 
+#include "core.h"
+
+#define MAX_RX 1024
+
+
 struct gdbremote_t
   {
     uint16_t port;
@@ -17,7 +22,9 @@ struct gdbremote_t
     sem_t startstop;
     bool running;
     pthread_t tid;
-    char rxbuf[1024];
+    char rxbuf[MAX_RX + 1];
+    int rxlen;
+    struct hc11_core *core;
   };
 
 int gdbremote_init(struct gdbremote_t *gr);
