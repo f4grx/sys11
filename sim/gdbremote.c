@@ -14,17 +14,26 @@
 #define STATE_CSUM_1     3
 #define STATE_CSUM_2     4
 
+
+void gdbremote_fputc(const char ch, FILE *io)
+  {
+  fputc(ch, io);
+  fputc(ch, stdout);
+  }
+
 void gdbremote_tx(struct gdbremote_t *gr, FILE *io, const char *response)
   {
     char csum = 0;
-    fputc('$', io);
+    gdbremote_fputc('$', io);
     while(*response != 0)
       {
         csum = csum + *response;
-        fputc(*response, io);
+        gdbremote_fputc(*response, io);
         response++;
       }
-    fputc('#', io); fprintf(io, "%02X", csum); fflush(io);
+    gdbremote_fputc('#', io);
+    fprintf(io, "%02X", csum&0xFF); fflush(io);
+    fprintf(stdout, "%02X", csum&0xFF); fflush(stdout);
   }
 
 void gdbremote_command(struct gdbremote_t *gr, FILE *io)
@@ -46,13 +55,12 @@ void gdbremote_command(struct gdbremote_t *gr, FILE *io)
    if(!strcmp(gr->rxbuf, "qSupported"))
     {
       //gdb request supported features at boot
-      //gdbremote_tx(gr, io, "qSupported:PacketSize=1024");
-      goto end; 
+      gdbremote_tx(gr, io, "qSupported:PacketSize=1024;timeout=1000");
     }
   else
     {
 end:
-      fprintf(io, "+$#00"); fflush(io);
+      gdbremote_tx(gr, io, "");
     }
   }
 
@@ -61,7 +69,8 @@ void gdbremote_client(struct gdbremote_t *gr, FILE *io)
     int index;
     int state;
     char c;
-    char cs[2];
+    char cs[5];
+    char sum;
 
     printf("gdbremote: client connected\n");
 
@@ -81,6 +90,7 @@ void gdbremote_client(struct gdbremote_t *gr, FILE *io)
               if(c == '$')
                 {
                   index = 0;
+                  sum   = 0;
                   state = STATE_WAIT_CSUM;
                 }
               break;
@@ -94,6 +104,7 @@ void gdbremote_client(struct gdbremote_t *gr, FILE *io)
               else if(index < (sizeof(gr->rxbuf)-1))
                 {
                   gr->rxbuf[index++] = c;
+                  sum = sum + c;
                 }
               else
                 {
@@ -108,9 +119,18 @@ void gdbremote_client(struct gdbremote_t *gr, FILE *io)
 
             case STATE_CSUM_2:
               cs[1] = c;
+              sprintf(cs+2, "%02x", sum & 0xFF);
+              printf("computed %c%c rx %c%c\n", cs[2], cs[3], cs[0], cs[1]);
+              if(cs[0] == cs[2] && cs[1] == cs[3])
+                {
+                  fprintf(io, "+"); fflush(io);
+                  gdbremote_command(gr, io);
+                }
+              else
+                {
+                  fprintf(io, "-"); fflush(io);
+                }
               state = STATE_WAIT_START;
-              fprintf(io, "+"); fflush(io);
-              gdbremote_command(gr, io);
               break;
           }
       }
@@ -119,31 +139,8 @@ void gdbremote_client(struct gdbremote_t *gr, FILE *io)
 static void* gdbremote_thread(void *param)
   {
     struct gdbremote_t *gr = param;
-    struct sockaddr_in server;
     struct sockaddr_in client;
-    int ret;
-
-    // create tcp socket to allow gdb incoming connection
-    gr->sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(gr->sock < 0)
-      {
-        return (void*)-1;
-      }
-
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    server.sin_port = ntohs(gr->port);
-    ret = bind(gr->sock, (struct sockaddr*)&server, sizeof(server));
-    if(ret < 0)
-      {
-        perror("bind()");
-      }
-
-    ret = listen(gr->sock, 0);
-    if(ret < 0)
-      {
-        perror("listen()");
-      }
+    FILE *io;
 
     gr->running = true;
     printf("gdbremote: listen thread start (port %u)\n", gr->port);
@@ -154,32 +151,77 @@ static void* gdbremote_thread(void *param)
       {
       int cli;
       int clientsize = sizeof(client);
+printf("before accept\n");
       cli = accept(gr->sock, (struct sockaddr*)&client, &clientsize);
-      FILE *io = fdopen(cli, "rw");
+printf("after accept\n");
+      if(cli < 0)
+        {
+          perror("accept()");
+          break;
+        }
+      io = fdopen(cli, "rw");
       gdbremote_client(gr, io);
       fclose(io);
       }
 
-    close(gr->sock);
     printf("gdbremote: listen thread done\n");
   }
 
 int gdbremote_init(struct gdbremote_t *gr)
   {
     pthread_t id;
+    struct sockaddr_in server;
+    int ret;
+
     printf("gdbremote starting\n");
     sem_init(&gr->startstop, 0, 0);
+
+    // create tcp socket to allow gdb incoming connection
+    gr->sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(gr->sock < 0)
+      {
+        return -1;
+      }
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    server.sin_port = ntohs(gr->port);
+    ret = bind(gr->sock, (struct sockaddr*)&server, sizeof(server));
+    if(ret < 0)
+      {
+        perror("bind()");
+        goto close;
+      }
+
+    ret = listen(gr->sock, 0);
+    if(ret < 0)
+      {
+        perror("listen()");
+        goto close;
+      }
+
+
     pthread_create(&id, NULL, gdbremote_thread, gr);
+
     sem_wait(&gr->startstop);
     printf("gdbremote started\n");
     gr->tid = id;
+    return 0;
+
+close:
+    close(gr->sock);
+    return -1;
   }
 
 int gdbremote_close(struct gdbremote_t *gr)
   {
     void *ret;
-//    pthread_kill(gr->tid, SIGUSR1);
+    printf("gdbremote: terminating...\n");
+    close(gr->sock);
+pthread_kill(gr->tid, SIGINT);
     gr->running = false;
     pthread_join(gr->tid, &ret);
+    printf("gdbremote: thread terminated\n");
+    return 0;
   }
 

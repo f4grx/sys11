@@ -7,6 +7,8 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <semaphore.h>
+#include <signal.h>
 
 #include "core.h"
 #include "gdbremote.h"
@@ -23,6 +25,8 @@ static struct option long_options[] =
 //    {"file",    required_argument,  0,  0 },
     {0       , 0                , 0,  0  }
   };
+
+sem_t end;
 
 static uint8_t* loadbin(const char *fname, uint16_t *size)
   {
@@ -76,14 +80,26 @@ void help(void)
          );
   }
 
+void sig(int sig)
+  {
+    printf("Signal caught\n");
+    sem_post(&end);
+  }
+
 int main(int argc, char **argv)
   {
     struct hc11_core core;
     struct gdbremote_t remote;
     int c;
     uint64_t cycles = 0;
+    struct sigaction sa_mine;
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
+
+    sem_init(&end,0,0);
+    memset(&sa_mine, 0, sizeof(struct sigaction));
+    sa_mine.sa_handler = sig;
+    sigaction(SIGINT, &sa_mine, NULL);
 
     hc11_core_init(&core);
 
@@ -165,10 +181,18 @@ int main(int argc, char **argv)
     hc11_core_reset(&core);
     while(1)
       {
+        int val;
+        sem_getvalue(&end, &val);
+        if(val)
+          {
+            printf("simulation interrupted\n");
+            break;
+          }
         hc11_core_clock(&core);
         if(cycles != 0 && core.clocks > cycles) break;
       }
-
+    printf("Waiting for ctrl-c...\n");
+    sem_wait(&end);
     gdbremote_close(&remote);
   }
 
