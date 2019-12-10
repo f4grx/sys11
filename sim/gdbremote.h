@@ -12,8 +12,8 @@
 
 #include "core.h"
 
-#define MAX_RX 1024
-
+#define GDBREMOTE_MAX_RX 1023
+#define GDBREMOTE_MAX_TX 1023
 
 struct gdbremote_t
   {
@@ -22,8 +22,9 @@ struct gdbremote_t
     sem_t startstop;
     bool running;
     pthread_t tid;
-    char rxbuf[MAX_RX + 1];
-    int rxlen;
+    char rxbuf[GDBREMOTE_MAX_RX + 1];
+    char txbuf[GDBREMOTE_MAX_TX + 1];
+    int rxlen,txlen;
     struct hc11_core *core;
   };
 

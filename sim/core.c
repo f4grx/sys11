@@ -1223,3 +1223,12 @@ void hc11_core_clock(struct hc11_core *core)
       }//switch
   }
 
+void hc11_core_insn(struct hc11_core *core)
+  {
+    hc11_core_clock(core);
+    while(core->state != STATE_FETCHOPCODE)
+      {
+        hc11_core_clock(core);
+      }
+  }
+

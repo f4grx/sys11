@@ -1,6 +1,7 @@
 /* gdb remote target for simulator */
 
 #include <stdbool.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,19 +25,20 @@ int gdbremote_putc(const char ch, int client)
   return ret;
   }
 
-int gdbremote_tx(struct gdbremote_t *gr, int client, const char *response)
+int gdbremote_txraw(struct gdbremote_t *gr, int client)
   {
     uint8_t csum = 0;
     char ack, tx, rx;
     int ret;
     char sum[3];
+    int index=0;
 
    printf("<<<");
 again:
     gdbremote_putc('$', client);
-    while(*response != 0)
+    while(gr->txlen > 0)
       {
-        tx = *response;
+        tx = gr->txbuf[index];
         if(tx == '#' || tx == '%' || tx == '}' || tx == '*')
           {
             csum += '}';
@@ -45,7 +47,8 @@ again:
           }
         csum = csum + (uint8_t)tx;
         gdbremote_putc(tx, client);
-        response++;
+        index++;
+        gr->txlen--;
       }
     gdbremote_putc('#', client);
     sprintf(sum, "%02x", csum&0xFF);
@@ -61,70 +64,103 @@ again:
     return 0;
   }
 
+int gdbremote_txstr(struct gdbremote_t *gr, int client, const char *fmt, ...)
+  {
+    va_list ap;
+    va_start(ap, fmt);
+    gr->txlen = vsprintf(gr->txbuf, fmt, ap);
+    va_end(ap);
+    return gdbremote_txraw(gr,client);
+  }
+
+void gdbremote_monitor(struct gdbremote_t *gr, int client)
+  {
+    gr->txlen = sprintf(gr->txbuf, "OK");
+  }
+
 void gdbremote_command(struct gdbremote_t *gr, int client)
   {
     printf(">>> %s\n", gr->rxbuf);
 
-    if(!strncmp("qSupported", gr->rxbuf, sizeof("qSupported")))
+    if(!strncmp("qSupported", gr->rxbuf, strlen("qSupported")))
       {
         //gdb request supported features at boot
-        gdbremote_tx(gr, client, "PacketSize=1024");
+        gdbremote_txstr(gr, client, "PacketSize=%d", GDBREMOTE_MAX_RX);
         //gdbremote_tx(gr, io, "");
       }
-    else if(!strncmp("qC", gr->rxbuf, sizeof("qC")))
+    else if(!strncmp("qfThreadInfo", gr->rxbuf, strlen("qfThreadInfo")))
       {
-        gdbremote_tx(gr, client, "0");
+        gdbremote_txstr(gr, client, "m0");
       }
-    else if(!strncmp("qfThreadInfo", gr->rxbuf, sizeof("qfThreadInfo")))
+    else if(!strncmp("qsThreadInfo", gr->rxbuf, strlen("qsThreadInfo")))
       {
-        gdbremote_tx(gr, client, "m0");
+        gdbremote_txstr(gr, client, "l"); //this is a lower case L
       }
-    else if(!strncmp("qsThreadInfo", gr->rxbuf, sizeof("qsThreadInfo")))
+    else if(!strncmp("qAttached", gr->rxbuf, strlen("qAttached")))
       {
-        gdbremote_tx(gr, client, "l"); //this is a lower case L
+        gdbremote_txstr(gr, client, "1"); //this is a one
       }
-    else if(!strncmp("qAttached", gr->rxbuf, sizeof("qAttached")))
+    else if(!strncmp("qRcmd,", gr->rxbuf, strlen("qRcmd,")))
       {
-        gdbremote_tx(gr, client, "1"); //this is a one
+        int i,buf;
+        //convert hex to chars
+        for(i=0;i<(gr->rxlen-6)/2;i++)
+          {
+            sscanf(gr->rxbuf + 6 + (2 * i), "%02x", &buf);
+            gr->rxbuf[i] = buf & 0xFF;
+          }
+        gr->rxbuf[i] = 0;
+        printf("monitor: %s\n", gr->rxbuf);
+        gr->txlen = 0;
+        gdbremote_monitor(gr, client);
+        gdbremote_txraw(gr, client); //this is a one
+      }
+    else if(!strncmp("qC", gr->rxbuf, strlen("qC")))
+      {
+        gdbremote_txstr(gr, client, "0");
       }
     else if(gr->rxbuf[0] == '?')
       {
-        gdbremote_tx(gr, client, "S00");
+        gdbremote_txstr(gr, client, "S05");
       }
     else if(gr->rxbuf[0] == 'g')
       {
-/* according to gdb/m68hc11-tdep.c:
-#define HARD_X_REGNUM   0
-#define HARD_D_REGNUM   1
-#define HARD_Y_REGNUM   2
-#define HARD_SP_REGNUM  3
-#define HARD_PC_REGNUM  4
-
-#define HARD_A_REGNUM   5
-#define HARD_B_REGNUM   6
-#define HARD_CCR_REGNUM 7
+/* According to gdb/m68hc11-tdep.c:
+ * #define HARD_X_REGNUM   0
+ * #define HARD_D_REGNUM   1
+ * #define HARD_Y_REGNUM   2
+ * #define HARD_SP_REGNUM  3
+ * #define HARD_PC_REGNUM  4
+ * #define HARD_A_REGNUM   5
+ * #define HARD_B_REGNUM   6
+ * #define HARD_CCR_REGNUM 7
  */
-        char regs[27];
-        sprintf(regs, "%04X%04X%04X%04X%04X%02X%02X%02X",
-                gr->core->regs.x,
-                gr->core->regs.d,
-                gr->core->regs.y,
-                gr->core->regs.sp,
-                gr->core->regs.pc,
-                gr->core->regs.d & 0xFF,
-                gr->core->regs.d >> 8,
-                gr->core->regs.ccr
-               );
-        gdbremote_tx(gr, client, regs);
+        gr->txlen = sprintf(gr->txbuf, "%04X%04X%04X%04X%04X%02X%02X%02X",
+                            (int)gr->core->regs.x,
+                            (int)gr->core->regs.d,
+                            (int)gr->core->regs.y,
+                            (int)gr->core->regs.sp,
+                            (int)gr->core->regs.pc,
+                            (int)gr->core->regs.d & 0xFF,
+                            (int)gr->core->regs.d >> 8,
+                            (int)gr->core->regs.ccr
+                            );
+        gdbremote_txraw(gr, client);
       }
     else if(gr->rxbuf[0] == 'H')
       {
-        gdbremote_tx(gr, client, "OK");
+        //set thread for next operations
+        gdbremote_txstr(gr, client, "OK");
+      }
+    else if(gr->rxbuf[0] == 's')
+      {
+        //single step
+        hc11_core_insn(gr->core);
+        gdbremote_txstr(gr, client, "S05");
       }
     else
       {
-end:
-        gdbremote_tx(gr, client, "");
+        gdbremote_txstr(gr, client, "");
       }
   }
 
@@ -177,7 +213,7 @@ int gdbremote_rx(struct gdbremote_t *gr, int client)
                 {
                   state = STATE_CSUM_1;
                 }
-              else if(gr->rxlen < MAX_RX)
+              else if(gr->rxlen < GDBREMOTE_MAX_RX)
                 {
                   gr->rxbuf[gr->rxlen] = c;
                   sum = sum + (uint8_t)c;

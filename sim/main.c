@@ -77,6 +77,7 @@ void help(void)
            "\n"
            "  -s --s19 <file>      Load S-record file\n"
            "  -b --bin <adr,file>  Load binary file at address\n"
+           "  -c --cycles N        Run for N cycles before stopping\n"
          );
   }
 
@@ -106,7 +107,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:c:", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -176,8 +177,8 @@ int main(int argc, char **argv)
     hc11_sci_init(&core);
 
     remote.port = 3333;
-    gdbremote_init(&remote);
     remote.core = &core;
+    gdbremote_init(&remote);
 
     hc11_core_reset(&core);
     while(1)
@@ -189,8 +190,11 @@ int main(int argc, char **argv)
             printf("simulation interrupted\n");
             break;
           }
-        hc11_core_clock(&core);
-        if(cycles != 0 && core.clocks > cycles) break;
+        hc11_core_insn(&core);
+        if(cycles != 0 && core.clocks >= cycles)
+          {
+            break;
+          }
       }
     printf("Waiting for ctrl-c...\n");
     sem_wait(&end);
