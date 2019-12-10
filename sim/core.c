@@ -1223,12 +1223,20 @@ void hc11_core_clock(struct hc11_core *core)
       }//switch
   }
 
-void hc11_core_insn(struct hc11_core *core)
+//run the clock until we are just ready to fetch the opcode
+void hc11_core_prep(struct hc11_core *core)
   {
-    hc11_core_clock(core);
     while(core->state != STATE_FETCHOPCODE)
       {
         hc11_core_clock(core);
       }
   }
+
+//run the clock until the current insn being fetched is executed
+void hc11_core_insn(struct hc11_core *core)
+  {
+    hc11_core_clock(core);
+    hc11_core_prep(core);
+  }
+
 

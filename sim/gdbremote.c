@@ -75,13 +75,20 @@ int gdbremote_txstr(struct gdbremote_t *gr, int client, const char *fmt, ...)
 
 void gdbremote_monitor(struct gdbremote_t *gr, int client)
   {
-    gr->txlen = sprintf(gr->txbuf, "OK");
+    if(!strncmp("help", gr->rxbuf, strlen("help")))
+      {
+        gr->txlen = sprintf(gr->txbuf, "reset - restart cpu\n");
+      }
+    else if(!strncmp("reset", gr->rxbuf, strlen("reset")))
+      {
+        hc11_core_reset(gr->core);
+        hc11_core_prep (gr->core);
+        gr->txlen = sprintf(gr->txbuf, "target reset");
+      }
   }
 
-void gdbremote_command(struct gdbremote_t *gr, int client)
+void gdbremote_query(struct gdbremote_t *gr, int client)
   {
-    printf(">>> %s\n", gr->rxbuf);
-
     if(!strncmp("qSupported", gr->rxbuf, strlen("qSupported")))
       {
         //gdb request supported features at boot
@@ -113,11 +120,47 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
         printf("monitor: %s\n", gr->rxbuf);
         gr->txlen = 0;
         gdbremote_monitor(gr, client);
-        gdbremote_txraw(gr, client); //this is a one
+        if(gr->txlen == 0)
+          {
+            gdbremote_txstr(gr, client, "");
+          }
+        else
+          {
+            char buf[3];
+            //convert response to hex
+            if(gr->txlen > (GDBREMOTE_MAX_TX/2))
+              {
+                gr->txlen = GDBREMOTE_MAX_TX/2;
+              }
+            for(i=gr->txlen-1; i>=0; i--)
+              {
+                sprintf(buf, "%02X", gr->txbuf[i]);
+                gr->txbuf[2*i  ] = buf[0];
+                gr->txbuf[2*i+1] = buf[1];
+              }
+            gr->txlen *= 2;
+            gdbremote_txraw(gr, client);
+          }
       }
     else if(!strncmp("qC", gr->rxbuf, strlen("qC")))
       {
         gdbremote_txstr(gr, client, "0");
+      }
+    else
+      {
+        printf("Unsupported GDB query\n");
+        gdbremote_txstr(gr, client, "");
+      }
+
+  }
+
+void gdbremote_command(struct gdbremote_t *gr, int client)
+  {
+    printf(">>> %s\n", gr->rxbuf);
+
+    if(gr->rxbuf[0] == 'q')
+      {
+        gdbremote_query(gr, client);
       }
     else if(gr->rxbuf[0] == '?')
       {
