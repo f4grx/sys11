@@ -83,7 +83,7 @@ void gdbremote_monitor(struct gdbremote_t *gr, int client)
       {
         hc11_core_reset(gr->core);
         hc11_core_prep (gr->core);
-        gr->txlen = sprintf(gr->txbuf, "target reset");
+        gr->txlen = sprintf(gr->txbuf, "target was reset\n");
       }
   }
 
@@ -201,6 +201,12 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
         hc11_core_insn(gr->core);
         gdbremote_txstr(gr, client, "S05");
       }
+    else if(gr->rxbuf[0] == 'D')
+      {
+        //detach
+        gdbremote_txstr(gr, client, "OK");
+        gr->running = false;
+      }
     else
       {
         gdbremote_txstr(gr, client, "");
@@ -216,7 +222,7 @@ int gdbremote_rx(struct gdbremote_t *gr, int client)
     int ret;
 
     state = STATE_WAIT_START;
-    while(1)
+    while(gr->running)
       {
         ret = recv(client, &c, 1, 0);
         if(ret < 0) return -1;
