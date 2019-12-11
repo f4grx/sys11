@@ -1233,7 +1233,7 @@ void hc11_core_prep(struct hc11_core *core)
   }
 
 //run the clock until the current insn being fetched is executed
-void hc11_core_insn(struct hc11_core *core)
+void hc11_core_step(struct hc11_core *core)
   {
     hc11_core_clock(core);
     hc11_core_prep(core);

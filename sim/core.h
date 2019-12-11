@@ -125,7 +125,8 @@ void    hc11_core_writeb(struct hc11_core *core, uint16_t adr,
 
 void hc11_core_reset(struct hc11_core *core);
 void hc11_core_clock(struct hc11_core *core);
-void hc11_core_insn (struct hc11_core *core);
+void hc11_core_step (struct hc11_core *core);
 void hc11_core_prep (struct hc11_core *core);
 
 #endif /* __core__h__ */
+

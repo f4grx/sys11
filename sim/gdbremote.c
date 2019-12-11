@@ -1,5 +1,7 @@
 /* gdb remote target for simulator */
 
+#define _GNU_SOURCE
+
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -198,7 +200,7 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
     else if(gr->rxbuf[0] == 's')
       {
         //single step
-        hc11_core_insn(gr->core);
+        hc11_core_step(gr->core);
         gdbremote_txstr(gr, client, "S05");
       }
     else if(gr->rxbuf[0] == 'D')
@@ -309,11 +311,25 @@ int gdbremote_rx(struct gdbremote_t *gr, int client)
       }
   }
 
+
+static void gdbremote_thread_sig(int num, siginfo_t *info, void *v)
+  {
+    struct gdbremote_t *sgr = info->si_value.sival_ptr;
+    printf("thread signal caught\n");
+    sgr->running = false;
+  }
+
 static void* gdbremote_thread(void *param)
   {
     struct gdbremote_t *gr = param;
     struct sockaddr_in client;
+    struct sigaction sa_thread;
     int ret;
+
+    memset(&sa_thread, 0, sizeof(struct sigaction));
+    sa_thread.sa_sigaction = gdbremote_thread_sig;
+    sa_thread.sa_flags     = SA_SIGINFO;
+    sigaction(SIGUSR1, &sa_thread, NULL);
 
     gr->running = true;
     printf("gdbremote: listen thread start (port %u)\n", gr->port);
@@ -330,7 +346,7 @@ static void* gdbremote_thread(void *param)
             break;
           }
         printf("gdbremote: client connected\n");
-        while(1)
+        while(gr->running)
           {
             ret = gdbremote_rx(gr, cli);
             if(ret < 0) break;
@@ -340,6 +356,7 @@ static void* gdbremote_thread(void *param)
       }
 
     printf("gdbremote: listen thread done\n");
+    return NULL;
   }
 
 int gdbremote_init(struct gdbremote_t *gr)
@@ -399,9 +416,13 @@ close:
 int gdbremote_close(struct gdbremote_t *gr)
   {
     void *ret;
+    sigval_t val;
+
     printf("gdbremote: terminating...\n");
     close(gr->sock);
-pthread_kill(gr->tid, SIGINT);
+
+    val.sival_ptr = gr;
+    pthread_sigqueue(gr->tid, SIGUSR1, val);
     gr->running = false;
     pthread_join(gr->tid, &ret);
     printf("gdbremote: thread terminated\n");

@@ -94,6 +94,7 @@ int main(int argc, char **argv)
     int c;
     uint64_t cycles = 0;
     struct sigaction sa_mine;
+    int val;
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
 
@@ -183,21 +184,24 @@ int main(int argc, char **argv)
     hc11_core_reset(&core);
     while(1)
       {
-        int val;
         sem_getvalue(&end, &val);
         if(val)
           {
             printf("simulation interrupted\n");
             break;
           }
-        hc11_core_insn(&core);
+        hc11_core_step(&core);
         if(cycles != 0 && core.clocks >= cycles)
           {
             break;
           }
       }
-    printf("Waiting for ctrl-c...\n");
-    sem_wait(&end);
+    sem_getvalue(&end, &val);
+    if(!val)
+      {
+        printf("Waiting for ctrl-c...\n");
+        sem_wait(&end);
+      }
     gdbremote_close(&remote);
   }
 
