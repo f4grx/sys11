@@ -140,217 +140,277 @@ static const uint8_t opmodes_CD[256] =
 //Define opcodes
 enum
   {
-    OP_TEST_INH  = 0x00, OP_NOP_INH, OP_IDIV_INH, OP_FDIV_INH, OP_LSRD_INH, OP_ASLD_INH, OP_TAP_INH, OP_TPA_INH,
-    OP_INXY_INH  = 0x08, OP_DEXY_INH, OP_CLV_INH, OP_SEV_INH, OP_CLC_INH, OP_SEC_INH, OP_CLI_INH, OP_SEI_INH,
-    OP_SBA_INH   = 0x10, OP_CBA_INH, OP_BRSET_DIR, OP_BRCLR_DIR, OP_BSET_DIR, OP_BCLR_DIR, OP_TAB_INH, OP_TBA_INH,
-    OP_PFX_18    = 0x18, OP_DAA_INH, OP_PFX_1A, OP_ABA_INH, OP_BSET_IND, OP_BCLR_IND, OP_BRSET_IND, OP_BRCLR_IND,
-    OP_BRA_REL   = 0x20, OP_BRN_REL, OP_BHI_REL, OP_BLS_REL, OP_BHS_REL, OP_BLO_REL, OP_BNE_REL, OP_BEQ_REL,
-    OP_BVC_REL   = 0x28, OP_BVS_REL, OP_BPL_REL, OP_BMI_REL, OP_BGE_REL, OP_BLT_REL, OP_BGT_REL, OP_BLE_REL,
-    OP_TSXY_INH  = 0x30, OP_INS_INH, OP_PULA_INH, OP_PULB_INH, OP_DES_INH, OP_TXYS_INH, OP_PSHA_INH, OP_PSHB_INH,
-    OP_PULXY_INH = 0x38, OP_RTS_INH, OP_ABXY_INH, OP_RTI_INH, OP_PSHXY_INH, OP_MUL_INH, OP_WAI_INH, OP_SWI_INH,
+    OP_TEST_INH  = 0x00,
+    OP_NOP_INH,
+    OP_IDIV_INH,
+    OP_FDIV_INH,
+    OP_LSRD_INH,
+    OP_ASLD_INH,
+    OP_TAP_INH,
+    OP_TPA_INH,
+    OP_INXY_INH,
+    OP_DEXY_INH,
+    OP_CLV_INH,
+    OP_SEV_INH,
+    OP_CLC_INH,
+    OP_SEC_INH,
+    OP_CLI_INH,
+    OP_SEI_INH,
+
+    OP_SBA_INH   = 0x10,
+    OP_CBA_INH,
+    OP_BRSET_DIR,
+    OP_BRCLR_DIR,
+    OP_BSET_DIR,
+    OP_BCLR_DIR,
+    OP_TAB_INH,
+    OP_TBA_INH,
+    OP_PFX_18,
+    OP_DAA_INH,
+    OP_PFX_1A,
+    OP_ABA_INH,
+    OP_BSET_IND,
+    OP_BCLR_IND,
+    OP_BRSET_IND,
+    OP_BRCLR_IND,
+
+    OP_BRA_REL   = 0x20,
+    OP_BRN_REL,
+    OP_BHI_REL,
+    OP_BLS_REL,
+    OP_BHS_REL,
+    OP_BLO_REL,
+    OP_BNE_REL,
+    OP_BEQ_REL,
+    OP_BVC_REL,
+    OP_BVS_REL,
+    OP_BPL_REL,
+    OP_BMI_REL,
+    OP_BGE_REL,
+    OP_BLT_REL,
+    OP_BGT_REL,
+    OP_BLE_REL,
+
+    OP_TSXY_INH  = 0x30,
+    OP_INS_INH,
+    OP_PULA_INH,
+    OP_PULB_INH,
+    OP_DES_INH,
+    OP_TXYS_INH,
+    OP_PSHA_INH,
+    OP_PSHB_INH,
+    OP_PULXY_INH,
+    OP_RTS_INH,
+    OP_ABXY_INH,
+    OP_RTI_INH,
+    OP_PSHXY_INH,
+    OP_MUL_INH,
+    OP_WAI_INH,
+    OP_SWI_INH,
+
     OP_NEGA_INH = 0x40,
-    OP_RSVD_41  = 0x41,
-    OP_RSVD_42  = 0x42,
-    OP_COMA_INH = 0x43,
-    OP_LSRA_INH = 0x44,
-    OP_RSVD_45  = 0x45,
-    OP_RORA_INH = 0x46,
-    OP_ASRA_INH = 0x47,
-    OP_ASLA_INH = 0x48,
-    OP_ROLA_INH = 0x49,
-    OP_DECA_INH = 0x4A,
-    OP_RSVD_4B  = 0x4B,
-    OP_INCA_INH = 0x4C,
-    OP_TSTA_INH = 0x4D,
-    OP_RSVD_4E  = 0x4E,
-    OP_CLRA_INH = 0x4F,
+    OP_RSVD_41,
+    OP_RSVD_42,
+    OP_COMA_INH,
+    OP_LSRA_INH,
+    OP_RSVD_45,
+    OP_RORA_INH,
+    OP_ASRA_INH,
+    OP_ASLA_INH,
+    OP_ROLA_INH,
+    OP_DECA_INH,
+    OP_RSVD_4B,
+    OP_INCA_INH,
+    OP_TSTA_INH,
+    OP_RSVD_4E,
+    OP_CLRA_INH,
 
     OP_NEGB_INH = 0x50,
-    OP_RSVD_51  = 0x51,
-    OP_RSVD_52  = 0x52,
-    OP_COMB_INH = 0x53,
-    OP_LSRB_INH = 0x54,
-    OP_RSVD_55  = 0x55,
-    OP_RORB_INH = 0x56,
-    OP_ASRB_INH = 0x57,
-    OP_ASLB_INH = 0x58,
-    OP_ROLB_INH = 0x59,
-    OP_DECB_INH = 0x5A,
-    OP_RSVD_5B  = 0x5B,
-    OP_INCB_INH = 0x5C,
-    OP_TSTB_INH = 0x5D,
-    OP_RSVD_5E  = 0x5E,
-    OP_CLRB_INH = 0x5F,
+    OP_RSVD_51,
+    OP_RSVD_52,
+    OP_COMB_INH,
+    OP_LSRB_INH,
+    OP_RSVD_55,
+    OP_RORB_INH,
+    OP_ASRB_INH,
+    OP_ASLB_INH,
+    OP_ROLB_INH,
+    OP_DECB_INH,
+    OP_RSVD_5B,
+    OP_INCB_INH,
+    OP_TSTB_INH,
+    OP_RSVD_5E,
+    OP_CLRB_INH,
 
     OP_NEG_IND = 0x60,
-    OP_RSVD_61 = 0x61,
-    OP_RSVD_62 = 0x62,
-    OP_COM_IND = 0x63,
-    OP_LSR_IND = 0x64,
-    OP_RSVD_65 = 0x65,
-    OP_ROR_IND = 0x66,
-    OP_ASR_IND = 0x67,
-    OP_ASL_IND = 0x68,
-    OP_ROL_IND = 0x69,
-    OP_DEC_IND = 0x6A,
-    OP_RSVD_6B = 0x6B,
-    OP_INC_IND = 0x6C,
-    OP_TST_IND = 0x6D,
-    OP_JMP_IND = 0x6E,
-    OP_CLR_IND = 0x6F,
+    OP_RSVD_61,
+    OP_RSVD_62,
+    OP_COM_IND,
+    OP_LSR_IND,
+    OP_RSVD_65,
+    OP_ROR_IND,
+    OP_ASR_IND,
+    OP_ASL_IND,
+    OP_ROL_IND,
+    OP_DEC_IND,
+    OP_RSVD_6B,
+    OP_INC_IND,
+    OP_TST_IND,
+    OP_JMP_IND,
+    OP_CLR_IND,
 
     OP_NEG_EXT = 0x70,
-    OP_RSVD_71 = 0x71,
-    OP_RSVD_72 = 0x72,
-    OP_COM_EXT = 0x73,
-    OP_LSR_EXT = 0x74,
-    OP_RSVD_75 = 0x75,
-    OP_ROR_EXT = 0x76,
-    OP_ASR_EXT = 0x77,
-    OP_ASL_EXT = 0x78,
-    OP_ROL_EXT = 0x79,
-    OP_DEC_EXT = 0x7A,
-    OP_RSVD_7B = 0x7B,
-    OP_INC_EXT = 0x7C,
-    OP_TST_EXT = 0x7D,
-    OP_JMP_EXT = 0x7E,
-    OP_CLR_EXT = 0x7F,
+    OP_RSVD_71,
+    OP_RSVD_72,
+    OP_COM_EXT,
+    OP_LSR_EXT,
+    OP_RSVD_75,
+    OP_ROR_EXT,
+    OP_ASR_EXT,
+    OP_ASL_EXT,
+    OP_ROL_EXT,
+    OP_DEC_EXT,
+    OP_RSVD_7B,
+    OP_INC_EXT,
+    OP_TST_EXT,
+    OP_JMP_EXT,
+    OP_CLR_EXT,
 
     OP_SUBA_IMM  = 0x80,
-    OP_CMPA_IMM  = 0x81,
-    OP_SBCA_IMM  = 0x82,
-    OP_CPD_SUBD_IMM = 0x83,
-    OP_ANDA_IMM  = 0x84,
-    OP_BITA_IMM  = 0x85,
-    OP_LDAA_IMM  = 0x86,
-    OP_RSVD_87   = 0x87,
-    OP_EORA_IMM  = 0x88,
-    OP_ADCA_IMM  = 0x89,
-    OP_ORAA_IMM  = 0x8A,
-    OP_ADDA_IMM  = 0x8B,
-    OP_CPXY_IMM  = 0x8C,
-    OP_BSR_REL   = 0x8D,
-    OP_LDS_IMM   = 0x8E,
-    OP_XGDXY_INH = 0x8F,
+    OP_CMPA_IMM,
+    OP_SBCA_IMM,
+    OP_CPD_SUBD_IMM,
+    OP_ANDA_IMM,
+    OP_BITA_IMM,
+    OP_LDAA_IMM,
+    OP_RSVD_87,
+    OP_EORA_IMM,
+    OP_ADCA_IMM,
+    OP_ORAA_IMM,
+    OP_ADDA_IMM,
+    OP_CPXY_IMM,
+    OP_BSR_REL,
+    OP_LDS_IMM,
+    OP_XGDXY_INH,
 
     OP_SUBA_DIR = 0x90,
-    OP_CMPA_DIR = 0x91,
-    OP_SBCA_DIR = 0x92,
-    OP_CPD_SUBD_DIR = 0x93,
-    OP_ANDA_DIR = 0x94,
-    OP_BITA_DIR = 0x95,
-    OP_LDAA_DIR = 0x96,
-    OP_STAA_DIR = 0x97,
-    OP_EORA_DIR = 0x98,
-    OP_ADCA_DIR = 0x99,
-    OP_ORAA_DIR = 0x9A,
-    OP_ADDA_DIR = 0x9B,
-    OP_CPXY_DIR = 0x9C,
-    OP_JSR_DIR  = 0x9D,
-    OP_LDS_DIR  = 0x9E,
-    OP_STS_DIR  = 0x9F,
+    OP_CMPA_DIR,
+    OP_SBCA_DIR,
+    OP_CPD_SUBD_DIR,
+    OP_ANDA_DIR,
+    OP_BITA_DIR,
+    OP_LDAA_DIR,
+    OP_STAA_DIR,
+    OP_EORA_DIR,
+    OP_ADCA_DIR,
+    OP_ORAA_DIR,
+    OP_ADDA_DIR,
+    OP_CPXY_DIR,
+    OP_JSR_DIR,
+    OP_LDS_DIR,
+    OP_STS_DIR,
 
     OP_SUBA_IND = 0xA0,
-    OP_CMPA_IND = 0xA1,
-    OP_SBCA_IND = 0xA2,
-    OP_CPD_SUBD_IND = 0xA3,
-    OP_ANDA_IND = 0xA4,
-    OP_BITA_IND = 0xA5,
-    OP_LDAA_IND = 0xA6,
-    OP_STAA_IND = 0xA7,
-    OP_EORA_IND = 0xA8,
-    OP_ADCA_IND = 0xA9,
-    OP_ORAA_IND = 0xAA,
-    OP_ADDA_IND = 0xAB,
-    OP_CPXY_IND = 0xAC,
-    OP_JSR_IND  = 0xAD,
-    OP_LDS_IND  = 0xAE,
-    OP_STS_IND  = 0xAF,
+    OP_CMPA_IND,
+    OP_SBCA_IND,
+    OP_CPD_SUBD_IND,
+    OP_ANDA_IND,
+    OP_BITA_IND,
+    OP_LDAA_IND,
+    OP_STAA_IND,
+    OP_EORA_IND,
+    OP_ADCA_IND,
+    OP_ORAA_IND,
+    OP_ADDA_IND,
+    OP_CPXY_IND,
+    OP_JSR_IND,
+    OP_LDS_IND,
+    OP_STS_IND,
 
     OP_SUBA_EXT = 0xB0,
-    OP_CMPA_EXT = 0xB1,
-    OP_SBCA_EXT = 0xB2,
-    OP_CPD_SUBD_EXT = 0xB3,
-    OP_ANDA_EXT = 0xB4,
-    OP_BITA_EXT = 0xB5,
-    OP_LDAA_EXT = 0xB6,
-    OP_STAA_EXT = 0xB7,
-    OP_EORA_EXT = 0xB8,
-    OP_ADCA_EXT = 0xB9,
-    OP_ORAA_EXT = 0xBA,
-    OP_ADDA_EXT = 0xBB,
-    OP_CPXY_EXT = 0xBC,
-    OP_JSR_EXT  = 0xBD,
-    OP_LDS_EXT  = 0xBE,
-    OP_STS_EXT  = 0xBF,
+    OP_CMPA_EXT,
+    OP_SBCA_EXT,
+    OP_CPD_SUBD_EXT,
+    OP_ANDA_EXT,
+    OP_BITA_EXT,
+    OP_LDAA_EXT,
+    OP_STAA_EXT,
+    OP_EORA_EXT,
+    OP_ADCA_EXT,
+    OP_ORAA_EXT,
+    OP_ADDA_EXT,
+    OP_CPXY_EXT,
+    OP_JSR_EXT,
+    OP_LDS_EXT,
+    OP_STS_EXT,
 
     OP_SUBB_IMM = 0xC0,
-    OP_CMPB_IMM = 0xC1,
-    OP_SBCB_IMM = 0xC2,
-    OP_ADDD_IMM = 0xC3,
-    OP_ANDB_IMM = 0xC4,
-    OP_BITB_IMM = 0xC5,
-    OP_LDAB_IMM = 0xC6,
-    OP_RSVD_C7  = 0xC7,
-    OP_EORB_IMM = 0xC8,
-    OP_ADCB_IMM = 0xC9,
-    OP_ORAB_IMM = 0xCA,
-    OP_ADDB_IMM = 0xCB,
-    OP_LDD_IMM  = 0xCC,
-    OP_PFX_CD   = 0xCD,
-    OP_LDXY_IMM = 0xCE,
-    OP_STOP_INH = 0xCF,
+    OP_CMPB_IMM,
+    OP_SBCB_IMM,
+    OP_ADDD_IMM,
+    OP_ANDB_IMM,
+    OP_BITB_IMM,
+    OP_LDAB_IMM,
+    OP_RSVD_C7,
+    OP_EORB_IMM,
+    OP_ADCB_IMM,
+    OP_ORAB_IMM,
+    OP_ADDB_IMM,
+    OP_LDD_IMM,
+    OP_PFX_CD,
+    OP_LDXY_IMM,
+    OP_STOP_INH,
 
     OP_SUBB_DIR = 0xD0,
-    OP_CMPB_DIR = 0xD1,
-    OP_SBCB_DIR = 0xD2,
-    OP_ADDD_DIR = 0xD3,
-    OP_ANDB_DIR = 0xD4,
-    OP_BITB_DIR = 0xD5,
-    OP_LDAB_DIR = 0xD6,
-    OP_STAB_DIR = 0xD7,
-    OP_EORB_DIR = 0xD8,
-    OP_ADCB_DIR = 0xD9,
-    OP_ORAB_DIR = 0xDA,
-    OP_ADDB_DIR = 0xDB,
-    OP_LDD_DIR  = 0xDC,
-    OP_STD_DIR  = 0xDD,
-    OP_LDXY_DIR = 0xDE,
-    OP_STXY_DIR = 0xDF,
+    OP_CMPB_DIR,
+    OP_SBCB_DIR,
+    OP_ADDD_DIR,
+    OP_ANDB_DIR,
+    OP_BITB_DIR,
+    OP_LDAB_DIR,
+    OP_STAB_DIR,
+    OP_EORB_DIR,
+    OP_ADCB_DIR,
+    OP_ORAB_DIR,
+    OP_ADDB_DIR,
+    OP_LDD_DIR,
+    OP_STD_DIR,
+    OP_LDXY_DIR,
+    OP_STXY_DIR,
 
     OP_SUBB_IND = 0xE0,
-    OP_CMPB_IND = 0xE1,
-    OP_SBCB_IND = 0xE2,
-    OP_ADDD_IND = 0xE3,
-    OP_ANDB_IND = 0xE4,
-    OP_BITB_IND = 0xE5,
-    OP_LDAB_IND = 0xE6,
-    OP_STAB_IND = 0xE7,
-    OP_EORB_IND = 0xE8,
-    OP_ADCB_IND = 0xE9,
-    OP_ORAB_IND = 0xEA,
-    OP_ADDB_IND = 0xEB,
-    OP_LDD_IND  = 0xEC,
-    OP_STD_IND  = 0xED,
-    OP_LDXY_IND = 0xEE,
-    OP_STXY_IND = 0xEF,
+    OP_CMPB_IND,
+    OP_SBCB_IND,
+    OP_ADDD_IND,
+    OP_ANDB_IND,
+    OP_BITB_IND,
+    OP_LDAB_IND,
+    OP_STAB_IND,
+    OP_EORB_IND,
+    OP_ADCB_IND,
+    OP_ORAB_IND,
+    OP_ADDB_IND,
+    OP_LDD_IND,
+    OP_STD_IND,
+    OP_LDXY_IND,
+    OP_STXY_IND,
 
     OP_SUBB_EXT = 0xF0,
-    OP_CMPB_EXT = 0xF1,
-    OP_SBCB_EXT = 0xF2,
-    OP_ADDD_EXT = 0xF3,
-    OP_ANDB_EXT = 0xF4,
-    OP_BITB_EXT = 0xF5,
-    OP_LDAB_EXT = 0xF6,
-    OP_STAB_EXT = 0xF7,
-    OP_EORB_EXT = 0xF8,
-    OP_ADCB_EXT = 0xF9,
-    OP_ORAB_EXT = 0xFA,
-    OP_ADDB_EXT = 0xFB,
-    OP_LDD_EXT  = 0xFC,
-    OP_STD_EXT  = 0xFD,
-    OP_LDXY_EXT = 0xFE,
-    OP_STXY_EXT = 0xFF,
+    OP_CMPB_EXT,
+    OP_SBCB_EXT,
+    OP_ADDD_EXT,
+    OP_ANDB_EXT,
+    OP_BITB_EXT,
+    OP_LDAB_EXT,
+    OP_STAB_EXT,
+    OP_EORB_EXT,
+    OP_ADCB_EXT,
+    OP_ORAB_EXT,
+    OP_ADDB_EXT,
+    OP_LDD_EXT,
+    OP_STD_EXT,
+    OP_LDXY_EXT,
+    OP_STXY_EXT,
   };
 
 uint8_t init_read(void *ctx, uint16_t off)
@@ -640,12 +700,22 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("NOP\n");
                 break;
 
-              case OP_IDIV_INH : /*ZVC*/ break;
-              case OP_FDIV_INH : /*ZVC*/ break;
-              case OP_MUL_INH   : /*C*/ break;
+              case OP_IDIV_INH : /*ZVC*/
+                break;
 
-              case OP_TAP_INH  : /*SXHINZVC*/ break;
-              case OP_TPA_INH  : break;
+              case OP_FDIV_INH : /*ZVC*/
+                break;
+
+              case OP_MUL_INH   : /*C*/
+                break;
+
+              case OP_TAP_INH  : /*SXHINZVC*/
+                core->regs.ccr = core->regs.d >> 8;
+                break;
+
+              case OP_TPA_INH  :
+                core->regs.d = (core->regs.d & 0x00FF) | (core->regs.ccr << 8);
+                break;
 
               case OP_TAB_INH   : /*NZV*/
                 tmp = core->regs.d >> 8; //get A
@@ -665,20 +735,50 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("TBA\n");
                 break;
 
+              case OP_CLV_INH  : /*V*/
+                core->regs.flags.V = 0;
+                printf("CLV\n");
+                break;
 
-              case OP_CLV_INH  : /*V*/ break;
-              case OP_SEV_INH  : /*V*/ break;
-              case OP_CLC_INH  : /*C*/ break;
-              case OP_SEC_INH  : /*C*/ break;
-              case OP_CLI_INH  : /*I*/ break;
-              case OP_SEI_INH  : /*I*/ break;
+              case OP_SEV_INH  : /*V*/
+                core->regs.flags.V = 1;
+                printf("SEV\n");
+                break;
 
-              case OP_ABXY_INH  : break;
+              case OP_CLC_INH  : /*C*/
+                core->regs.flags.C = 0;
+                printf("CLC\n");
+                break;
 
-              case OP_ABA_INH   : /*HNZCV*/ break;
-              case OP_SBA_INH   : /*NZVC*/ break;
-              case OP_CBA_INH   : /*NZVC*/ break;
-              case OP_DAA_INH   : /*NZC*/ break;
+              case OP_SEC_INH  : /*C*/
+                core->regs.flags.C = 1;
+                printf("SEC\n");
+                break;
+
+              case OP_CLI_INH  : /*I*/
+                core->regs.flags.I = 0;
+                printf("CLI\n");
+                break;
+
+              case OP_SEI_INH  : /*I*/
+                core->regs.flags.I = 1;
+                printf("SEI\n");
+                break;
+
+              case OP_ABXY_INH  :
+                break;
+
+              case OP_ABA_INH   : /*HNZCV*/
+                break;
+
+              case OP_SBA_INH   : /*NZVC*/
+                break;
+
+              case OP_CBA_INH   : /*NZVC*/
+                break;
+
+              case OP_DAA_INH   : /*NZC*/
+                break;
 
               case OP_CLRA_INH : /*NZVC*/
                 core->regs.d = core->regs.d & 0x00FF;
@@ -698,26 +798,65 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("CLRB\n");
                 break;
 
-              case OP_INCA_INH : /*NZV*/ break;
-              case OP_INCB_INH : /*NZV*/ break;
-              case OP_DECA_INH : /*NZV*/ break;
-              case OP_DECB_INH : /*NZV*/ break;
-              case OP_LSRA_INH : /*NZVC*/ break;
-              case OP_LSRB_INH : /*NZVC*/ break;
-              case OP_RORA_INH : /*NZVC*/ break;
-              case OP_RORB_INH : /*NZVC*/ break;
-              case OP_ASRA_INH : /*NZVC*/ break;
-              case OP_ASRB_INH : /*NZVC*/ break;
-              case OP_ASLA_INH : /*NZVC*/ break;
-              case OP_ASLB_INH : /*NZVC*/ break;
-              case OP_ROLA_INH : /*NZVC*/ break;
-              case OP_ROLB_INH : /*NZVC*/ break;
-              case OP_NEGA_INH : /*NZVC*/ break;
-              case OP_NEGB_INH : /*NZVC*/ break;
-              case OP_COMA_INH : /*NZVC*/ break;
-              case OP_COMB_INH : /*NZVC*/ break;
-              case OP_TSTA_INH : /*NZVC*/ break;
-              case OP_TSTB_INH : /*NZVC*/ break;
+              case OP_INCA_INH : /*NZV*/
+                break;
+
+              case OP_INCB_INH : /*NZV*/
+                break;
+
+              case OP_DECA_INH : /*NZV*/
+                break;
+
+              case OP_DECB_INH : /*NZV*/
+                break;
+
+              case OP_LSRA_INH : /*NZVC*/
+                break;
+
+              case OP_LSRB_INH : /*NZVC*/
+                break;
+
+              case OP_RORA_INH : /*NZVC*/
+                break;
+
+              case OP_RORB_INH : /*NZVC*/
+                break;
+
+              case OP_ASRA_INH : /*NZVC*/
+                break;
+
+              case OP_ASRB_INH : /*NZVC*/
+                break;
+
+              case OP_ASLA_INH : /*NZVC*/
+                break;
+
+              case OP_ASLB_INH : /*NZVC*/
+                break;
+
+              case OP_ROLA_INH : /*NZVC*/
+                break;
+
+              case OP_ROLB_INH : /*NZVC*/
+                break;
+
+              case OP_NEGA_INH : /*NZVC*/
+                break;
+
+              case OP_NEGB_INH : /*NZVC*/
+                break;
+
+              case OP_COMA_INH : /*NZVC*/
+                break;
+
+              case OP_COMB_INH : /*NZVC*/
+                break;
+
+              case OP_TSTA_INH : /*NZVC*/
+                break;
+
+              case OP_TSTB_INH : /*NZVC*/
+                break;
 
               case OP_PSHA_INH  :
                 core->busdat = (core->regs.d >> 8) << 8;
@@ -743,13 +882,28 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("PULX\n");
                 break;
 
-              case OP_LSRD_INH : /*NZVC*/ break;
-              case OP_ASLD_INH : /*NZVC*/ break;
+              case OP_LSRD_INH : /*NZVC*/
+                break;
 
-              case OP_TSXY_INH  : break;
-              case OP_TXYS_INH  : break;
-              case OP_INS_INH   : break;
-              case OP_DES_INH   : break;
+              case OP_ASLD_INH : /*NZVC*/
+                break;
+
+              case OP_TSXY_INH  :
+                break;
+
+              case OP_TXYS_INH  :
+                break;
+
+              case OP_INS_INH   :
+                core->regs.sp = core->regs.sp + 1;
+                printf("INS -> %04X\n", core->regs.sp );
+                break;
+
+              case OP_DES_INH   :
+                core->regs.sp = core->regs.sp - 1;
+                printf("DES -> %04X\n", core->regs.sp );
+                break;
+
 
               case OP_INXY_INH : /*Z*/
                 core->regs.x = core->regs.x + 1;
@@ -781,11 +935,14 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("RTS\n");
                 break;
 
-              case OP_RTI_INH   : /*SXHINZVC*/ break;
+              case OP_RTI_INH   : /*SXHINZVC*/
+                break;
 
-              case OP_WAI_INH   : break;
-              case OP_SWI_INH   : break;
+              case OP_WAI_INH   :
+                break;
 
+              case OP_SWI_INH   :
+                break;
 
               case OP_BRSET_IND :
               case OP_BRSET_DIR :
@@ -811,7 +968,6 @@ void hc11_core_clock(struct hc11_core *core)
                 core->state = STATE_RDMASK;
                 break;
 
-
               case OP_BRA_REL  :
                 rel = (int16_t)((int8_t)core->operand);
                 core->regs.pc = core->regs.pc + rel;
@@ -822,12 +978,19 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("BRN\n");
                 break;
 
-              case OP_BHI_REL  : break;
-              case OP_BLS_REL  : break;
-              case OP_BHS_REL  : break;
-              case OP_BLO_REL  : break;
+              case OP_BHI_REL  :
+                break;
 
-              case OP_BNE_REL  : break;
+              case OP_BLS_REL  :
+                break;
+
+              case OP_BHS_REL  :
+                break;
+
+              case OP_BLO_REL  :
+                break;
+
+              case OP_BNE_REL  :
                 if(!core->regs.flags.Z)
                   {
                   rel = (int16_t)((int8_t)core->operand);
@@ -846,14 +1009,29 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("BEQ -> Z=%d pc=%04X\n" , core->regs.flags.Z, core->regs.pc);
                 break;
 
-              case OP_BVC_REL  : break;
-              case OP_BVS_REL  : break;
-              case OP_BPL_REL  : break;
-              case OP_BMI_REL  : break;
-              case OP_BGE_REL  : break;
-              case OP_BLT_REL  : break;
-              case OP_BGT_REL  : break;
-              case OP_BLE_REL  : break;
+              case OP_BVC_REL  :
+                break;
+
+              case OP_BVS_REL  :
+                break;
+
+              case OP_BPL_REL  :
+                break;
+
+              case OP_BMI_REL  :
+                break;
+
+              case OP_BGE_REL  :
+                break;
+
+              case OP_BLT_REL  :
+                break;
+
+              case OP_BGT_REL  :
+                break;
+
+              case OP_BLE_REL  :
+               break;
 
               case OP_BSR_REL  :
                 rel = (int16_t)((int8_t)core->operand);
@@ -864,37 +1042,48 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_NEG_EXT : /*NZVC*/
-              case OP_NEG_IND : break;
+              case OP_NEG_IND :
+                break;
 
               case OP_COM_EXT : /*NZVC*/
-              case OP_COM_IND : break;
+              case OP_COM_IND :
+                break;
 
               case OP_LSR_EXT : /*NZVC*/
-              case OP_LSR_IND : break;
+              case OP_LSR_IND :
+                break;
 
               case OP_ROR_EXT : /*NZVC*/
-              case OP_ROR_IND : break;
+              case OP_ROR_IND :
+                break;
 
               case OP_ASR_EXT : /*NZVC*/
-              case OP_ASR_IND : break;
+              case OP_ASR_IND :
+                break;
 
               case OP_ASL_EXT : /*NZVC*/
-              case OP_ASL_IND : break;
+              case OP_ASL_IND :
+                break;
 
               case OP_ROL_EXT :/*NZVC*/
-              case OP_ROL_IND : break;
+              case OP_ROL_IND :
+                break;
 
               case OP_DEC_EXT : /*NZV*/
-              case OP_DEC_IND : break;
+              case OP_DEC_IND :
+                break;
 
               case OP_INC_EXT : /*NZV*/
-              case OP_INC_IND : break;
+              case OP_INC_IND :
+                break;
 
               case OP_TST_EXT : /*NZVC*/
-              case OP_TST_IND : break;
+              case OP_TST_IND :
+                break;
 
               case OP_JMP_EXT :
-              case OP_JMP_IND : break;
+              case OP_JMP_IND :
+                break;
 
               case OP_CLR_EXT :/*NZVC*/
               case OP_CLR_IND :
@@ -908,12 +1097,24 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("CLR_DIR_EXT_IND\n");
                 break;
 
-              case OP_SUBA_IMM : /*NZVC*/ break;
-              case OP_CMPA_IMM : /*NZVC*/break;
-              case OP_SBCA_IMM : /*NZVC*/ break;
-              case OP_CPD_SUBD_IMM : /* SUBD: NZVC*/ break;
-              case OP_ANDA_IMM : /*NZV*/ break;
-              case OP_BITA_IMM : /*NZV*/ break;
+              case OP_SUBA_IMM : /*NZVC*/
+                break;
+
+              case OP_CMPA_IMM : /*NZVC*/
+                break;
+
+              case OP_SBCA_IMM : /*NZVC*/
+                break;
+
+              case OP_CPD_SUBD_IMM : /* SUBD: NZVC*/
+                break;
+
+              case OP_ANDA_IMM : /*NZV*/
+                break;
+
+              case OP_BITA_IMM : /*NZV*/
+                break;
+
               case OP_LDAA_IMM : /*NZV*/
                 core->regs.d = (core->regs.d & 0x00FF) | (core->operand & 0xFF) << 8;
                 tmp = core->regs.d >> 8;
@@ -923,21 +1124,44 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("LDAA_IMM #%02X\n", core->operand & 0xFF);
                 break;
 
-              case OP_EORA_IMM  : /*NZV*/ break;
-              case OP_ADCA_IMM  : /*HNZVC*/ break;
-              case OP_ORAA_IMM  : /*NZV*/ break;
-              case OP_ADDA_IMM  : /*HNZVC*/ break;
-              case OP_CPXY_IMM  : /*NZVC*/ break;
+              case OP_EORA_IMM  : /*NZV*/
+                break;
+
+              case OP_ADCA_IMM  : /*HNZVC*/
+                break;
+
+              case OP_ORAA_IMM  : /*NZV*/
+                break;
+
+              case OP_ADDA_IMM  : /*HNZVC*/
+                break;
+
+              case OP_CPXY_IMM  : /*NZVC*/
+                break;
+
               case OP_LDS_IMM   : /*NZV*/
                 core->regs.sp = core->operand;
                 printf("LDS_IMM %04X\n", core->operand);
                 break;
-              case OP_SUBB_IMM : /*NZVC*/break;
-              case OP_CMPB_IMM : /*NZVC*/break;
-              case OP_SBCB_IMM : /*NZVC*/break;
-              case OP_ADDD_IMM : /*NZVC*/break;
-              case OP_ANDB_IMM : /*NZV*/ break;
-              case OP_BITB_IMM : /*NZV*/ break;
+
+              case OP_SUBB_IMM : /*NZVC*/
+                break;
+
+              case OP_CMPB_IMM : /*NZVC*/
+                break;
+
+              case OP_SBCB_IMM : /*NZVC*/
+                break;
+
+              case OP_ADDD_IMM : /*NZVC*/
+                break;
+
+              case OP_ANDB_IMM : /*NZV*/
+                break;
+
+              case OP_BITB_IMM : /*NZV*/
+                break;
+
               case OP_LDAB_IMM :/*NZV*/
                 core->regs.d = (core->regs.d & 0xFF00) | (core->operand & 0xFF);
                 tmp = core->regs.d && 0xFF;
@@ -947,10 +1171,18 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("LDAB_IMM #%02X\n", core->operand & 0xFF);
                 break;
 
-              case OP_EORB_IMM : /*NZV*/break;
-              case OP_ADCB_IMM : /*HNZVC*/ break;
-              case OP_ORAB_IMM : /*NZV*/ break;
-              case OP_ADDB_IMM : /*HNZVC*/break;
+              case OP_EORB_IMM : /*NZV*/
+                break;
+
+              case OP_ADCB_IMM : /*HNZVC*/
+                break;
+
+              case OP_ORAB_IMM : /*NZV*/
+                break;
+
+              case OP_ADDB_IMM : /*HNZVC*/
+                break;
+
               case OP_LDD_IMM  :/*NZV*/ 
                 core->regs.d = core->operand;
                 printf("LDD_IMM #%04X\n", core->operand);
@@ -961,43 +1193,64 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("LDX_IMM #%04X\n", core->operand);
                 break;
 
-              case OP_XGDXY_INH : break;
-
+              case OP_XGDXY_INH :
+                break;
 
               case OP_SUBA_IND :/*NZVC*/
               case OP_SUBA_DIR :
-              case OP_SUBA_EXT : break;
+              case OP_SUBA_EXT :
+                break;
+
               case OP_CMPA_IND :/*NZVC*/
               case OP_CMPA_DIR :
-              case OP_CMPA_EXT : break;
+              case OP_CMPA_EXT :
+                break;
+
               case OP_SBCA_IND :/*NZVC*/
               case OP_SBCA_DIR :
-              case OP_SBCA_EXT : break;
+              case OP_SBCA_EXT :
+                break;
+
               case OP_CPD_SUBD_IND :/*subd: NZVC*/
               case OP_CPD_SUBD_DIR :
-              case OP_CPD_SUBD_EXT : break;
+              case OP_CPD_SUBD_EXT :
+                break;
+
               case OP_ANDA_IND :/*NZV*/ 
               case OP_ANDA_DIR :
-              case OP_ANDA_EXT : break;
+              case OP_ANDA_EXT :
+                break;
+
               case OP_BITA_IND :/*NZV*/ 
               case OP_BITA_DIR :
-              case OP_BITA_EXT : break;
+              case OP_BITA_EXT :
+                break;
+
 
               case OP_EORA_IND : /*NZV*/
               case OP_EORA_DIR :
-              case OP_EORA_EXT : break;
+              case OP_EORA_EXT :
+                break;
+
               case OP_ADCA_IND : /*HNZVC*/
               case OP_ADCA_DIR :
-              case OP_ADCA_EXT : break;
+              case OP_ADCA_EXT :
+                break;
+
               case OP_ORAA_IND : /*NZV*/
               case OP_ORAA_DIR :
-              case OP_ORAA_EXT : break;
+              case OP_ORAA_EXT :
+                break;
+
               case OP_ADDA_IND : /*HNZVC*/
               case OP_ADDA_DIR :
-              case OP_ADDA_EXT : break;
+              case OP_ADDA_EXT :
+                break;
+
               case OP_CPXY_IND : /*NZVC*/
               case OP_CPXY_DIR :
-              case OP_CPXY_EXT : break;
+              case OP_CPXY_EXT :
+                break;
 
               case OP_JSR_IND  :
               case OP_JSR_DIR  :
@@ -1010,30 +1263,43 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_LDS_IND  : /*NZV*/
               case OP_LDS_DIR  :
-              case OP_LDS_EXT  : break;
+              case OP_LDS_EXT  :
+                break;
+
               case OP_STS_IND  : /*NZV*/
               case OP_STS_DIR  :
-              case OP_STS_EXT  : break;
-
+              case OP_STS_EXT  :
+                break;
 
               case OP_SUBB_IND :/*NZVC*/
               case OP_SUBB_DIR :
-              case OP_SUBB_EXT : break;
+              case OP_SUBB_EXT :
+                break;
+
               case OP_CMPB_IND :/*NZVC*/
               case OP_CMPB_DIR :
-              case OP_CMPB_EXT : break;
+              case OP_CMPB_EXT :
+                break;
+
               case OP_SBCB_IND :/*NZVC*/
               case OP_SBCB_DIR :
-              case OP_SBCB_EXT : break;
+              case OP_SBCB_EXT :
+                break;
+
               case OP_ADDD_IND : /*NZVC*/
               case OP_ADDD_DIR :
-              case OP_ADDD_EXT : break;
+              case OP_ADDD_EXT :
+                break;
+
               case OP_ANDB_IND :/*NZV*/ 
               case OP_ANDB_DIR :
-              case OP_ANDB_EXT : break;
+              case OP_ANDB_EXT :
+                break;
+
               case OP_BITB_IND :/*NZV*/ 
               case OP_BITB_DIR :
-              case OP_BITB_EXT : break;
+              case OP_BITB_EXT :
+                break;
 
               case OP_LDAA_IND :/*NZV*/
               case OP_LDAA_DIR :
@@ -1056,6 +1322,7 @@ void hc11_core_clock(struct hc11_core *core)
                 core->regs.flags.V = 0;
                 printf("LDAB_DIR_EXT_IND %02X\n", core->busdat & 0xFF);
                 break;
+
               case OP_LDD_IND  :/*NZV*/
               case OP_LDD_DIR  :
               case OP_LDD_EXT  :
@@ -1106,16 +1373,23 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_EORB_IND :/*NZV*/
               case OP_EORB_DIR :
-              case OP_EORB_EXT : break;
+              case OP_EORB_EXT :
+                break;
+
               case OP_ADCB_IND : /*HNZVC*/
               case OP_ADCB_DIR :
-              case OP_ADCB_EXT : break;
+              case OP_ADCB_EXT :
+                break;
+
               case OP_ORAB_IND : /*NZV*/
               case OP_ORAB_DIR :
-              case OP_ORAB_EXT : break;
+              case OP_ORAB_EXT :
+                break;
+
               case OP_ADDB_IND : /*HNZVC*/
               case OP_ADDB_DIR :
-              case OP_ADDB_EXT : break;
+              case OP_ADDB_EXT :
+                break;
 
               case OP_STD_IND  :/*NZV*/
               case OP_STD_DIR  :
@@ -1152,6 +1426,134 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
+              case OP_INXY_INH:
+                break;
+              case OP_DEXY_INH:
+                break;
+              case OP_BSET_IND:
+                break;
+              case OP_BCLR_IND:
+                break;
+              case OP_BRSET_IND:
+                break;
+              case OP_BRCLR_IND:
+                break;
+              case OP_TSXY_INH:
+                break;
+              case OP_TXYS_INH:
+                break;
+              case OP_PULXY_INH:
+                break;
+              case OP_ABXY_INH:
+                break;
+              case OP_PSHXY_INH:
+                break;
+              case OP_NEG_IND:
+                break;
+              case OP_COM_IND:
+                break;
+              case OP_LSR_IND:
+                break;
+              case OP_ROR_IND:
+                break;
+              case OP_ASR_IND:
+                break;
+              case OP_ASL_IND:
+                break;
+              case OP_ROL_IND:
+                break;
+              case OP_DEC_IND:
+                break;
+              case OP_INC_IND:
+                break;
+              case OP_TST_IND:
+                break;
+              case OP_JMP_IND:
+                break;
+              case OP_CLR_IND:
+                break;
+              case OP_CPXY_IMM:
+                break;
+              case OP_XGDXY_INH:
+                break;
+              case OP_CPXY_DIR:
+                break;
+              case OP_SUBA_IND:
+                break;
+              case OP_CMPA_IND:
+                break;
+              case OP_SBCA_IND:
+                break;
+              case OP_CPD_SUBD_IND:
+                break;
+              case OP_ANDA_IND:
+                break;
+              case OP_BITA_IND:
+                break;
+              case OP_LDAA_IND:
+                break;
+              case OP_STAA_IND:
+                break;
+              case OP_EORA_IND:
+                break;
+              case OP_ADCA_IND:
+                break;
+              case OP_ORAA_IND:
+                break;
+              case OP_ADDA_IND:
+                break;
+              case OP_CPXY_IND:
+                break;
+              case OP_JSR_IND:
+                break;
+              case OP_LDS_IND:
+                break;
+              case OP_STS_IND:
+                break;
+              case OP_CPXY_EXT:
+                break;
+              case OP_LDXY_IMM:
+                break;
+              case OP_LDXY_DIR:
+                break;
+              case OP_STXY_DIR:
+                break;
+              case OP_SUBB_IND:
+                break;
+              case OP_CMPB_IND:
+                break;
+              case OP_SBCB_IND:
+                break;
+              case OP_ADDD_IND:
+                break;
+              case OP_ANDB_IND:
+                break;
+              case OP_BITB_IND:
+                break;
+              case OP_LDAB_IND:
+                break;
+              case OP_STAB_IND:
+                break;
+              case OP_EORB_IND:
+                break;
+              case OP_ADCB_IND:
+                break;
+              case OP_ORAB_IND:
+                break;
+              case OP_ADDB_IND:
+                break;
+              case OP_LDD_IND:
+                break;
+              case OP_STD_IND:
+                break;
+              case OP_LDXY_IND:
+                break;
+              case OP_STXY_IND:
+                break;
+              case OP_LDXY_EXT:
+                break;
+              case OP_STXY_EXT:
+                break;
             }
             break;
 
@@ -1161,6 +1563,20 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
+              case OP_CPD_SUBD_IMM:
+                break;
+              case OP_CPD_SUBD_DIR:
+                break;
+              case OP_CPD_SUBD_IND:
+                break;
+              case OP_CPXY_IND:
+                break;
+              case OP_CPD_SUBD_EXT:
+                break;
+              case OP_LDXY_IND:
+                break;
+              case OP_STXY_IND:
+                break;
             }
             break;
 
@@ -1170,6 +1586,14 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
+              case OP_CPD_SUBD_IND:
+                break;
+              case OP_CPXY_IND:
+                break;
+              case OP_LDXY_IND:
+                break;
+              case OP_STXY_IND:
+                break;
             }
             break;
 
@@ -1238,5 +1662,3 @@ void hc11_core_step(struct hc11_core *core)
     hc11_core_clock(core);
     hc11_core_prep(core);
   }
-
-
