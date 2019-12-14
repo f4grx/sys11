@@ -65,16 +65,19 @@ uint16_t mem_alloc(uint16_t size)
   {
     uint16_t adr = head;
     uint16_t nxtadr;
+    uint16_t prvadr;
     uint16_t tmp;
     uint16_t cursiz;
     printf("\nasked to alloc %u bytes\n",size);
+    prvadr = EOL;
     while(adr != EOL)
       {
         cursiz = PEEK_U16BE(adr+SIZE);
+        printf("check @%04X (sz %04X, %d)\n", adr, cursiz, cursiz);
         if(cursiz > size)
           {
             nxtadr = adr + 2 + size;
-            printf("suitable but bigger -> split\n");
+            printf("suitable but bigger -> split, newfree=%04X\n", nxtadr);
 
             tmp = PEEK_U16BE(adr+SIZE) - 2 - size;
             POKE_U16BE(nxtadr+SIZE, tmp);
@@ -91,13 +94,21 @@ uint16_t mem_alloc(uint16_t size)
         nxtadr = PEEK_U16BE(adr+NEXT);
         if(cursiz == size)
           {
-            printf("match\n");
+            printf("match, adr=%04X\n", adr);
             //Remove from free list
             if(adr == head)
-              head = nxtadr;
-            POKE_U16BE(adr+NEXT, 0);
+              {
+                head = nxtadr; //the head of list now look at the second block
+              }
+            else
+              {
+              //the allocated block was free in the middle of the list.
+              //next of previous is now next of current.
+              POKE_U16BE(prvadr+NEXT , nxtadr);
+              }
             return adr+NEXT;
           }
+        prvadr = adr;
         adr = nxtadr;
       }
     printf("no suitable room found\n");
@@ -107,27 +118,30 @@ uint16_t mem_alloc(uint16_t size)
 /* ************************************************************************* */
 void mem_free(uint16_t adr)
   {
-    uint16_t siz = PEEK_U16BE(adr-2);
+    uint16_t siz;
     uint16_t cur;
     uint16_t nxt;
     adr -= 2;
+    siz = PEEK_U16BE(adr);
     printf("\nasked to free cur 0x%04X, block size %u (0x%04X)\n", adr, siz, siz);
     //Find insertion point
     if(adr < head)
       {
-        //new head
+        //easy: this block becomes the new head, the old head is now next of new head
         POKE_U16BE(adr+NEXT, head);
         head = adr;
       }
     else
       {
-        //browse free blocks until we find the insertion point
+        //browse free blocks until we find the insertion point: cur < adr < nxt
         cur = head;
         while(cur != EOL)
           {
             nxt = PEEK_U16BE(cur+NEXT);
             if(nxt > adr)
-              break;
+              {
+                break;
+              }
             cur = nxt;
           }
         printf("insert to freelist: adrhdr=%04X cur=%04X nxt=%04X\n",adr,cur,nxt);
@@ -135,7 +149,7 @@ void mem_free(uint16_t adr)
         POKE_U16BE(cur+NEXT, adr);
       }
 
-    //now coalesce
+    //now coalesce, brutal but compact technique. trying again if anything happens.
 again:
     cur = head;
     while(cur != EOL)
@@ -177,16 +191,34 @@ int main(int argc, char **argv)
   mem_status();
   printf("//should have one big block at this point\n");
  
+
   adr1 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
   mem_status();
   adr2 = mem_alloc(10); printf("got adr 0x%04X\n",adr2);
   mem_status();
-  adr3 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
+  adr3 = mem_alloc(10); printf("got adr 0x%04X\n",adr3);
   mem_status();
   mem_free(adr2); //no coalescence possible
   mem_status();
   mem_free(adr1); //coalesce two first ranges
-  mem_status(); //should have two free zones here
+  mem_status();
+  printf("//should have two free zones here\n");
+
+  adr1 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
+  mem_status();
+  adr2 = mem_alloc(10); printf("got adr 0x%04X\n",adr2);
+  mem_status();
+  adr1 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
+  mem_status();
+  adr3 = mem_alloc(20); printf("got adr 0x%04X\n",adr3);
+  mem_status();
+  adr1 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
+  mem_status();
+  mem_free(adr2); //no coalescence possible
+  mem_free(adr3); //no coalescence possible
+  mem_status();
+  adr3 = mem_alloc(20); printf("got adr 0x%04X\n",adr3);
+  mem_status();
 
   return 0;
   }
