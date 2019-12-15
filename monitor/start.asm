@@ -31,14 +31,27 @@ _start:
 	/* Initialize the system */
 	/* ==================== */
 
-	bsr	sci_init
+	jsr	sci_init
+	jsr	mm_init
+
+	/* ==================== */
+	/* Start message */
+	/* ==================== */
 
 	ldx	#motd
+	stx	*sp0
 	jsr	sci_puts
 
+	/* ==================== */
+	/* Simple test */
+	/* ==================== */
+
 	ldx	#10
-	pshx
+	stx	*sp0
 	jsr	mm_alloc
+
+	std	*sp0
+	jsr	mm_free
 
 	/* ==================== */
 	/* Fall in the idle loop */

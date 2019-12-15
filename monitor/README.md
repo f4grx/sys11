@@ -68,7 +68,7 @@ Calling functions with stack params
 -----------------------------------
 NOTE: This convention currently does not work because BSR/JSR pushes the return
 PC. We would need a frame pointer, using X as a copy of SP is very wasteful.
-Using Y wastes program space.
+Using Y additionnally wastes program space.
 
 Parameters are pushed right to left on the stack by the caller.
 Parameters are popped from the stack by the callee.

@@ -13,30 +13,22 @@ sci_init:
 	rts
 
 /*
- * SCI_PUTCHAR
- * Input : Character in A
- * Output: None
- * Destroys: None
- */
-	.global sci_putchar
-sci_putchar:
-	brclr	*SCSR #SCSR_TDRE, sci_putchar
-	staa	SCDR
-	rts
-
-
-/*
  * SCI_PUTS
- * Input : String pointer in X
+ * Input : String pointer in sp0
  * Output: None
  * Destroys: A, X
  */
 	.global sci_puts
 sci_puts:
+	ldx	*sp0
+.Lnext:
 	ldaa	0,X		/* Load char pointed b X */
-	beq	1f
-	bsr	sci_putchar
+	beq	.Ldone
+.Lwait:
+	brclr	*SCSR #SCSR_TDRE, .Lwait
+	staa	*SCDR
 	inx
-	bra	sci_puts
-1:
+	bra	.Lnext
+.Ldone:
 	rts
+

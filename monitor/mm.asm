@@ -28,63 +28,62 @@ mm_init:
 
 /* Allocate a memory zone.
  * Parameters:
- *   PUSH16 requested_size
- * Return value: Pointer to memory zone, possibly NULL if failed to alloc
+ *   sp0 requested_size
+ * Return value:
+ *   D   Pointer to memory zone, possibly NULL if failed to alloc
  */
 	.global mm_alloc
 mm_alloc:
-	/* Get requested size from stack into *sp2 */
-	pulx
-	stx	*sp2	/* *sp2 <- size */
-
 	/* Browse all zones in the free list.
 	 * We need one that is larger than the requested size
 	 */
 	ldx	head
-	stx	*sp3	/* *sp3 <- adr */
+	stx	*st3	/* *st3 <- adr */
 .Lagain:
-	ldx	*sp3	/* X <- adr */
-	ldx	0,X	/* X <- cursiz */
-	stx	*sp0	/* *sp0 <- cursiz */
-	cpx	*sp2	/* Compare cursiz and size */
+	ldx	*st3	/* X <- adr */
+	ldd	0,X	/* X <- adr.siz */
+	cpd	*sp0	/* Compare adr.siz and size */
 	blo	.Lnext	/* Current free block smaller than request? try next */
 	/* At this point we have a zone that is big enough for allocation */
 	beq	.Lalloc	/* Zone has the correct size */
 	/* Zone is larger than requested, we have to do a split */	
 .Lsplit:
-	ldd	*sp2	/* D <- size */
+	ldd	*sp0	/* D <- size */
 	addd	#2	/* D <- size + 2 */
-	addd	*sp3	/* D <- size + 2 + adr == nxtadr */
-	std	*sp1	/* *sp1 <- nxtadr */
+	addd	*st3	/* D <- size + 2 + adr == nxtadr */
+	std	*st1	/* *st1 <- nxtadr */
 
-	ldx	*sp3	/* X <- adr */
+	ldx	*st3	/* X <- adr */
 	ldd	0,X	/* D <- PEEK(adr+SIZE) */
 	subd	#2	/* D <- PEEK(adr+SIZE) - 2 */
-	subd	*sp2	/* D <- PEEK(adr+SIZE) - 2 - size == tmp */
-	ldx	*sp1	/* X <- nxtadr */
+	subd	*sp0	/* D <- PEEK(adr+SIZE) - 2 - size == tmp */
+	ldx	*st1	/* X <- nxtadr */
 	std	0,X	/* POKE(nxtadr+SIZE, tmp)*/
 
-	ldx	*sp3	/* X <- adr */
+	ldx	*st3	/* X <- adr */
 	ldd	2,X	/* D <- PEEK(adr+NEXT) == tmp */
-	ldx	*sp1	/* X <- nxtadr */
+	ldx	*st1	/* X <- nxtadr */
 	std	2,X	/* POKE(nxtadr+NEXT, tmp) */
 
-	ldx	*sp3	/* X contain adr */
-	ldd	*sp1	/* D <- nxtadr */
+	ldx	*st3	/* X contain adr */
+	ldd	*st1	/* D <- nxtadr */
 	std	2,X	/* POKE adr+NEXT, nxtadr */
-	ldd	*sp2	/* D <- size */
+	ldd	*sp0	/* D <- size */
 	std	0,X	/* POKE adr+SIZE, size */
 
 	/* now the current free zone @*sp3 has the correct size */
 
-.Lalloc:
+.Lalloc: /* at this point X contains st3 */
 	/* Set the mem fields to allocate this zone */
-	ldx	*sp3		/* X <- adr */
-	cpx	head		/* is cur zone (alloced) the head of list? */
-	bne	.Lretblock	/* no: we can now return the block */
+	ldd	*st1 		/* Get next zone pointer */
+	cpx	head		/* is cur zone (alloced) the head of free list? */
+	bne	.Lremlist	/* no: remove cur block from free list */
 	/* yes: so the head is the zone after the allocated block */
-	ldd	*sp1 		/* Get next zone pointer */
 	std	head		/* Update head */
+	bra	.Lretblock
+.Lremlist:
+	ldy	*st0		/* Y <- prev_adr (avoid overwriting st3 in X) */
+	std	2,Y		/* POKE prevadr+NEXT, nxtadr (skip curblock in freelist) */
 .Lretblock:
 	inx			/* X still has *sp3(adr), skip size */
 	inx			/* skip size */
@@ -92,10 +91,11 @@ mm_alloc:
 	bra	.Lend		/* We're done! */
 
 .Lnext:	/* Setup pointers to look at next block */
-	ldx	*sp1	/* Get curzone->next */
+	stx	*st0	/* st0 : prev_adr (potential use at next round) */
+	ldx	2,X	/* Get curzone->next */
 	cpx	#0xffff	/* Is next the end of the list? */
 	beq	.Ldone	/* Yes, alloc was not possible, were done */
-	stx	*sp3	/* now current zone is next zone */
+	stx	*st3	/* now current zone is next zone */
 	bra	.Lagain	/* Try to fit the request in the next zone */
 .Ldone:
 	/* We reached the end of free zones without finding a big enough one */
@@ -109,12 +109,12 @@ mm_alloc:
 /* Release a memory zone.
  * After this call the pointed memory zone is considered free for allocation.
  * Parameters:
- *   PUSH16 pointer_to_zone
+ *   sp0 pointer_to_zone
  * Return value: None
  */
 	.global mm_free
 mm_free:
-	pulx		/* X <- pointer to data to free */
+	ldx	*sp0	/* X <- pointer to user data to free */
 	dex		/* Get pointer to zone */
 	dex		/* X <- adr */
 	stx	*sp0	/* sp0 <- adr */
@@ -150,32 +150,32 @@ mm_free:
 .Lcoalloop:
 	cpx	#0xFFFF	/* end of list reached? */
 	beq	.Lcoaldone
-	stx	*sp2	/* sp2 <- cur (has to be saved for use later in block merge) */
+	stx	*st2	/* st2 <- cur (has to be saved for use later in block merge) */
 	ldd	2,X
-	std	*sp1	/*sp1 == D <- nxt == PEEK(cur+NEXT) */
+	std	*st1	/*st1 == D <- nxt == PEEK(cur+NEXT) */
 	ldd	0,X
-	std	*sp0	/*sp0 == D <- siz == PEEK(cur+SIZE) */
+	std	*st0	/*st0 == D <- siz == PEEK(cur+SIZE) */
 	inx
 	inx		/* Double inc X saves one byte wrt addd #0x0002 */
 	xgdx		/* D <- cur + 2 */
-	addd	*sp0	/* D <- cur + 2 + siz */
-	cpd	*sp1	/* Compare with next */
+	addd	*st0	/* D <- cur + 2 + siz */
+	cpd	*st1	/* Compare with next */
 	bne	.Lcoalnext
 .Lcoaldo:
 	/* free blocks adr and nxt are adjacent, can be merged */
-	ldx	*sp1	/* X <- nxt */
+	ldx	*st1	/* X <- nxt */
 	ldd	2,X	/* D <- PEEK(nxt+SIZE) */
 	addd	#2	/* D <- PEEK(nxt+SIZE) + 2 */
-	addd	*sp0	/* D <- siz + nxtsiz + 2 */
-	ldx	*sp2	/* X <- cur */
+	addd	*st0	/* D <- siz + nxtsiz + 2 */
+	ldx	*st2	/* X <- cur */
 	std	0,X	/* POKE(cur+SIZE, D) */
-	ldy	*sp1	/* Y <- nxt */
+	ldy	*st1	/* Y <- nxt */
 	ldd	2,Y	/* D == nxt = PEEK(nxt+NEXT) */
-        std	2,X	/* POKE(cur+NEXT, nxt) */
+	std	2,X	/* POKE(cur+NEXT, nxt) */
 	bra	.Lcoalesce	/* Try again */
 .Lcoalnext:
 	/* These blocks are not adjacent, replace cur by next and try again for next pair */
-	ldx	*sp1
+	ldx	*st1
 	bra	.Lcoalloop
 .Lcoaldone:
 	rts
