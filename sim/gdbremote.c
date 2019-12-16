@@ -130,9 +130,9 @@ void gdbremote_query(struct gdbremote_t *gr, int client)
           {
             char buf[3];
             //convert response to hex
-            if(gr->txlen > (GDBREMOTE_MAX_TX/2))
+            if(gr->txlen > (GDBREMOTE_MAX_TX/2) - 4)
               {
-                gr->txlen = GDBREMOTE_MAX_TX/2;
+                gr->txlen = GDBREMOTE_MAX_TX/2 - 4;
               }
             for(i=gr->txlen-1; i>=0; i--)
               {
@@ -211,9 +211,25 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
       }
     else if(gr->rxbuf[0] == 'm')
       {
+        unsigned int adr, len, i, buf;
         //memory read: MAAAA,len  reply :HH..HH
-#warning todo
-        gdbremote_txstr(gr, client, "");
+        if(sscanf(gr->rxbuf+1, "%X,%X", &adr, &len) != 2)
+          {
+            gdbremote_txstr(gr, client, "E01");
+            return;
+          }
+        if(len > (GDBREMOTE_MAX_TX/2) - 4)
+          {
+            len = GDBREMOTE_MAX_TX/2 - 4;
+          }
+        printf("adr=%04X len=%d\n",adr,len);
+        for(i=0;i<len;i++)
+          {
+            int ch = hc11_core_readb(gr->core, adr+i);
+            sprintf(gr->txbuf+(2*i), "%02x", ch);
+          }
+        gr->txlen = len * 2;
+        gdbremote_txraw(gr, client);
       }
     else if(gr->rxbuf[0] == 'M')
       {
@@ -240,6 +256,19 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
         // memory write: XAAAA,len:binary
 #warning todo
         gdbremote_txstr(gr, client, "");
+      }
+    else if(gr->rxbuf[0] == 'Z')
+      {
+        unsigned int type, adr, kind;
+        // breakpoint
+        if(sscanf(gr->rxbuf+1, "%d,%X,%d", &type, &adr, &kind) != 3)
+          {
+            gdbremote_txstr(gr, client, "E01");
+            return;
+          }
+        printf("set bkpt type %d at %04X\n", type, adr);
+        //hc11_core_break(gr->core, );
+        gdbremote_txstr(gr, client, "E02");
       }
     else
       {
