@@ -7,7 +7,7 @@
  */
 	.global strlen
 strlen:
-	pulx
+	ldx	*sp0
 	clra
 	clrb		/* Clear D in 2 bytes instead of 3 using ldd */
 .Lagain:

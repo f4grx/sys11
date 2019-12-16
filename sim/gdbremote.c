@@ -209,6 +209,18 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
         gdbremote_txstr(gr, client, "OK");
         gr->running = false;
       }
+    else if(gr->rxbuf[0] == 'M')
+      {
+        //memory write: MAAAA,len:HH..HH
+#warning todo
+        gdbremote_txstr(gr, client, "");
+      }
+    else if(gr->rxbuf[0] == 'X')
+      {
+        // ???
+#warning todo
+        gdbremote_txstr(gr, client, "");
+      }
     else
       {
         gdbremote_txstr(gr, client, "");
