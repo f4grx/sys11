@@ -52,6 +52,7 @@ typedef void    (*write_f)(void *ctx, uint16_t off, uint8_t val);
 struct hc11_mapping
   {
     struct hc11_mapping *next;
+    char     name[8];
     uint16_t start;
     uint16_t len;
     void     *ctx;
@@ -110,10 +111,12 @@ struct hc11_core
   };
 
 void hc11_core_init(struct hc11_core *core);
-void hc11_core_map(struct hc11_core *core, uint16_t start, uint16_t count,
-                   void *ctx, read_f rd, write_f wr);
-void hc11_core_map_ram(struct hc11_core *core, uint16_t start, uint16_t count);
-void hc11_core_map_rom(struct hc11_core *core, uint16_t start, uint16_t count, uint8_t *rom);
+void hc11_core_map(struct hc11_core *core, const char *name, uint16_t start,
+                   uint16_t count, void *ctx, read_f rd, write_f wr);
+void hc11_core_map_ram(struct hc11_core *core, const char *name, uint16_t start,
+                       uint16_t count);
+void hc11_core_map_rom(struct hc11_core *core, const char *name, uint16_t start,
+                       uint16_t count, uint8_t *rom);
 void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
                           void *ctx, read_f rd, write_f wr);
 

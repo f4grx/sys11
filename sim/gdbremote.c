@@ -209,15 +209,35 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
         gdbremote_txstr(gr, client, "OK");
         gr->running = false;
       }
-    else if(gr->rxbuf[0] == 'M')
+    else if(gr->rxbuf[0] == 'm')
       {
-        //memory write: MAAAA,len:HH..HH
+        //memory read: MAAAA,len  reply :HH..HH
 #warning todo
         gdbremote_txstr(gr, client, "");
       }
+    else if(gr->rxbuf[0] == 'M')
+      {
+        unsigned int adr, len, count, i, buf;
+        char *next;
+        //memory write: MAAAA,len:HH..HH
+        if(sscanf(gr->rxbuf+1, "%X,%X:%n", &adr, &len, &count) != 2)
+          {
+            gdbremote_txstr(gr, client, "E01");
+            return;
+          }
+        printf("count=%d\n",count);
+        next = gr->rxbuf+1+count;
+        printf("adr=%04X len=%d next->%s\n",adr,len,next);
+        for(i=0;i<len;i++)
+          {
+            sscanf(next+(2*i), "%02x", &buf);
+            hc11_core_writeb(gr->core, adr+i, buf & 0xFF);
+          }
+        gdbremote_txstr(gr, client, "OK");
+      }
     else if(gr->rxbuf[0] == 'X')
       {
-        // ???
+        // memory write: XAAAA,len:binary
 #warning todo
         gdbremote_txstr(gr, client, "");
       }

@@ -550,35 +550,64 @@ void hc11_core_clock(struct hc11_core *core)
           // this is not required for stores and jmps.
           switch(core->addmode)
             {
+              case IM1:
+              case IM2:
+                printf("Immediate (1/2)\n");
+                break;
+
+              case EXS:
+              case DIS:
+                printf("Direct/Extended (0)\n");
+                break;
+
               case DIR:
               case EXT:
+                printf("Direct/Extended (1)\n");
                 core->state = STATE_READOP_L; //read value not used for jsr and bsr, but still acquired
                 break;
 
               case DI2:
               case EX2:
+                printf("Direct/Extended (2)\n");
                 core->state = STATE_READOP_H;
                 break;
 
+              case IXS:
+                printf("Indexed(0) op X=0x%04X off=0x%02X (%d)\n", core->regs.x, core->operand, core->operand);
+                core->operand = core->regs.x + core->operand;
+                break;
+
+              case IYS:
+                printf("Indexed(0) op Y=0x%04X off=0x%02X (%d)\n", core->regs.y, core->operand, core->operand);
+                core->operand = core->regs.y + core->operand;
+                break;
+
               case INX:
+                printf("Indexed(1) op X=0x%04X off=0x%02X (%d)\n", core->regs.x, core->operand, core->operand);
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_L;
                 break;
 
               case INY:
+                printf("Indexed(1) op Y=0x%04X off=0x%02X (%d)\n", core->regs.y, core->operand, core->operand);
                 core->operand = core->regs.y + core->operand;
                 core->state = STATE_READOP_L;
                 break;
 
               case IX2:
+                printf("Indexed(2) op X=0x%04X off=0x%02X (%d)\n", core->regs.x, core->operand, core->operand);
                 core->operand = core->regs.x + core->operand;
                 core->state = STATE_READOP_H;
                 break;
 
               case IY2:
+                printf("Indexed(2) op Y=0x%04X off=0x%02X (%d)\n", core->regs.y, core->operand, core->operand);
                 core->operand = core->regs.y + core->operand;
                 core->state = STATE_READOP_H;
                 break;
+
+              default:
+                printf("ERROR - undefined addressing mode %d!\n", core->addmode);
             }
           core->busadr = core->operand;
           if(core->state != STATE_EXECUTE)
@@ -1394,9 +1423,9 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_STD_IND  :/*NZV*/
               case OP_STD_DIR  :
               case OP_STD_EXT  :
-                core->busdat = core->regs.d;
-                core->busadr = core->opcode;
                 tmp = core->regs.d;
+                core->busdat = tmp;
+                core->busadr = core->operand;
                 core->regs.flags.Z = tmp == 0;
                 core->regs.flags.N = tmp >> 7;
                 core->regs.flags.V = 0;
@@ -1407,9 +1436,9 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_STXY_IND :/*NZV*/
               case OP_STXY_DIR :
               case OP_STXY_EXT :
-                core->busdat = core->regs.x;
-                core->busadr = core->opcode;
                 tmp = core->regs.x;
+                core->busdat = tmp;
+                core->busadr = core->operand;
                 core->regs.flags.Z = tmp == 0;
                 core->regs.flags.N = tmp >> 7;
                 core->regs.flags.V = 0;

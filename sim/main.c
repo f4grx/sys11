@@ -104,7 +104,8 @@ int main(int argc, char **argv)
     sigaction(SIGINT, &sa_mine, NULL);
 
     hc11_core_init(&core);
-
+    //map 32k of RAM in the first half of the address space
+    hc11_core_map_ram(&core, "ram", 0x0000, 0x8000); //100h bytes masked by internal mem
     while (1)
       {
         int option_index = 0;
@@ -137,7 +138,7 @@ int main(int argc, char **argv)
                     return -1;
                   }
                 adr = (uint16_t)strtoul(optarg, NULL, 0);
-                hc11_core_map_rom(&core, adr, size, bin);
+                hc11_core_map_rom(&core, "rom", adr, size, bin);
                 break;
               }
 
