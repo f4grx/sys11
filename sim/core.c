@@ -437,6 +437,7 @@ void hc11_core_init(struct hc11_core *core)
         core->io[i].wrf = NULL;
       }
     hc11_core_iocallback(core, REG_INIT, 1, core, init_read, init_write);
+    core->status = STATUS_STOPPED;
   }
 
 void hc11_core_reset(struct hc11_core *core)

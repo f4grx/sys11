@@ -46,6 +46,13 @@ enum
   PULL_PC
   };
 
+enum
+  {
+    STATUS_STOPPED,
+    STATUS_STEPPING,
+    STATUS_RUNNING
+  };
+
 typedef uint8_t (*read_f )(void *ctx, uint16_t off);
 typedef void    (*write_f)(void *ctx, uint16_t off, uint8_t val);
 
@@ -101,6 +108,8 @@ struct hc11_core
     uint16_t             iobase;
     uint16_t             state; //core state machine
     uint64_t             clocks;
+    volatile uint16_t    status; //stopped, stepping, running...
+    // internal regs for execution
     uint16_t             busadr;
     uint16_t             busdat;
     uint8_t              prefix;

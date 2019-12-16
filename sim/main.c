@@ -15,14 +15,9 @@
 
 static struct option long_options[] =
   {
-//    {"add",     required_argument, 0,  0 },
 //    {"append",  no_argument,       0,  0 },
     {"bin"   , required_argument, 0, 'b' },
     {"s19"   , required_argument, 0, 's' },
-    {"cycles", required_argument, 0, 'c' },
-//    {"verbose", no_argument,        0,  0 },
-//    {"create",  required_argument,  0, 'c'},
-//    {"file",    required_argument,  0,  0 },
     {0       , 0                , 0,  0  }
   };
 
@@ -77,7 +72,6 @@ void help(void)
            "\n"
            "  -s --s19 <file>      Load S-record file\n"
            "  -b --bin <adr,file>  Load binary file at address\n"
-           "  -c --cycles N        Run for N cycles before stopping\n"
          );
   }
 
@@ -92,9 +86,9 @@ int main(int argc, char **argv)
     struct hc11_core core;
     struct gdbremote_t remote;
     int c;
-    uint64_t cycles = 0;
     struct sigaction sa_mine;
     int val;
+    int prev;
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
 
@@ -109,7 +103,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:c:", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -148,11 +142,6 @@ int main(int argc, char **argv)
                 return -1;
               }
 
-            case 'c':
-              {
-                cycles = strtoull(optarg, NULL, 0);
-                break;
-              }
             case '?':
               {
                 help();
@@ -183,6 +172,7 @@ int main(int argc, char **argv)
     gdbremote_init(&remote);
 
     hc11_core_reset(&core);
+    prev = -1;
     while(1)
       {
         sem_getvalue(&end, &val);
@@ -191,10 +181,26 @@ int main(int argc, char **argv)
             printf("simulation interrupted\n");
             break;
           }
-        hc11_core_step(&core);
-        if(cycles != 0 && core.clocks >= cycles)
+
+        if(prev != core.status)
           {
-            break;
+            printf("status: %d -> %d\n", prev, core.status);
+            prev = core.status;
+          }
+
+        if(core.status == STATUS_STEPPING)
+          {
+            printf("doing a step\n");
+            hc11_core_step(&core);
+            core.status = STATUS_STOPPED;
+          }
+        else if(core.status == STATUS_RUNNING)
+          {
+            hc11_core_step(&core);
+          }
+        else if(core.status == STATUS_STOPPED)
+          {
+            usleep(1000);
           }
       }
     sem_getvalue(&end, &val);

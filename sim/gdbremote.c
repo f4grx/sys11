@@ -160,13 +160,33 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
   {
     printf(">>> %s\n", gr->rxbuf);
 
-    if(gr->rxbuf[0] == 'q')
+    if(gr->rxbuf[0] == 0x03)
       {
-        gdbremote_query(gr, client);
+        printf("break request\n");
+        gr->core->status = STATUS_STOPPED;
+        gdbremote_txstr(gr, client, "S05");
       }
     else if(gr->rxbuf[0] == '?')
       {
-        gdbremote_txstr(gr, client, "S05");
+        if(gr->core->status == STATUS_STOPPED)
+          {
+            gdbremote_txstr(gr, client, "S05"); //core is stopped
+          }
+        else
+          {
+            gdbremote_txstr(gr, client, "S05"); //core is running
+          }
+      }
+    else if(gr->rxbuf[0] == 'c')
+      {
+        //continue
+        gr->core->status = STATUS_RUNNING;
+      }
+    else if(gr->rxbuf[0] == 'D')
+      {
+        //detach
+        gdbremote_txstr(gr, client, "OK");
+        gr->running = false;
       }
     else if(gr->rxbuf[0] == 'g')
       {
@@ -196,18 +216,6 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
       {
         //set thread for next operations
         gdbremote_txstr(gr, client, "OK");
-      }
-    else if(gr->rxbuf[0] == 's')
-      {
-        //single step
-        hc11_core_step(gr->core);
-        gdbremote_txstr(gr, client, "S05");
-      }
-    else if(gr->rxbuf[0] == 'D')
-      {
-        //detach
-        gdbremote_txstr(gr, client, "OK");
-        gr->running = false;
       }
     else if(gr->rxbuf[0] == 'm')
       {
@@ -250,6 +258,73 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
             hc11_core_writeb(gr->core, adr+i, buf & 0xFF);
           }
         gdbremote_txstr(gr, client, "OK");
+      }
+    else if(gr->rxbuf[0] == 'P')
+      {
+        int reg,val;
+        // register write: reg,val
+        if(sscanf(gr->rxbuf+1, "%x=%x", &reg, &val) != 2)
+          {
+            gdbremote_txstr(gr, client, "E01");
+            return;
+          }
+        printf("set reg %d val %04X\n", reg, val);
+        switch(reg)
+          {
+            case 0: gr->core->regs.x  = val; break;
+            case 1: gr->core->regs.d  = val; break;
+            case 2: gr->core->regs.y  = val; break;
+            case 3: gr->core->regs.sp = val; break;
+            case 4: gr->core->regs.pc = val; break;
+            case 5: gr->core->regs.d = (gr->core->regs.d & 0x00FF) | (val<<8  ); break; //set a
+            case 6: gr->core->regs.d = (gr->core->regs.d & 0xFF00) | (val&0xFF); break; //set b
+            case 7: gr->core->regs.ccr = val; break;
+            default: gdbremote_txstr(gr, client, "E02"); return;
+          }
+        gdbremote_txstr(gr, client, "OK");
+      }
+    else if(gr->rxbuf[0] == 'p')
+      {
+        int reg,val, len=1;
+        char sval[5];
+        // register read: reg, return val
+        if(sscanf(gr->rxbuf+1, "%x", &reg) != 1)
+          {
+            gdbremote_txstr(gr, client, "E01");
+            return;
+          }
+        switch(reg)
+          {
+            case 0: val = gr->core->regs.x  ; len=2; break;
+            case 1: val = gr->core->regs.d  ; len=2; break;
+            case 2: val = gr->core->regs.y  ; len=2; break;
+            case 3: val = gr->core->regs.sp ; len=2; break;
+            case 4: val = gr->core->regs.pc ; len=2; break;
+            case 5: val = gr->core->regs.d >> 8;     break;
+            case 6: val = gr->core->regs.d & 0xFF;   break;
+            case 7: val = gr->core->regs.ccr;        break;
+            default: gdbremote_txstr(gr, client, "E02"); return;
+          }
+        if(len==1)
+          {
+            sprintf(sval, "%02X", val);
+          }
+        else
+          {
+            sprintf(sval, "%04X", val);
+          }
+        gdbremote_txstr(gr, client, sval);
+      }
+    else if(gr->rxbuf[0] == 'q')
+      {
+        gdbremote_query(gr, client);
+      }
+    else if(gr->rxbuf[0] == 's')
+      {
+        //single step
+        gr->core->status = STATUS_STEPPING;
+        while(gr->core->status != STATUS_STOPPED) {usleep(100);}
+        gdbremote_txstr(gr, client, "S05");
       }
     else if(gr->rxbuf[0] == 'X')
       {
