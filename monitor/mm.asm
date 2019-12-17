@@ -164,7 +164,7 @@ mm_free:
 .Lcoaldo:
 	/* free blocks adr and nxt are adjacent, can be merged */
 	ldx	*st1	/* X <- nxt */
-	ldd	2,X	/* D <- PEEK(nxt+SIZE) */
+	ldd	0,X	/* D <- PEEK(nxt+SIZE) */
 	addd	#2	/* D <- PEEK(nxt+SIZE) + 2 */
 	addd	*st0	/* D <- siz + nxtsiz + 2 */
 	ldx	*st2	/* X <- cur */

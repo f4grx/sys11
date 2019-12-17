@@ -325,6 +325,7 @@ void gdbremote_command(struct gdbremote_t *gr)
             case 5: val = gr->core->regs.d >> 8;     break;
             case 6: val = gr->core->regs.d & 0xFF;   break;
             case 7: val = gr->core->regs.ccr;        break;
+            case 8: val = 0; break; //non existent reg but gdb asks for it
             default: gdbremote_txstr(gr, "E02"); return;
           }
         if(len==1)

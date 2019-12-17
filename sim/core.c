@@ -1553,7 +1553,7 @@ void hc11_core_clock(struct hc11_core *core)
                 core->busdat = tmp;
                 core->busadr = core->operand;
                 core->regs.flags.Z = tmp == 0;
-                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.N = tmp >> 15;
                 core->regs.flags.V = 0;
                 core->state = STATE_WRITEOP_H;
                 printf("STD DIR_EXT_IND @%04X <- %04X\n", core->busadr, core->busdat);
@@ -1566,7 +1566,7 @@ void hc11_core_clock(struct hc11_core *core)
                 core->busdat = tmp;
                 core->busadr = core->operand;
                 core->regs.flags.Z = tmp == 0;
-                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.N = tmp >> 15;
                 core->regs.flags.V = 0;
                 core->state = STATE_WRITEOP_H;
                 printf("STX DIR_EXT_IND @%04X <- %04X\n", core->busadr, core->busdat);
@@ -1674,10 +1674,22 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
               case OP_CPXY_EXT:
                 break;
-              case OP_LDXY_IMM:
+
+              case OP_LDXY_IMM : /*NZV*/
+                core->busdat = core->operand;
+                printf("LDY_IMM\n");
+                /*FALLTHROUGH*/
+              case OP_LDXY_IND : /*NZV, LDY IND,Y*/ 
+              case OP_LDXY_DIR :
+              case OP_LDXY_EXT : 
+                core->regs.y = core->busdat;
+                tmp = core->regs.y;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.V = 0;
+                printf("LDY_DIR_EXT_INDY @%04X -> %04X\n", core->operand, core->busdat);
                 break;
-              case OP_LDXY_DIR:
-                break;
+
               case OP_STXY_DIR:
                 break;
               case OP_SUBB_IND:
@@ -1708,11 +1720,7 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
               case OP_STD_IND:
                 break;
-              case OP_LDXY_IND:
-                break;
               case OP_STXY_IND:
-                break;
-              case OP_LDXY_EXT:
                 break;
               case OP_STXY_EXT:
                 break;
@@ -1749,7 +1757,13 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_CPD_SUBD_EXT:
                 break;
 
-              case OP_LDXY_IND:
+              case OP_LDXY_IND: /*NZV, LDY IND,X*/
+                core->regs.y = core->busdat;
+                tmp = core->regs.y;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.V = 0;
+                printf("LDY_DIR_EXT_INDX @%04X -> %04X\n", core->operand, core->busdat);
                 break;
 
               case OP_STXY_IND:
@@ -1764,12 +1778,21 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
+              uint16_t tmp;
               case OP_CPD_SUBD_IND:
                 break;
               case OP_CPXY_IND:
                 break;
-              case OP_LDXY_IND:
+
+              case OP_LDXY_IND: /*NZV, LDX IND,Y*/
+                core->regs.x = core->busdat;
+                tmp = core->regs.x;
+                core->regs.flags.Z = tmp == 0;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.V = 0;
+                printf("LDX_DIR_EXT_INDY @%04X -> %04X\n", core->operand, core->busdat);
                 break;
+
               case OP_STXY_IND:
                 break;
             }
