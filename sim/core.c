@@ -10,6 +10,7 @@ enum hc11states
     STATE_VECTORFETCH_H,  //fetch high byte of vector address
     STATE_VECTORFETCH_L,  //fetch low byte of vector address
     STATE_FETCHOPCODE,    //fetch the opcode or the prefix
+    STATE_PREFIX,         //similar to fetchopcode, to avoid stopping a single step
     STATE_OPERAND_H,      //fetch operand (hi bytes)
     STATE_OPERAND_L,      //fetch operand (single or lo byte)
     STATE_OPERAND_DOUBLE, //Special mode for BSET/BCLR
@@ -107,9 +108,9 @@ static const uint8_t opmodes_1A[256] =
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 60-6F */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 70-7F */
   0,  0,  0,  IM2,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 80-8F */
-  0,  0,  0,  DIR,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
-  0,  0,  0,  INX,0,  0,  0,  0,  0,  0,  0,  0,  INX,0,  0,  0, /* A0-AF */
-  0,  0,  0,  EXT,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
+  0,  0,  0,  DI2,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 90-9F */
+  0,  0,  0,  IX2,0,  0,  0,  0,  0,  0,  0,  0,  INX,0,  0,  0, /* A0-AF */
+  0,  0,  0,  EX2,0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* B0-BF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* C0-CF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* D0-DF */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  IX2,IXS, /* E0-EF */
@@ -505,6 +506,7 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE;
           break;
 
+        case STATE_PREFIX:
         case STATE_FETCHOPCODE:
           printf("----------------------------------------\n");
           core->busadr = core->regs.pc;
@@ -515,7 +517,9 @@ void hc11_core_clock(struct hc11_core *core)
             {
               if(core->prefix == 0)
                 {
+                  printf("Got prefix %02X\n", core->busdat);
                   core->prefix = core->busdat;
+                  core->state = STATE_PREFIX; //dummy state to avoid stopping single step in the middle of the inst
                   break; //stay in this state
                 }
               else
@@ -594,6 +598,10 @@ void hc11_core_clock(struct hc11_core *core)
           // this is not required for stores and jmps.
           switch(core->addmode)
             {
+              case REL:
+                printf("Relative\n");
+                break;
+
               case IM1:
               case IM2:
                 printf("Immediate (1/2)\n");
@@ -1058,9 +1066,21 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BHS_REL  :
+                if(!core->regs.flags.C)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BHS/BCC -> C=%d pc=%04X\n" , core->regs.flags.C, core->regs.pc);
                 break;
 
               case OP_BLO_REL  :
+                if(core->regs.flags.C)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BLO/BCS -> C=%d pc=%04X\n" , core->regs.flags.C, core->regs.pc);
                 break;
 
               case OP_BNE_REL  :
@@ -1083,15 +1103,39 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BVC_REL  :
+                if(!core->regs.flags.V)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BVC -> V=%d pc=%04X\n" , core->regs.flags.V, core->regs.pc);
                 break;
 
               case OP_BVS_REL  :
+                if(core->regs.flags.V)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BVS -> V=%d pc=%04X\n" , core->regs.flags.V, core->regs.pc);
                 break;
 
               case OP_BPL_REL  :
+                if(!core->regs.flags.N)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BPL -> N=%d pc=%04X\n" , core->regs.flags.N, core->regs.pc);
                 break;
 
               case OP_BMI_REL  :
+                if(core->regs.flags.N)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                printf("BMI -> N=%d pc=%04X\n" , core->regs.flags.N, core->regs.pc);
                 break;
 
               case OP_BGE_REL  :
@@ -1256,16 +1300,6 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDB_IMM : /*HNZVC*/
                 break;
 
-              case OP_LDD_IMM  :/*NZV*/ 
-                core->regs.d = core->operand;
-                printf("LDD_IMM #%04X\n", core->operand);
-                break;
-
-              case OP_LDXY_IMM : /*NZV*/
-                core->regs.x = core->operand;
-                printf("LDX_IMM #%04X\n", core->operand);
-                break;
-
               case OP_XGDXY_INH :
                 break;
 
@@ -1396,17 +1430,25 @@ void hc11_core_clock(struct hc11_core *core)
                 printf("LDAB_DIR_EXT_IND %02X\n", core->busdat & 0xFF);
                 break;
 
+              case OP_LDD_IMM  :/*NZV*/ 
+                core->busdat = core->operand;
+                printf("LDD_IMM\n");
+                /*FALLTHROUGH*/
               case OP_LDD_IND  :/*NZV*/
               case OP_LDD_DIR  :
               case OP_LDD_EXT  :
                 core->regs.d = core->busdat;
                 tmp = core->regs.d;
-                core->regs.flags.Z = tmp == 0;
-                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 15);
                 core->regs.flags.V = 0;
                 printf("LDD_DIR_EXT_IND @%04X -> %04X\n", core->operand, core->busdat);
                 break;
 
+              case OP_LDXY_IMM : /*NZV*/
+                core->busdat = core->operand;
+                printf("LDX_IMM\n");
+                /*FALLTHROUGH*/
               case OP_LDXY_IND :/*NZV*/ 
               case OP_LDXY_DIR :
               case OP_LDXY_EXT :
@@ -1636,20 +1678,36 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
-              case OP_CPD_SUBD_IMM:
+              uint16_t tmp;
+              case OP_CPD_SUBD_IMM: //CPD, NZVC
+                core->busdat = core->operand;
+                printf("CPD_IMM\n");
+                /* FALLTHROUGH */
+              case OP_CPD_SUBD_DIR: //CPD, NZVC
+              case OP_CPD_SUBD_IND: //CPD (X), NZVC
+                tmp = core->regs.d - core->busdat;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) && !(core->busdat>>15) && !(tmp>>15)) ||
+                                     (!(core->regs.d>>15) &&  (core->busdat>>15) &&  (tmp>>15));
+                core->regs.flags.C = (!(core->regs.d>>15) &&  (core->busdat>>15)) || 
+                                     ( (core->busdat>>15) &&  (tmp         >>15)) ||
+                                     ( (tmp         >>15) && !(core->regs.d>>15));
+                printf("CPD_DIR_INDX D=%04X M=%04X diff=%04X\n",core->regs.d,core->busdat, tmp);
                 break;
-              case OP_CPD_SUBD_DIR:
-                break;
-              case OP_CPD_SUBD_IND:
-                break;
+
               case OP_CPXY_IND:
                 break;
+
               case OP_CPD_SUBD_EXT:
                 break;
+
               case OP_LDXY_IND:
                 break;
+
               case OP_STXY_IND:
                 break;
+
             }
             break;
 
