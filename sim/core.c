@@ -436,8 +436,46 @@ void hc11_core_init(struct hc11_core *core)
         core->io[i].rdf = NULL;
         core->io[i].wrf = NULL;
       }
+    for(i=0;i<HC11_BKPT_NUM;i++)
+      {
+        core->break_pc[i] = 0x0000;
+      }
     hc11_core_iocallback(core, REG_INIT, 1, core, init_read, init_write);
     core->status = STATUS_STOPPED;
+  }
+
+int hc11_core_set_bkpt(struct hc11_core *core, uint16_t pc)
+  {
+    int i;
+    for(i=0;i<HC11_BKPT_NUM;i++)
+      {
+        if(core->break_pc[i] == pc)
+          {
+            //already done
+            return 0;
+          }        
+        if(core->break_pc[i] == 0)
+          {
+            //added in free place
+            core->break_pc[i] = pc;
+            return 0;
+          }
+      }
+    return -1;
+  }
+
+int hc11_core_clr_bkpt(struct hc11_core *core, uint16_t pc)
+  {
+    int i;
+    for(i=0;i<HC11_BKPT_NUM;i++)
+      {
+        if(core->break_pc[i] == pc)
+          {
+            core->break_pc[i] = 0;
+            return 0;
+          }        
+      }
+    return -1;
   }
 
 void hc11_core_reset(struct hc11_core *core)
@@ -1689,6 +1727,19 @@ void hc11_core_prep(struct hc11_core *core)
 //run the clock until the current insn being fetched is executed
 void hc11_core_step(struct hc11_core *core)
   {
+    int i;
+
     hc11_core_clock(core);
     hc11_core_prep(core);
+
+    for(i=0;i<HC11_BKPT_NUM;i++)
+      {
+        if(core->break_pc[i] == core->regs.pc)
+          {
+            printf("reached breakpoint %d\n",i);
+            core->status = STATUS_STOPPED;
+            return;
+          }        
+      }
   }
+

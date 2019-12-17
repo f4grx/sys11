@@ -185,6 +185,10 @@ int main(int argc, char **argv)
         if(prev != core.status)
           {
             printf("status: %d -> %d\n", prev, core.status);
+            if(core.status == STATUS_STOPPED && prev != -1)
+              {
+                gdbremote_stopped(&remote);
+              }
             prev = core.status;
           }
 
@@ -196,12 +200,14 @@ int main(int argc, char **argv)
           }
         else if(core.status == STATUS_RUNNING)
           {
+//            printf("(r)");
             hc11_core_step(&core);
           }
         else if(core.status == STATUS_STOPPED)
           {
-            usleep(1000);
+//            printf("(s)");
           }
+        usleep(1000);
       }
     sem_getvalue(&end, &val);
     if(!val)

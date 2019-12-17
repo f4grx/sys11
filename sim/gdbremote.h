@@ -19,6 +19,7 @@ struct gdbremote_t
   {
     uint16_t port;
     int sock;
+    int client;
     sem_t startstop;
     bool running;
     pthread_t tid;
@@ -26,10 +27,13 @@ struct gdbremote_t
     char txbuf[GDBREMOTE_MAX_TX + 1];
     int rxlen,txlen;
     struct hc11_core *core;
+    int waitack;
+    int lastcommand; //flag to allow an async response when core was running then is stopped
   };
 
 int gdbremote_init(struct gdbremote_t *gr);
 int gdbremote_close(struct gdbremote_t *gr);
+int gdbremote_stopped(struct gdbremote_t *gr);
 
 #endif /* __gdb__h__ */
 

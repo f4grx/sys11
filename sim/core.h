@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define HC11_BKPT_NUM  8
+
 enum hc11regs
   {
     REG_OPTION = 0x39,
@@ -109,6 +111,7 @@ struct hc11_core
     uint16_t             state; //core state machine
     uint64_t             clocks;
     volatile uint16_t    status; //stopped, stepping, running...
+    uint16_t             break_pc[HC11_BKPT_NUM];
     // internal regs for execution
     uint16_t             busadr;
     uint16_t             busdat;
@@ -128,6 +131,9 @@ void hc11_core_map_rom(struct hc11_core *core, const char *name, uint16_t start,
                        uint16_t count, uint8_t *rom);
 void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
                           void *ctx, read_f rd, write_f wr);
+
+int hc11_core_set_bkpt(struct hc11_core *core, uint16_t pc);
+int hc11_core_clr_bkpt(struct hc11_core *core, uint16_t pc);
 
 void hc11_sci_init(struct hc11_core *core);
 
