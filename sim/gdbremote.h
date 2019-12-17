@@ -22,12 +22,12 @@ struct gdbremote_t
     int client;
     sem_t startstop;
     bool running;
+    bool connected;
     pthread_t tid;
     char rxbuf[GDBREMOTE_MAX_RX + 1];
     char txbuf[GDBREMOTE_MAX_TX + 1];
     int rxlen,txlen;
     struct hc11_core *core;
-    int waitack;
     int lastcommand; //flag to allow an async response when core was running then is stopped
   };
 

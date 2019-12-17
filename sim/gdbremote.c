@@ -27,7 +27,7 @@ int gdbremote_putc(const char ch, int client)
   return ret;
   }
 
-int gdbremote_txraw(struct gdbremote_t *gr)
+static int gdbremote_tx(struct gdbremote_t *gr, bool req_ack)
   {
     uint8_t csum;
     char ack, tx, rx;
@@ -61,7 +61,7 @@ int gdbremote_txraw(struct gdbremote_t *gr)
     gdbremote_putc(sum[1], gr->client);
     printf("\n");
 
-    if(gr->waitack)
+    if(req_ack)
       {
         ret = recv(gr->client, &rx, 1, 0);
         if(ret < 0) return -1;
@@ -74,13 +74,27 @@ int gdbremote_txraw(struct gdbremote_t *gr)
     return 0;
   }
 
+int gdbremote_txraw(struct gdbremote_t *gr)
+  {
+    return gdbremote_tx(gr, true);
+  }
+
 int gdbremote_txstr(struct gdbremote_t *gr, const char *fmt, ...)
   {
     va_list ap;
     va_start(ap, fmt);
     gr->txlen = vsprintf(gr->txbuf, fmt, ap);
     va_end(ap);
-    return gdbremote_txraw(gr);
+    return gdbremote_tx(gr, true);
+  }
+
+int gdbremote_txnotif(struct gdbremote_t *gr, const char *fmt, ...)
+  {
+    va_list ap;
+    va_start(ap, fmt);
+    gr->txlen = vsprintf(gr->txbuf, fmt, ap);
+    va_end(ap);
+    return gdbremote_tx(gr, false);
   }
 
 void gdbremote_monitor(struct gdbremote_t *gr)
@@ -164,7 +178,7 @@ void gdbremote_query(struct gdbremote_t *gr)
 
   }
 
-void gdbremote_command(struct gdbremote_t *gr, int client)
+void gdbremote_command(struct gdbremote_t *gr)
   {
     printf(">>> %s\n", gr->rxbuf);
     gr->lastcommand = gr->rxbuf[0];
@@ -196,7 +210,7 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
       {
         //detach
         gdbremote_txstr(gr, "OK");
-        gr->running = false;
+        gr->connected= false;
       }
     else if(gr->rxbuf[0] == 'g')
       {
@@ -259,9 +273,8 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
             gdbremote_txstr(gr, "E01");
             return;
           }
-        printf("count=%d\n",count);
         next = gr->rxbuf+1+count;
-        printf("adr=%04X len=%d next->%s\n",adr,len,next);
+        printf("adr=%04X len=%d\n",adr,len);
         for(i=0;i<len;i++)
           {
             sscanf(next+(2*i), "%02x", &buf);
@@ -296,7 +309,6 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
     else if(gr->rxbuf[0] == 'p')
       {
         int reg,val, len=1;
-        char sval[5];
         // register read: reg, return val
         if(sscanf(gr->rxbuf+1, "%x", &reg) != 1)
           {
@@ -317,13 +329,12 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
           }
         if(len==1)
           {
-            sprintf(sval, "%02X", val);
+            gdbremote_txstr(gr, "%02X", val);
           }
         else
           {
-            sprintf(sval, "%04X", val);
+            gdbremote_txstr(gr, "%04X", val);
           }
-        gdbremote_txstr(gr, sval);
       }
     else if(gr->rxbuf[0] == 'q')
       {
@@ -337,9 +348,25 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
       }
     else if(gr->rxbuf[0] == 'X')
       {
+#if 0
+        unsigned int adr, len, count, i, buf;
+        uint8_t *next;
         // memory write: XAAAA,len:binary
-#warning todo
-        gdbremote_txstr(gr, "");
+        if(sscanf(gr->rxbuf+1, "%X,%X:%n", &adr, &len, &count) != 2)
+          {
+            gdbremote_txstr(gr, "E01");
+            return;
+          }
+        next = (uint8_t*)(gr->rxbuf+1+count);
+        printf("adr=%04X len=%d next->%s\n",adr,len,next);
+        for(i=0;i<len;i++)
+          {
+          printf("%02X\n", next[i]);
+          }
+        gdbremote_txstr(gr, "OK");
+#else
+        gdbremote_txstr(gr, ""); //not supported
+#endif
       }
     else if(gr->rxbuf[0] == 'Z')
       {
@@ -389,7 +416,6 @@ void gdbremote_command(struct gdbremote_t *gr, int client)
 
 int gdbremote_rx(struct gdbremote_t *gr)
   {
-    int client = gr->client;
     int state;
     char c,ack;
     char cs[5];
@@ -397,9 +423,9 @@ int gdbremote_rx(struct gdbremote_t *gr)
     int ret;
 
     state = STATE_WAIT_START;
-    while(gr->running)
+    while(gr->connected)
       {
-        ret = recv(client, &c, 1, 0);
+        ret = recv(gr->client, &c, 1, 0);
         if(ret < 0) return -1;
         if(ret == 0) return -1;
 
@@ -417,7 +443,7 @@ int gdbremote_rx(struct gdbremote_t *gr)
                   //special case
                   gr->rxbuf[0] = c;
                   gr->rxlen = 1;
-                  gdbremote_command(gr, client);
+                  gdbremote_command(gr);
                 }
               else if(c == '$')
                 {
@@ -472,11 +498,11 @@ int gdbremote_rx(struct gdbremote_t *gr)
                 {
                   ack = '-';
                 }
-              send(client, &ack, 1, 0);
+              send(gr->client, &ack, 1, 0);
               if(ack == '+')
                 {
                   gr->rxbuf[gr->rxlen] = 0;
-                  gdbremote_command(gr, client);
+                  gdbremote_command(gr);
                 }
               state = STATE_WAIT_START;
               break;
@@ -489,7 +515,8 @@ static void gdbremote_thread_sig(int num, siginfo_t *info, void *v)
   {
     struct gdbremote_t *sgr = info->si_value.sival_ptr;
     printf("thread signal caught\n");
-    sgr->running = false;
+    sgr->connected = false;
+    sgr->running   = false;
   }
 
 static void* gdbremote_thread(void *param)
@@ -518,7 +545,8 @@ static void* gdbremote_thread(void *param)
             break;
           }
         printf("gdbremote: client connected\n");
-        while(gr->running)
+        gr->connected = true;
+        while(gr->connected)
           {
             ret = gdbremote_rx(gr);
             if(ret < 0) break;
@@ -540,7 +568,6 @@ int gdbremote_init(struct gdbremote_t *gr)
 
     printf("gdbremote starting\n");
     sem_init(&gr->startstop, 0, 0);
-    gr->waitack = 1;
 
     // create tcp socket to allow gdb incoming connection
     gr->sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -609,9 +636,7 @@ int gdbremote_stopped(struct gdbremote_t *gr)
       {
         return 0;
       }
-    gr->waitack = 0;
-    gdbremote_txstr(gr,"S05"); //this is a notification, there is no ack!
-    gr->waitack = 1;
+    gdbremote_txnotif(gr,"S05"); //this is a notification, there is no ack!
     return 0;
   }
 

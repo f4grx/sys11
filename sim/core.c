@@ -548,7 +548,8 @@ void hc11_core_clock(struct hc11_core *core)
                   break;
 
                 case IM1: //immediate, one byte
-                case DIR: //direct (one byte abs address)
+                case DIR: //direct (one byte abs address, one byte fetch)
+                case DI2: //direct (one byte abs address, two bytes fetch)
                 case DIS: //direct (one byte abs address, no data fetched)
                 case REL: //relative (branches)
                 case INX: //indexed relative to X
@@ -566,6 +567,10 @@ void hc11_core_clock(struct hc11_core *core)
                 case EXS: //extended (two bytes absolute address, no data fetch)
                   core->state = STATE_OPERAND_H;
                   break;
+
+                default:
+                  printf("ERROR - undefined addressing mode %d!\n", core->addmode);
+  
               }
             }
           break;
@@ -646,7 +651,7 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               default:
-                printf("ERROR - undefined addressing mode %d!\n", core->addmode);
+                printf("ERROR - undefined operand fetch mode %d!\n", core->addmode);
             }
           core->busadr = core->operand;
           if(core->state != STATE_EXECUTE)
