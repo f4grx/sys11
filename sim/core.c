@@ -1223,9 +1223,6 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SBCA_IMM : /*NZVC*/
                 break;
 
-              case OP_CPD_SUBD_IMM : /* SUBD: NZVC*/
-                break;
-
               case OP_ANDA_IMM : /*NZV*/
                 break;
 
@@ -1253,14 +1250,6 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDA_IMM  : /*HNZVC*/
                 break;
 
-              case OP_CPXY_IMM  : /*NZVC*/
-                break;
-
-              case OP_LDS_IMM   : /*NZV*/
-                core->regs.sp = core->operand;
-                printf("LDS_IMM %04X\n", core->operand);
-                break;
-
               case OP_SUBB_IMM : /*NZVC*/
                 break;
 
@@ -1268,9 +1257,6 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_SBCB_IMM : /*NZVC*/
-                break;
-
-              case OP_ADDD_IMM : /*NZVC*/
                 break;
 
               case OP_ANDB_IMM : /*NZV*/
@@ -1318,9 +1304,23 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SBCA_EXT :
                 break;
 
+              case OP_CPD_SUBD_IMM : /* SUBD: NZVC*/
+                core->busdat = core->operand;
+                printf("SUBD_IMM\n");
+                /*FALLTHROUGH*/
               case OP_CPD_SUBD_IND :/*subd: NZVC*/
               case OP_CPD_SUBD_DIR :
               case OP_CPD_SUBD_EXT :
+                tmp = core->regs.d - core->busdat;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) && !(core->busdat>>15) && !(tmp>>15)) ||
+                                     (!(core->regs.d>>15) &&  (core->busdat>>15) &&  (tmp>>15));
+                core->regs.flags.C = (!(core->regs.d>>15) &&  (core->busdat>>15)) || 
+                                     ( (core->busdat>>15) &&  (tmp         >>15)) ||
+                                     ( (tmp         >>15) && !(core->regs.d>>15));
+                printf("SUBD_IND_DIR_EXT D=%04X M=%04X R=%04X\n", core->regs.d, core->busdat, tmp);
+                core->regs.d = tmp;
                 break;
 
               case OP_ANDA_IND :/*NZV*/ 
@@ -1354,9 +1354,22 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDA_EXT :
                 break;
 
+              case OP_CPXY_IMM  : /*NZVC*/
+                core->busdat = core->operand;
+                printf("CPX_IMM\n");
+                /*FALLTHROUGH*/
               case OP_CPXY_IND : /*NZVC*/
               case OP_CPXY_DIR :
               case OP_CPXY_EXT :
+                tmp = core->regs.x - core->busdat;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.x>>15) && !(core->busdat>>15) && !(tmp>>15)) ||
+                                     (!(core->regs.x>>15) &&  (core->busdat>>15) &&  (tmp>>15));
+                core->regs.flags.C = (!(core->regs.x>>15) &&  (core->busdat>>15)) || 
+                                     ( (core->busdat>>15) &&  (tmp         >>15)) ||
+                                     ( (tmp         >>15) && !(core->regs.x>>15));
+                printf("CPD_DIR_INDX X=%04X M=%04X diff=%04X\n",core->regs.x,core->busdat, tmp);
                 break;
 
               case OP_JSR_IND  :
@@ -1368,9 +1381,18 @@ void hc11_core_clock(struct hc11_core *core)
                 core->state = STATE_PUSH_L; // not H, push happens L first
                 break;
 
+              case OP_LDS_IMM   : /*NZV*/
+                core->busdat = core->operand;
+                printf("LDS_IMM\n");
+                /*FALLTHROUGH*/
               case OP_LDS_IND  : /*NZV*/
               case OP_LDS_DIR  :
               case OP_LDS_EXT  :
+                core->regs.sp = core->busdat;
+                core->regs.flags.N = (core->busdat >> 15);
+                core->regs.flags.Z = (core->busdat == 0);
+                core->regs.flags.V = 0;
+                printf("LDS_IND_DIR_EXT %04X\n", core->operand);
                 break;
 
               case OP_STS_IND  : /*NZV*/
@@ -1393,9 +1415,23 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SBCB_EXT :
                 break;
 
+              case OP_ADDD_IMM : /*NZVC*/
+                core->busdat = core->operand;
+                printf("ADDD_IMM\n");
+                /*FALLTHROUGH*/
               case OP_ADDD_IND : /*NZVC*/
               case OP_ADDD_DIR :
               case OP_ADDD_EXT :
+                tmp = core->regs.d + core->busdat;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) &&  (core->busdat>>15) && !(tmp>>15)) ||
+                                     (!(core->regs.d>>15) && !(core->busdat>>15) &&  (tmp>>15));
+                core->regs.flags.C = ( (core->regs.d>>15) &&  (core->busdat>>15)) || 
+                                     ( (core->busdat>>15) && !(tmp         >>15)) ||
+                                     (!(tmp         >>15) &&  (core->regs.d>>15));
+                printf("ADDD_IND_DIR_EXT D=%04X M=%04X R=%04X\n", core->regs.d, core->busdat, tmp);
+                core->regs.d = tmp;
                 break;
 
               case OP_ANDB_IND :/*NZV*/ 
