@@ -187,7 +187,7 @@ void gdbremote_command(struct gdbremote_t *gr)
       {
         printf("break request\n");
         gr->core->status = STATUS_STOPPED;
-        gdbremote_txstr(gr, "S05");
+        //no response!
       }
     else if(gr->rxbuf[0] == '?')
       {
@@ -230,8 +230,8 @@ void gdbremote_command(struct gdbremote_t *gr)
                             (int)gr->core->regs.y,
                             (int)gr->core->regs.sp,
                             (int)gr->core->regs.pc,
-                            (int)gr->core->regs.d & 0xFF,
-                            (int)gr->core->regs.d >> 8,
+                            (int)gr->core->regs.d >> 8,  //a is MSB
+                            (int)gr->core->regs.d & 0xFF,//b is LSB
                             (int)gr->core->regs.ccr
                             );
         gdbremote_txraw(gr);
@@ -322,8 +322,8 @@ void gdbremote_command(struct gdbremote_t *gr)
             case 2: val = gr->core->regs.y  ; len=2; break;
             case 3: val = gr->core->regs.sp ; len=2; break;
             case 4: val = gr->core->regs.pc ; len=2; break;
-            case 5: val = gr->core->regs.d >> 8;     break;
-            case 6: val = gr->core->regs.d & 0xFF;   break;
+            case 5: val = gr->core->regs.d >> 8;     break; //a is MSB
+            case 6: val = gr->core->regs.d & 0xFF;   break; //b is LSB
             case 7: val = gr->core->regs.ccr;        break;
             case 8: val = 0; break; //non existent reg but gdb asks for it
             default: gdbremote_txstr(gr, "E02"); return;
@@ -633,7 +633,7 @@ int gdbremote_close(struct gdbremote_t *gr)
 int gdbremote_stopped(struct gdbremote_t *gr)
   {
     printf("core has stopped\n");
-    if(gr->lastcommand != 'c' && gr->lastcommand != 's')
+    if(gr->lastcommand != 'c' && gr->lastcommand != 's' && gr->lastcommand != 0x03)
       {
         return 0;
       }

@@ -59,7 +59,7 @@ _start:
 
 idle:
 .ifndef DEBUG
-	wai		/* Do nothing until some interrupt happens */
+	stop	/* Do nothing until some interrupt happens */
 .endif
 	bra idle
 	
