@@ -1287,6 +1287,10 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_XGDXY_INH :
+                tmp = core->regs.d;
+                core->regs.d = core->regs.x;
+                core->regs.x = tmp;
+                printf("XGDX\n");
                 break;
 
               case OP_SUBA_IND :/*NZVC*/
@@ -1577,6 +1581,7 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
+              uint16_t tmp;
               case OP_INXY_INH:
                 break;
               case OP_DEXY_INH:
@@ -1625,8 +1630,14 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
               case OP_CPXY_IMM:
                 break;
+
               case OP_XGDXY_INH:
+                tmp = core->regs.d;
+                core->regs.d = core->regs.y;
+                core->regs.y = tmp;
+                printf("XGDY\n");
                 break;
+
               case OP_CPXY_DIR:
                 break;
               case OP_SUBA_IND:
