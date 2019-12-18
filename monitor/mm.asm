@@ -3,9 +3,8 @@
 
 	.include "softregs.inc"
 
-	.extern	RAMSTART
-#	.equ	RAMSTART, 0x0100
-	.equ	RAMLEN  , 0x100
+	.extern	HEAPSTART
+	.extern	HEAPEND
 
 	.data
 head:	.word	0 /* Pointer to the first free zone */
@@ -20,8 +19,10 @@ head:	.word	0 /* Pointer to the first free zone */
 	.func	mm_init
 	.global	mm_init
 mm_init:
-	ldx	#RAMSTART
-	ldd	#(RAMLEN-2)	/* Block size = all but two header bytes */
+	ldx	#HEAPSTART
+	ldd	#HEAPEND
+	subd	#HEAPSTART
+	subd	#2
 	std	0,X
 	ldd	#0xffff
 	std	2,X		/* This is the pointer to next (none) */

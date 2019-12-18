@@ -42,7 +42,11 @@ SECTIONS
 /* EXTERNAL RAM */
 	.edata : {
 		*(.edata)
-		RAMSTART = .;
+		HEAPSTART = .;
 	} > ram
+	.xdata : {
+		HEAPEND = .;
+		*(.xdata)
+	} > xram
 }
 
