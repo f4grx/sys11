@@ -191,14 +191,7 @@ void gdbremote_command(struct gdbremote_t *gr)
       }
     else if(gr->rxbuf[0] == '?')
       {
-        if(gr->core->status == STATUS_STOPPED)
-          {
-            gdbremote_txstr(gr, "S05"); //core is stopped
-          }
-        else
-          {
-            gdbremote_txstr(gr, "S05"); //core is running
-          }
+        gdbremote_txstr(gr, "S02"); //core is stopped
       }
     else if(gr->rxbuf[0] == 'c')
       {
@@ -515,7 +508,7 @@ int gdbremote_rx(struct gdbremote_t *gr)
 static void gdbremote_thread_sig(int num, siginfo_t *info, void *v)
   {
     struct gdbremote_t *sgr = info->si_value.sival_ptr;
-    printf("thread signal caught\n");
+    printf("gdbremote: thread signal caught\n");
     sgr->connected = false;
     sgr->running   = false;
   }
@@ -567,7 +560,7 @@ int gdbremote_init(struct gdbremote_t *gr)
     int ret;
     int yes = 1;
 
-    printf("gdbremote starting\n");
+    printf("gdbremote: starting\n");
     sem_init(&gr->startstop, 0, 0);
 
     // create tcp socket to allow gdb incoming connection
@@ -605,7 +598,7 @@ int gdbremote_init(struct gdbremote_t *gr)
     pthread_create(&id, NULL, gdbremote_thread, gr);
 
     sem_wait(&gr->startstop);
-    printf("gdbremote started\n");
+    printf("gdbremote: started\n");
     gr->tid = id;
     return 0;
 
@@ -624,7 +617,6 @@ int gdbremote_close(struct gdbremote_t *gr)
 
     val.sival_ptr = gr;
     pthread_sigqueue(gr->tid, SIGUSR1, val);
-    gr->running = false;
     pthread_join(gr->tid, &ret);
     printf("gdbremote: thread terminated\n");
     return 0;
@@ -632,12 +624,12 @@ int gdbremote_close(struct gdbremote_t *gr)
 
 int gdbremote_stopped(struct gdbremote_t *gr)
   {
-    printf("core has stopped\n");
+    printf("gdbremote: core has stopped\n");
     if(gr->lastcommand != 'c' && gr->lastcommand != 's' && gr->lastcommand != 0x03)
       {
         return 0;
       }
-    gdbremote_txnotif(gr,"S05"); //this is a notification, there is no ack!
+    gdbremote_txnotif(gr,"S02"); //this is a notification, there is no ack!
     return 0;
   }
 

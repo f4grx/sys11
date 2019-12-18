@@ -135,7 +135,6 @@ void hc11_core_iocallback(struct hc11_core *core, uint8_t off, uint8_t count,
 int hc11_core_set_bkpt(struct hc11_core *core, uint16_t pc);
 int hc11_core_clr_bkpt(struct hc11_core *core, uint16_t pc);
 
-void hc11_sci_init(struct hc11_core *core);
 
 uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr);
 void    hc11_core_writeb(struct hc11_core *core, uint16_t adr,

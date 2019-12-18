@@ -11,14 +11,15 @@
 #include <signal.h>
 
 #include "core.h"
+#include "sci.h"
 #include "gdbremote.h"
 
 static struct option long_options[] =
   {
-//    {"append",  no_argument,       0,  0 },
-    {"bin"   , required_argument, 0, 'b' },
-    {"s19"   , required_argument, 0, 's' },
-    {0       , 0                , 0,  0  }
+    {"bin"     , required_argument, 0, 'b' },
+    {"s19"     , required_argument, 0, 's' },
+    {"writable", no_argument   , 0, 'w' },
+    {0         , 0                , 0,  0  }
   };
 
 sem_t end;
@@ -68,10 +69,11 @@ err:
 
 void help(void)
   {
-    printf("sim [-s,--s19 <file>] [-b,--bin <adr,file>]\n"
+    printf("sim [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
            "\n"
            "  -s --s19 <file>      Load S-record file\n"
            "  -b --bin <adr,file>  Load binary file at address\n"
+           "  -w --writable        Map 8K of RAM in monitor address space\n"
          );
   }
 
@@ -84,6 +86,7 @@ void sig(int sig)
 int main(int argc, char **argv)
   {
     struct hc11_core core;
+    struct hc11_sci *sci;
     struct gdbremote_t remote;
     int c;
     struct sigaction sa_mine;
@@ -103,7 +106,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:w", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -136,6 +139,11 @@ int main(int argc, char **argv)
                 break;
               }
 
+            case 'w':
+              {
+                hc11_core_map_ram(&core, "rom", 0xE000, 0x2000);
+                break;
+              }
             case 's':
               {
                 printf("TODO load S19 file\n");
@@ -165,7 +173,7 @@ int main(int argc, char **argv)
         printf("\n");
       }
 
-    hc11_sci_init(&core);
+    sci = hc11_sci_init(&core);
 
     remote.port = 3333;
     remote.core = &core;
@@ -216,5 +224,6 @@ int main(int argc, char **argv)
         sem_wait(&end);
       }
     gdbremote_close(&remote);
+    hc11_sci_close(sci);
   }
 
