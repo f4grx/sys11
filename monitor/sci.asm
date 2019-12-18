@@ -36,3 +36,18 @@ sci_puts:
 	rts
 	.endfunc
 
+/*
+ * SCI_GETCHAR
+ 8 Get a serial char.
+ * Input: none
+ * Output: received char in D
+ */
+	.func	sci_getchar
+	.global	sci_getchar
+sci_getchar:
+	brclr	*SCSR #SCSR_RDRF, sci_getchar
+	clra
+	ldab	*SCDR
+	rts
+	.endfunc
+
