@@ -5,6 +5,7 @@
  * Output: length in D
  * Destroys D,X,Y
  */
+	.func	strlen
 	.global strlen
 strlen:
 	ldx	*sp0
@@ -18,4 +19,5 @@ strlen:
 	bra	.Lagain	/* Continue with next char */
 .Ldone:
 	rts
+	.endfunc
 

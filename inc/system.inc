@@ -1,4 +1,6 @@
 /* System registers */
+	.equ	REGBASE, 0x1000 /* Just defined for nice assembly output*/
+
 	.equ	OPTION, 0x39
 	.equ	HPRIO , 0x3C
 	.equ	INIT  , 0x3D	/* Used to map regs and iram */

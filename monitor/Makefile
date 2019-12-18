@@ -4,6 +4,8 @@ monitor_OBJS=start.o vectors.o softregs.o
 monitor_OBJS+=sci.o
 #lib
 monitor_OBJS+=mm.o string.o
+#app
+monitor_OBJS+=shell.o
 
 monitor_LKR=../link/full.ld
 

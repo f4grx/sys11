@@ -3,8 +3,9 @@
 
 	.include "softregs.inc"
 
-	.equ	RAMSTART, 0x0100
-	.equ	RAMLEN  , 0x8000 - 0x0100
+	.extern	RAMSTART
+#	.equ	RAMSTART, 0x0100
+	.equ	RAMLEN  , 0x100
 
 	.data
 head:	.word	0 /* Pointer to the first free zone */
@@ -16,6 +17,7 @@ head:	.word	0 /* Pointer to the first free zone */
  * Parameters: None
  * Return value: None
  */
+	.func	mm_init
 	.global	mm_init
 mm_init:
 	ldx	#RAMSTART
@@ -25,6 +27,7 @@ mm_init:
 	std	2,X		/* This is the pointer to next (none) */
 	stx	head		/* Initialize head of free zone list */
 	rts
+	.endfunc
 
 /* Allocate a memory zone.
  * Parameters:
@@ -32,6 +35,7 @@ mm_init:
  * Return value:
  *   D   Pointer to memory zone, possibly NULL if failed to alloc
  */
+	.func	mm_alloc
 	.global mm_alloc
 mm_alloc:
 	/* Browse all zones in the free list.
@@ -104,7 +108,7 @@ mm_alloc:
 	clrb	/* DH <- 0 */
 .Lend:
 	rts
-
+	.endfunc
 
 /* Release a memory zone.
  * After this call the pointed memory zone is considered free for allocation.
@@ -112,6 +116,7 @@ mm_alloc:
  *   sp0 pointer_to_zone
  * Return value: None
  */
+	.func	mm_free
 	.global mm_free
 mm_free:
 	ldx	*sp0	/* X <- pointer to user data to free */
@@ -179,4 +184,4 @@ mm_free:
 	bra	.Lcoalloop
 .Lcoaldone:
 	rts
-
+	.endfunc

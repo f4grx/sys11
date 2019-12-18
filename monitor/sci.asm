@@ -4,6 +4,7 @@
 
 	.text
 
+	.func	sci_init
 	.global sci_init
 sci_init:
 	ldaa	#0x22
@@ -11,6 +12,7 @@ sci_init:
 	ldaa	#0x0C
 	staa	SCCR2
 	rts
+	.endfunc
 
 /*
  * SCI_PUTS
@@ -18,6 +20,7 @@ sci_init:
  * Output: None
  * Destroys: A, X
  */
+	.func	sci_puts
 	.global sci_puts
 sci_puts:
 	ldx	*sp0
@@ -31,4 +34,5 @@ sci_puts:
 	bra	.Lnext
 .Ldone:
 	rts
+	.endfunc
 

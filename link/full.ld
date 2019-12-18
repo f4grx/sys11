@@ -38,5 +38,11 @@ SECTIONS
 		*(.bss)
 		*(COMMON)
 	} > iram
+
+/* EXTERNAL RAM */
+	.edata : {
+		*(.edata)
+		RAMSTART = .;
+	} > ram
 }
 

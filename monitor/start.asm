@@ -8,6 +8,7 @@
 	.extern sci_putchar
 	.extern	sci_puts
 
+	.func	_start
 	.global	_start
 _start:
 	/* Note: At this point we have no stack yet */
@@ -62,6 +63,7 @@ idle:
 	stop	/* Do nothing until some interrupt happens */
 .endif
 	bra idle
+	.endfunc
 	
 	.section .rodata
 motd:	.asciz	"sys11 monitor by f4grx v0.1\r\n"
