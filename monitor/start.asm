@@ -50,8 +50,28 @@ _start:
 	ldx	#10
 	stx	*sp0
 	jsr	mm_alloc
+	std	*adr1
 
-	std	*sp0
+	ldx	#20
+	stx	*sp0
+	jsr	mm_alloc
+	std	*adr2
+
+	ldx	*adr1
+	stx	*sp0
+	jsr	mm_free
+
+	ldx	#10
+	stx	*sp0
+	jsr	mm_alloc
+	std	*adr1
+
+	ldx	*adr1
+	stx	*sp0
+	jsr	mm_free
+
+	ldx	*adr2
+	stx	*sp0
 	jsr	mm_free
 
 	/* ==================== */
@@ -64,6 +84,11 @@ idle:
 .endif
 	bra idle
 	.endfunc
+
+	.data
+adr1:	.word 0
+adr2:	.word 0
+adr3:	.word 0
 	
 	.section .rodata
 motd:	.asciz	"sys11 monitor by f4grx v0.1\r\n"

@@ -177,6 +177,7 @@ int main(int argc, char **argv)
   {
   uint16_t adr1,adr2,adr3;
   mem_init();
+  mem_status();
   adr1 = mem_alloc(10); printf("got adr 0x%04X\n",adr1);
   mem_status();
   adr2 = mem_alloc(20); printf("got adr 0x%04X\n",adr2);
