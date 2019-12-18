@@ -105,11 +105,13 @@ Summary: The system is validated on the soldered wirewrap euro board.
 
 What is being done right now
 ----------------------------
+* Writing a 68HC11 simulator integrated with gdb to debug the monitor.
 * Editing schematic to fix errors and match reality of prototype
 * Writing the monitor ROM including a RAM allocator
 
 What remains to be done
 -----------------------
+* Finish simulating all opcodes
 * Replace fifth LS245 registers with sth that allows open drain on RST and IRQs.
 * Determine next step for hardware. Secondary board with more RAM? EPROM programmer?
 * NVRAM SSD using these old bq4017 samples maxim generously offered me for free
@@ -123,8 +125,9 @@ What remains to be done
 Software roadmap
 ----------------
 * Bootloader for extended mode - DONE
-* Malloc - WIP
-* Basic shell to manipulate memory
+* Malloc - WIP, almost validated
+* Simulator - WIP
+* Basic shell to manipulate memory - STARTED
 * SPI and I2C drivers
 * Filesystem (RRSF, already half designed)
 * ed-based text editor
