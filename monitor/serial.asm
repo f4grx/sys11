@@ -4,9 +4,9 @@
 
 	.text
 
-	.func	sci_init
-	.global sci_init
-sci_init:
+	.func	serial_init
+	.global serial_init
+serial_init:
 	ldaa	#0x22
 	staa	BAUD
 	ldaa	#0x0C
@@ -14,22 +14,44 @@ sci_init:
 	rts
 	.endfunc
 
+
 /*
- * SCI_PUTS
+ * SERIAL_PUTCHAR
+ * Input : Character in B
+ * Output: None
+ */
+	.func	serial_putchar
+	.global	serial_putchar
+serial_putchar:
+	brclr	*SCSR #SCSR_TDRE, serial_putchar
+	stab	*SCDR
+	rts
+	.endfunc
+
+	.func	serial_crlf
+	.global	serial_crlf
+serial_crlf:
+	ldab	#0x0D
+	jsr	serial_putchar
+	ldab	#0x0A
+	jsr	serial_putchar
+	rts
+	.endfunc
+
+/*
+ * SERIAL_PUTS
  * Input : String pointer in sp0
  * Output: None
- * Destroys: A, X
+ * Destroys: B, X
  */
-	.func	sci_puts
-	.global sci_puts
-sci_puts:
+	.func	serial_puts
+	.global serial_puts
+serial_puts:
 	ldx	*sp0
 .Lnext:
-	ldaa	0,X		/* Load char pointed b X */
+	ldab	0,X		/* Load char pointed b X */
 	beq	.Ldone
-.Lwait:
-	brclr	*SCSR #SCSR_TDRE, .Lwait
-	staa	*SCDR
+	bsr	serial_putchar
 	inx
 	bra	.Lnext
 .Ldone:
@@ -37,16 +59,15 @@ sci_puts:
 	.endfunc
 
 /*
- * SCI_GETCHAR
+ * SERIAL_GETCHAR
  8 Get a serial char.
  * Input: none
- * Output: received char in D
+ * Output: received char in B
  */
-	.func	sci_getchar
-	.global	sci_getchar
-sci_getchar:
-	brclr	*SCSR #SCSR_RDRF, sci_getchar
-	clra
+	.func	serial_getchar
+	.global	serial_getchar
+serial_getchar:
+	brclr	*SCSR #SCSR_RDRF, serial_getchar
 	ldab	*SCDR
 	rts
 	.endfunc

@@ -1,12 +1,10 @@
 	.include "system.inc"
 	.include "ioport.inc"
 	.include "mm.inc"
-
+	.include "serial.inc"
 	.text
 
-	.extern	sci_init
-	.extern sci_putchar
-	.extern	sci_puts
+	.extern shell_main
 
 	.func	_start
 	.global	_start
@@ -32,8 +30,8 @@ _start:
 	/* Initialize the system */
 	/* ==================== */
 
-	jsr	sci_init
-	jsr	mm_init
+	jsr	serial_init
+	#jsr	mm_init
 
 	/* ==================== */
 	/* Start message */
@@ -41,12 +39,12 @@ _start:
 
 	ldx	#motd
 	stx	*sp0
-	jsr	sci_puts
+	jsr	serial_puts
 
 	/* ==================== */
 	/* Simple test */
 	/* ==================== */
-
+.if 0
 	ldx	#10
 	stx	*sp0
 	jsr	mm_alloc
@@ -73,6 +71,8 @@ _start:
 	ldx	*adr2
 	stx	*sp0
 	jsr	mm_free
+.endif
+	jsr	shell_main
 
 	/* ==================== */
 	/* Fall in the idle loop */
@@ -91,5 +91,5 @@ adr2:	.word 0
 adr3:	.word 0
 	
 	.section .rodata
-motd:	.asciz	"sys11 monitor by f4grx v0.1\r\n"
+motd:	.asciz	"\r\nsys11 monitor by f4grx v0.1\r\n"
 

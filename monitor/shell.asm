@@ -1,6 +1,11 @@
 /* sys11 shell */
+	.include "serial.inc"
 
 	.equ SCMD_MAX, 80
+	.section .rodata
+sprompt:
+	.asciz "sys11>"
+
 	.section .edata
 scmdbuf:
 	.space	SCMD_MAX+1 /* Storage for command line */
@@ -16,26 +21,36 @@ shell_main:
 	staa	scmdlen
 	staa	scmdbuf+SCMD_MAX /* Put a final zero */
 
-	/* Get a command in the buffer */
+.Lcmdloop:
+	ldx	#sprompt
+	stx	*sp0
+	jsr	serial_puts
+	ldx	#scmdbuf
+
 .Lcharloop:
-	jsr	sci_getchar
-	cmpa	#0x0A
+	jsr	serial_getchar
+	jsr	serial_putchar /* echo */
+	cmpb	#0x0D
 	beq	.Lexec
-	ldx	scmdlen
-	cmpx	#SCMD_MAX
+	ldaa	scmdlen
+	cmpa	#SCMD_MAX
 	beq	.Lcharloop /* Overflow: dont store, but wait for LF */
-	xgdx
-	addd	scmdlen
-	xgdx
-	staa	0,X
+	stab	0,X
 	inc	scmdlen
+	inx
 	bra	.Lcharloop
 
 .Lexec:
+	clra
+	staa	0,X
+	jsr	serial_crlf
+
 	/* Just echo */
-	ldx	scmdbuf
+	ldx	#scmdbuf
 	stx	*sp0
-	jsr	sci_puts
+	jsr	serial_puts
+	jsr	serial_crlf
+	bra	.Lcmdloop
 	rts
 	.endfunc
 

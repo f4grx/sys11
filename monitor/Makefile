@@ -1,9 +1,10 @@
 #runtime
 monitor_OBJS=start.o vectors.o softregs.o
 #drivers
-monitor_OBJS+=sci.o
+monitor_OBJS+=serial.o
 #lib
-monitor_OBJS+=mm.o string.o
+#monitor_OBJS+=mm.o
+monitor_OBJS+=string.o
 #app
 monitor_OBJS+=shell.o
 
