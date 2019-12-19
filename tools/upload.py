@@ -202,17 +202,75 @@ if args["term"] == None:
     sys.exit(0)
 
 #
-# Start behaving as a serial terminal.
+# Start behaving as a RAW serial terminal.
 #
 
+#http://ballingt.com/nonblocking-stdin-in-python-3/
+import fcntl
+import sys
+import os
+import time
+import tty
+import termios
+
+class raw(object):
+    def __init__(self, stream):
+        self.stream = stream
+        self.fd = self.stream.fileno()
+    def __enter__(self):
+        self.original_stty = termios.tcgetattr(self.stream)
+        tty.setcbreak(self.stream)
+    def __exit__(self, type, value, traceback):
+        termios.tcsetattr(self.stream, termios.TCSANOW, self.original_stty)
+
+class nonblocking(object):
+    def __init__(self, stream):
+        self.stream = stream
+        self.fd = self.stream.fileno()
+    def __enter__(self):
+        self.orig_fl = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+        fcntl.fcntl(self.fd, fcntl.F_SETFL, self.orig_fl | os.O_NONBLOCK)
+    def __exit__(self, *args):
+        fcntl.fcntl(self.fd, fcntl.F_SETFL, self.orig_fl)
+
+running = True
+import time
+
+def input_thread():
+    print("input start")
+    with raw(sys.stdin):
+        with nonblocking(sys.stdin):
+            try:
+                while running:
+                    x=sys.stdin.read(1) 
+                    if x:
+                        c=ord(x)
+                        if c==10: c=13
+                        ser.write(struct.pack("B",c))
+                    else:
+                        time.sleep(0.01)
+            except KeyboardInterrupt:
+                print("done")
+                return
+
+import threading
+t=threading.Thread(target=input_thread)
+t.start()
+
 print("Serial terminal started")
-while(True):
-    x=ser.read(1)
-    if len(x) == 0 : continue
-    if x[0] < 0x20 and x[0] != 0x0D and x[0] != 0x0A:
-        print("<%02X>" % x[0])
-    else:
-        print(chr(x[0]),end='')
+ser.timeout=0 #nonblocking
+try:
+    while(True):
+        x=ser.read(1)
+        if len(x) == 0 : continue
+        if x[0] < 0x20 and x[0] != 0x0D and x[0] != 0x0A:
+            print("<%02X>" % x[0], flush=True)
+        else:
+            print(chr(x[0]), end='', flush=True)
+except KeyboardInterrupt:
+    running = False
+    t.join()
+    print("Input thread done")
 
 ser.close()
 print("Terminal stopped")
