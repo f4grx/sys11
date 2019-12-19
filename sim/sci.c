@@ -59,7 +59,7 @@ static uint8_t sci_read(void *ctx, uint16_t off)
       case OFF_SCCR2: printf("SCI read SCCR2 -> %02X\n", ret); break;
       case OFF_SCSR:  printf("SCI read SCSR -> %02X\n" , ret);  break;
       case OFF_SCDR:
-        sci->regs[OFF_SCSR] &= SCSR_RDRF;
+        sci->regs[OFF_SCSR] &= ~SCSR_RDRF;
         printf("SCI read SCDR -> %02X\n", ret);
         break;
       }
