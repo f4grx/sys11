@@ -880,9 +880,23 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_INCA_INH : /*NZV*/
+                tmp = core->regs.d >> 8;
+                core->regs.flags.V = (tmp == 0x7F);
+                tmp = (tmp + 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                printf("INCA -> %02X\n", tmp);
                 break;
 
               case OP_INCB_INH : /*NZV*/
+                tmp = core->regs.d & 0xFF;
+                core->regs.flags.V = (tmp == 0x7F);
+                tmp = (tmp + 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                printf("INCB -> %02X\n", tmp);
                 break;
 
               case OP_DECA_INH : /*NZV*/
@@ -1196,6 +1210,16 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_INC_EXT : /*NZV*/
               case OP_INC_IND :
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.V = (tmp == 0x7F);
+                tmp = (tmp + 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                core->busdat = tmp;
+                core->busadr = core->operand;
+                core->state = STATE_WRITEOP_L;
+                printf("INC_EXT_INX -> %02X @ %04X\n", tmp, core->busadr);
                 break;
 
               case OP_TST_EXT : /*NZVC*/
@@ -1219,9 +1243,6 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_SUBA_IMM : /*NZVC*/
-                break;
-
-              case OP_CMPA_IMM : /*NZVC*/
                 break;
 
               case OP_SBCA_IMM : /*NZVC*/
@@ -1255,9 +1276,6 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_SUBB_IMM : /*NZVC*/
-                break;
-
-              case OP_CMPB_IMM : /*NZVC*/
                 break;
 
               case OP_SBCB_IMM : /*NZVC*/
@@ -1302,9 +1320,42 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SUBA_EXT :
                 break;
 
+              case OP_CMPA_IMM : /*NZVC*/
+                core->busdat = core->operand;
+                printf("CMPA_IMM\n");
+                /*FALLTHROUGH*/
               case OP_CMPA_IND :/*NZVC*/
               case OP_CMPA_DIR :
               case OP_CMPA_EXT :
+                core->busdat &= 0xFF;
+                tmp = ((core->regs.d >> 8) - core->busdat) & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) && !(core->busdat>> 7) && !(tmp>> 7)) ||
+                                     (!(core->regs.d>>15) &&  (core->busdat>> 7) &&  (tmp>> 7));
+                core->regs.flags.C = (!(core->regs.d>>15) &&  (core->busdat>> 7)) || 
+                                     ( (core->busdat>> 7) &&  (tmp         >> 7)) ||
+                                     ( (tmp         >> 7) && !(core->regs.d>>15));
+                printf("CMPA_INX_DIR_EXT A=%02X M=%02X R=%02X\n", core->regs.d>>8, core->busdat&0xFF, tmp);
+                break;
+
+              case OP_CMPB_IMM : /*NZVC*/
+                core->busdat = core->operand;
+                printf("CMPB_IMM\n");
+                /*FALLTHROUGH*/
+              case OP_CMPB_IND :/*NZVC*/
+              case OP_CMPB_DIR :
+              case OP_CMPB_EXT :
+                core->busdat &= 0xFF;
+                tmp = ((core->regs.d & 0xFF) - core->busdat) & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( ((core->regs.d&0xFF)>> 7) && !(core->busdat>> 7) && !(tmp>> 7)) ||
+                                     (!((core->regs.d&0xFF)>> 7) &&  (core->busdat>> 7) &&  (tmp>> 7));
+                core->regs.flags.C = (!((core->regs.d&0xFF)>> 7) &&  (core->busdat>> 7)) || 
+                                     ( (core->busdat>> 7) &&  (tmp         >> 7)) ||
+                                     ( (tmp         >> 7) && !((core->regs.d&0xFF)>> 7));
+                printf("CMPB_INX_DIR_EXT B=%02X M=%02X R=%02X\n", core->regs.d&0xFF, core->busdat&0xFF, tmp);
                 break;
 
               case OP_SBCA_IND :/*NZVC*/
@@ -1411,11 +1462,6 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SUBB_IND :/*NZVC*/
               case OP_SUBB_DIR :
               case OP_SUBB_EXT :
-                break;
-
-              case OP_CMPB_IND :/*NZVC*/
-              case OP_CMPB_DIR :
-              case OP_CMPB_EXT :
                 break;
 
               case OP_SBCB_IND :/*NZVC*/
@@ -1632,8 +1678,20 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
               case OP_DEC_IND:
                 break;
+
               case OP_INC_IND:
+                tmp = core->busdat & 0xFF;
+                core->regs.flags.V = (tmp == 0x7F);
+                tmp = (tmp + 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                core->busdat = tmp;
+                core->busadr = core->operand;
+                core->state = STATE_WRITEOP_L;
+                printf("INC_EXT_INY -> %02X @ %04X\n", tmp, core->busadr);
                 break;
+
               case OP_TST_IND:
                 break;
               case OP_JMP_IND:
@@ -1654,8 +1712,33 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
               case OP_SUBA_IND:
                 break;
+
               case OP_CMPA_IND:
+                core->busdat &= 0xFF;
+                tmp = ((core->regs.d >> 8) - core->busdat) & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) && !(core->busdat>> 7) && !(tmp>> 7)) ||
+                                     (!(core->regs.d>>15) &&  (core->busdat>> 7) &&  (tmp>> 7));
+                core->regs.flags.C = (!(core->regs.d>>15) &&  (core->busdat>> 7)) || 
+                                     ( (core->busdat>> 7) &&  (tmp         >> 7)) ||
+                                     ( (tmp         >> 7) && !(core->regs.d>>15));
+                printf("CMPA_INY A=%02X M=%02X R=%02X\n", core->regs.d>>8, core->busdat&0xFF, tmp);
                 break;
+
+              case OP_CMPB_IND:
+                core->busdat &= 0xFF;
+                tmp = ((core->regs.d & 0xFF) - core->busdat) & 0xFF;
+                core->regs.flags.N = tmp >> 7;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( ((core->regs.d&0xFF)>> 7) && !(core->busdat>> 7) && !(tmp>> 7)) ||
+                                     (!((core->regs.d&0xFF)>> 7) &&  (core->busdat>> 7) &&  (tmp>> 7));
+                core->regs.flags.C = (!((core->regs.d&0xFF)>> 7) &&  (core->busdat>> 7)) || 
+                                     ( (core->busdat>> 7) &&  (tmp         >> 7)) ||
+                                     ( (tmp         >> 7) && !((core->regs.d&0xFF)>> 7));
+                printf("CMPB_INY B=%02X M=%02X R=%02X\n", core->regs.d&0xFF, core->busdat&0xFF, tmp);
+                break;
+
               case OP_SBCA_IND:
                 break;
               case OP_CPD_SUBD_IND:
@@ -1716,8 +1799,6 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_SUBB_IND:
-                break;
-              case OP_CMPB_IND:
                 break;
               case OP_SBCB_IND:
                 break;
