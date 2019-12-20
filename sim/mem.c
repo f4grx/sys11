@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "core.h"
+#include "log.h"
 
 static uint8_t ram_read(void *ctx, uint16_t off)
   {
@@ -23,7 +24,7 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
     struct hc11_mapping *cur;
     uint8_t ret;
 
-    printf("[%8ld] ", core->clocks); fflush(stdout);
+    log_msg(SYS_CORE, CORE_MEM, "[%8ld] ", core->clocks); fflush(stdout);
     //prio: fist IO, then internal mem [ram], then ext mem [maps]
     if(adr >= core->iobase && adr < (core->iobase + 0x40))
       {
@@ -32,7 +33,7 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
         if(reg->rdf != NULL)
           {
             ret = reg->rdf(reg->ctx, adr - core->iobase);
-            printf("READ  @ 0x%04X -> %02X [reg] rdf=%p\n", adr, ret, reg->rdf);
+            log_msg(SYS_CORE, CORE_MEM, "READ  @ 0x%04X -> %02X [reg] rdf=%p\n", adr, ret, reg->rdf);
             return ret;
           }
       }
@@ -41,7 +42,7 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
     if(adr >= core->rambase && adr < (core->rambase + 256))
       {
         ret = core->iram[adr - core->rambase];
-        printf("READ  @ 0x%04X -> %02X [iram]\n", adr, ret);
+        log_msg(SYS_CORE, CORE_MEM, "READ  @ 0x%04X -> %02X [iram]\n", adr, ret);
         return ret;
       }
 
@@ -51,14 +52,14 @@ uint8_t hc11_core_readb(struct hc11_core *core, uint16_t adr)
         if(adr >= cur->start && adr < (cur->start + cur->len))
           {
             ret = cur->rdf(cur->ctx, adr - cur->start);
-            printf("READ  @ 0x%04X -> %02X [xmem/%s]\n", adr, ret, cur->name);
+            log_msg(SYS_CORE, CORE_MEM, "READ  @ 0x%04X -> %02X [xmem/%s]\n", adr, ret, cur->name);
             return ret;
           }
         cur = cur->next;
       }
 
     //not io, not iram -> find adr in mappings
-    printf("READ  @ 0x%04X -> 0xFF [none]\n", adr);
+    log_msg(SYS_CORE, CORE_MEM, "READ  @ 0x%04X -> 0xFF [none]\n", adr);
     return 0xFF;
   }
 
@@ -67,14 +68,14 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
   {
     struct hc11_mapping *cur;
 
-    printf("[%8ld] ", core->clocks); fflush(stdout);
+    log_msg(SYS_CORE, CORE_MEM, "[%8ld] ", core->clocks); fflush(stdout);
     if(adr >= core->iobase && adr < core->iobase + 0x40)
       {
         //reading a reg
         struct hc11_io *reg = &core->io[adr - core->iobase];
         if(reg->wrf != NULL)
           {
-            printf("WRITE @ 0x%04X <- %02X [reg] wrf=%p\n", adr, val, reg->wrf);
+            log_msg(SYS_CORE, CORE_MEM, "WRITE @ 0x%04X <- %02X [reg] wrf=%p\n", adr, val, reg->wrf);
             reg->wrf(reg->ctx, adr - core->iobase, val);
             return;
           }
@@ -83,7 +84,7 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
     //not reading a reg. try iram
     if(adr >= core->rambase && adr < core->rambase + 256)
       {
-        printf("WRITE @ 0x%04X <- %02X [iram]\n", adr, val);
+        log_msg(SYS_CORE, CORE_MEM, "WRITE @ 0x%04X <- %02X [iram]\n", adr, val);
         core->iram[adr - core->rambase] = val;
         return;
       }
@@ -95,19 +96,19 @@ void hc11_core_writeb(struct hc11_core *core, uint16_t adr,
           {
             if(cur->wrf)
               {
-                printf("WRITE @ 0x%04X <- %02X [xmem/%s]\n", adr, val, cur->name);
+                log_msg(SYS_CORE, CORE_MEM, "WRITE @ 0x%04X <- %02X [xmem/%s]\n", adr, val, cur->name);
                 cur->wrf(cur->ctx, adr - cur->start, val);
               }
             else
               {
-                printf("WRITE @ 0x%04X <- %02X [ro/%s]\n", adr, val, cur->name);
+                log_msg(SYS_CORE, CORE_MEM, "WRITE @ 0x%04X <- %02X [ro/%s]\n", adr, val, cur->name);
               }
             return;
           }
         cur = cur->next;
       }
 
-    printf("WRITE @ 0x%04X <- %02X [none]\n", adr, val);
+    log_msg(SYS_CORE, CORE_MEM, "WRITE @ 0x%04X <- %02X [none]\n", adr, val);
   }
 
 void hc11_core_map(struct hc11_core *core, const char *name, uint16_t start,
@@ -156,7 +157,7 @@ void hc11_core_map_ram(struct hc11_core *core, const char *name, uint16_t start,
     uint8_t *ram;
     ram = malloc(count);
     memset(ram,0,count);
-    printf("Mapping %d bytes of RAM at address %04Xh\n", count, start);
+    log_msg(SYS_CORE, CORE_MEM, "Mapping %d bytes of RAM at address %04Xh\n", count, start);
     hc11_core_map(core, name, start, count, ram, ram_read, ram_write);
   }
 

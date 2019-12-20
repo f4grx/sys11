@@ -17,6 +17,7 @@
 #include <errno.h>
 
 #include "core.h"
+#include "log.h"
 
 enum
   {
@@ -54,13 +55,13 @@ static uint8_t sci_read(void *ctx, uint16_t off)
     ret = sci->regs[off];
     switch(off)
       {
-      case OFF_BAUD:  printf("SCI read BAUD -> %02X\n" , ret);  break;
-      case OFF_SCCR1: printf("SCI read SCCR1 -> %02X\n", ret); break;
-      case OFF_SCCR2: printf("SCI read SCCR2 -> %02X\n", ret); break;
-      case OFF_SCSR:  printf("SCI read SCSR -> %02X\n" , ret);  break;
+      case OFF_BAUD:  log_msg(SYS_SCI, 0, "SCI read BAUD -> %02X\n" , ret);  break;
+      case OFF_SCCR1: log_msg(SYS_SCI, 0, "SCI read SCCR1 -> %02X\n", ret); break;
+      case OFF_SCCR2: log_msg(SYS_SCI, 0, "SCI read SCCR2 -> %02X\n", ret); break;
+      case OFF_SCSR:  log_msg(SYS_SCI, 0, "SCI read SCSR -> %02X\n" , ret);  break;
       case OFF_SCDR:
         sci->regs[OFF_SCSR] &= ~SCSR_RDRF;
-        printf("SCI read SCDR -> %02X\n", ret);
+        log_msg(SYS_SCI, 0, "SCI read SCDR -> %02X\n", ret);
         break;
       }
     return ret;
@@ -73,14 +74,14 @@ static void sci_write(void *ctx, uint16_t off, uint8_t val)
     sci->regs[off] = val;
     switch(off)
       {
-      case OFF_BAUD:  printf("SCI write BAUD <- %02X\n" , val); break;
-      case OFF_SCCR1: printf("SCI write SCCR1 <- %02X\n", val); break;
-      case OFF_SCCR2: printf("SCI write SCCR2 <- %02X\n", val); break;
-      case OFF_SCSR:  printf("SCI write SCSR <- %02X\n" , val); break;
+      case OFF_BAUD:  log_msg(SYS_SCI, 0, "SCI write BAUD <- %02X\n" , val); break;
+      case OFF_SCCR1: log_msg(SYS_SCI, 0, "SCI write SCCR1 <- %02X\n", val); break;
+      case OFF_SCCR2: log_msg(SYS_SCI, 0, "SCI write SCCR2 <- %02X\n", val); break;
+      case OFF_SCSR:  log_msg(SYS_SCI, 0, "SCI write SCSR <- %02X\n" , val); break;
       case OFF_SCDR:
         sci->regs[OFF_SCSR] &= ~SCSR_TC;
         sci->regs[OFF_SCSR] &= ~SCSR_TDRE;
-        printf("SCI write SCDR <- %02X\n", val);
+        log_msg(SYS_SCI, 0, "SCI write SCDR <- %02X\n", val);
         break;
       }
   }
@@ -88,7 +89,7 @@ static void sci_write(void *ctx, uint16_t off, uint8_t val)
 static void sci_thread_sig(int num, siginfo_t *info, void *v)
   {
     struct hc11_sci *sci = info->si_value.sival_ptr;
-    printf("hc11_sci: thread signal caught\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: thread signal caught\n");
     sci->connected = false;
     sci->running   = false;
   }
@@ -108,7 +109,7 @@ static void* sci_thread(void *param)
 
     sci->running = true;
     sci->connected = false;
-    printf("hc11_sci: listen thread start (port %u)\n", sci->port);
+    log_msg(SYS_SCI, 0, "hc11_sci: listen thread start (port %u)\n", sci->port);
     sem_post(&sci->startstop);
 
     while(sci->running)
@@ -121,7 +122,7 @@ static void* sci_thread(void *param)
             perror("sci_accept()");
             break;
           }
-        printf("hc11_sci: client connected\n");
+        log_msg(SYS_SCI, 0, "hc11_sci: client connected\n");
         flags = fcntl(sci->client, F_GETFL, 0);
         if(flags == -1)
           {
@@ -140,13 +141,13 @@ static void* sci_thread(void *param)
             if(!(sci->regs[OFF_SCSR] & SCSR_TDRE))
               {
                 buf = sci->regs[OFF_SCDR];
-                printf("hc11_sci: transmit %02X\n", (int)(buf&0xFF));
+                log_msg(SYS_SCI, 0, "hc11_sci: transmit %02X\n", (int)(buf&0xFF));
                 ret = send(sci->client, &buf, 1, 0);
                 sci->regs[OFF_SCSR] |= SCSR_TC;
                 sci->regs[OFF_SCSR] |= SCSR_TDRE;
                 if(ret != 1)
                   {
-                    printf("hc11_sci: warning: transmit failed\n");
+                    log_msg(SYS_SCI, 0, "hc11_sci: warning: transmit failed\n");
                   }
               }
 
@@ -155,7 +156,7 @@ static void* sci_thread(void *param)
               {
 //                if(errno != EAGAIN)
 //                  {
-                    printf("zero ret\n");
+                    log_msg(SYS_SCI, 0, "zero ret\n");
                     sci->connected = false;
 //                  }
               }
@@ -163,7 +164,7 @@ static void* sci_thread(void *param)
               {
                 if(errno != EAGAIN)
                   {
-                    printf("neg ret\n");
+                    log_msg(SYS_SCI, 0, "neg ret\n");
                     sci->connected = false;
                   }
               }
@@ -171,22 +172,22 @@ static void* sci_thread(void *param)
               {
                 if(!(sci->regs[OFF_SCSR] & SCSR_RDRF))
                   {
-                    printf("sci: received a char %02X\n", (int)(buf&0xFF));
+                    log_msg(SYS_SCI, 0, "sci: received a char %02X\n", (int)(buf&0xFF));
                     sci->regs[OFF_SCDR] = buf;
                     sci->regs[OFF_SCSR] |= SCSR_RDRF;
                   }
                else
                  {
-                   printf("sci: warning: RX register already full, lost byte %02X\n", (int)(buf&0xFF));
+                   log_msg(SYS_SCI, 0, "sci: warning: RX register already full, lost byte %02X\n", (int)(buf&0xFF));
                  }
               }
           }
         sci->connected = false;
-        printf("hc11_sci: connection closed\n");
+        log_msg(SYS_SCI, 0, "hc11_sci: connection closed\n");
         close(sci->client);
       }
 
-    printf("hc11_sci: listen thread done\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: listen thread done\n");
     return NULL;
   }
 
@@ -197,7 +198,7 @@ struct hc11_sci* hc11_sci_init(struct hc11_core *core)
     int ret;
     int yes = 1;
 
-    printf("hc11_sci: starting\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: starting\n");
 
     sci = malloc(sizeof(struct hc11_sci));
     if(!sci)
@@ -247,7 +248,7 @@ struct hc11_sci* hc11_sci_init(struct hc11_core *core)
 
     pthread_create(&sci->thread, NULL, sci_thread, sci);
     sem_wait(&sci->startstop);
-    printf("hc11_sci: started\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: started\n");
     return sci;
 
 release:
@@ -262,14 +263,14 @@ int hc11_sci_close(struct hc11_sci *sci)
     void *ret;
     sigval_t val;
 
-    printf("hc11_sci: terminating...\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: terminating...\n");
     close(sci->client);
     close(sci->sock);
 
     val.sival_ptr = sci;
     pthread_sigqueue(sci->thread, SIGUSR1, val);
     pthread_join(sci->thread, &ret);
-    printf("hc11_sci: thread terminated\n");
+    log_msg(SYS_SCI, 0, "hc11_sci: thread terminated\n");
     free(sci);
     return 0;
   }

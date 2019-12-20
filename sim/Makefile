@@ -1,4 +1,4 @@
-OBJS=main.o gdbremote.o core.o mem.o sci.o
+OBJS=main.o log.o gdbremote.o core.o mem.o sci.o
 BIN=sim
 
 $(BIN): $(OBJS)
