@@ -247,7 +247,7 @@ struct hc11_sci* hc11_sci_init(struct hc11_core *core)
 
     pthread_create(&sci->thread, NULL, sci_thread, sci);
     sem_wait(&sci->startstop);
-    printf("hc11_sci: started (thread %lu)\n", sci->thread);
+    printf("hc11_sci: started\n");
     return sci;
 
 release:

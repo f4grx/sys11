@@ -1645,13 +1645,25 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BSET_IND:
+                printf("BSET_INY %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
+
               case OP_BCLR_IND:
+                printf("BCLR_INY %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
+
               case OP_BRSET_IND:
+                printf("BRSET_INY %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
+
               case OP_BRCLR_IND:
+                printf("BRCLR_INY %04X\n", core->operand);
+                core->state = STATE_RDMASK;
                 break;
+
               case OP_TSXY_INH:
                 break;
               case OP_TXYS_INH:
