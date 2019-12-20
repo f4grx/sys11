@@ -11,6 +11,9 @@ scmdbuf:
 	.space	SCMD_MAX+1 /* Storage for command line */
 scmdlen:
 	.byte	0
+scmdopts:
+	.byte	0
+	.equ	OPT_ECHO, 0x01
 
 	.text
 
@@ -29,7 +32,10 @@ shell_main:
 
 .Lcharloop:
 	jsr	serial_getchar
+	ldy	#scmdopts
+	brclr	0,Y #OPT_ECHO, .Lnoecho
 	jsr	serial_putchar /* echo */
+.Lnoecho:
 	cmpb	#0x0D
 	beq	.Lexec
 	ldaa	scmdlen
