@@ -34,28 +34,23 @@ strcmp:
 	ldx	*sp0
 	ldy	*sp1
 	clr	st0
-loop:
+.Lloop:
 	ldaa	0,X	/* A <- *str1 */
 	ldab	0,Y	/* B <- *str2  */
 	cba		/* compute/test *str1 - *str2 */
-	beq	.Ltestend
-	/* Both chars not equal. remember comparison */
-	tpa
-	staa	*st0
-
-.Ltestend:
+	bne	.Lend	/* Both chars not equal: Comparison is done. */
 	/* Both chars equal. test for end of string */
 	tsta		/* test all bits in *str1 */
-	beq	.Lendprev	/* They are zero -> end of str1 */
-	/* Not end of string. Try again with next chars */
+	beq	.Lendeq	/* They are zero -> end of str1 AND str2 - equality*/
+	/* Equality, but not end of string. Try again with next chars */
 	inx
 	iny
-	bra	.Lloop:
-.Lendprev:
+	bra	.Lloop
+.Lendeq:
 	/* End comparison, previous comparison result is valid */
-	ldaa	*st0
+	ldaa	#0x00 /* No Z, no N */
 	tap
 .Lend:
 	rts
-	.enfdunc strcmp
+	.endfunc
 
