@@ -51,6 +51,8 @@ shell_main:
 	staa	0,X
 	jsr	serial_crlf
 
+	/* Find command in list */
+
 	/* Just echo */
 	ldx	#scmdbuf
 	stx	*sp0
