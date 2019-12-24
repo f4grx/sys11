@@ -2,10 +2,18 @@
 	.include "serial.inc"
 
 	.equ SCMD_MAX, 80
+
+/*===========================================================================*/
 	.section .rodata
 sprompt:
 	.asciz "sys11>"
 
+scommands:
+	.asciz	"echo"
+	.word	shell_echo
+	.byte	0xFF	/* End of list */
+
+/*===========================================================================*/
 	.section .edata
 scmdbuf:
 	.space	SCMD_MAX+1 /* Storage for command line */
@@ -16,7 +24,16 @@ scmdopts:
 	.equ	OPT_ECHO, 0x01
 
 	.text
+/*===========================================================================*/
+	.func	shell_echo
+shell_echo:
+	ldx	#scommands
+	stx	*sp0
+	jsr	serial_puts
+	rts
+	.endfunc
 
+/*===========================================================================*/
 	.func	shell_main
 	.global shell_main
 shell_main:
@@ -48,11 +65,38 @@ shell_main:
 
 .Lexec:
 	clra
-	staa	0,X
-	jsr	serial_crlf
+	staa	0,X		/* Store a final zero */
+	jsr	serial_crlf	/* Skip current line */
+
+	/* TODO: put a zero after the command word, before params */
 
 	/* Find command in list */
+	ldx	#scommands
+	stx	*sp0		/* Init loop with pointer to first command */
+.Lnextcmd:
+	ldx	#scmdbuf
+	stx	*sp1
+	jsr	strcmp		/* Compare buffered command */
+	beq	.Lfound
+	jsr	strlen
+	addd	*sp0
+	addd	#3	/* skip final zero and function pointer */
+	std	*sp0
+	ldx	*sp0
+	ldaa	0,X
+	cmpa	#0xFF
+	beq	.Lcmdloop
+	bra	.Lnextcmd
 
+.Lfound:
+	jsr	strlen
+	addd	*sp0
+	addd	#1	/* skip final zero */
+	std	*sp0
+	ldx	*sp0
+	ldx	0,X	/* Get address stored right after the name */
+	jsr	0,X
+	
 	/* Just echo */
 	ldx	#scmdbuf
 	stx	*sp0

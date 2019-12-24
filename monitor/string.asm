@@ -1,3 +1,4 @@
+/*===========================================================================*/
 /* String manipulation functions */
 
 /* usual uint16_t strlen(char *sp0)
@@ -9,18 +10,19 @@
 	.global strlen
 strlen:
 	ldx	*sp0
-	clra
-	clrb		/* Clear D in 2 bytes instead of 3 using ldd */
+	ldy	#0
 .Lagain:
 	ldaa	0,X	/* Get pointed char */
 	beq	.Ldone	/* Pointed char zero: end of string */
 	inx		/* point at next char */
-	addd	#1	/* increment string length */
+	iny		/* increment string length */
 	bra	.Lagain	/* Continue with next char */
 .Ldone:
+	xgdy
 	rts
 	.endfunc
 
+/*===========================================================================*/
 /* usual strcmp(char *sp0, char *sp1)
  * Comparison information is returned via flags
  * Z set if both string are equal
@@ -33,7 +35,6 @@ strlen:
 strcmp:
 	ldx	*sp0
 	ldy	*sp1
-	clr	st0
 .Lloop:
 	ldaa	0,X	/* A <- *str1 */
 	ldab	0,Y	/* B <- *str2  */
@@ -41,15 +42,11 @@ strcmp:
 	bne	.Lend	/* Both chars not equal: Comparison is done. */
 	/* Both chars equal. test for end of string */
 	tsta		/* test all bits in *str1 */
-	beq	.Lendeq	/* They are zero -> end of str1 AND str2 - equality*/
+	beq	.Lend	/* They are zero -> end of str1 AND str2 - equality*/
 	/* Equality, but not end of string. Try again with next chars */
 	inx
 	iny
 	bra	.Lloop
-.Lendeq:
-	/* End comparison, previous comparison result is valid */
-	ldaa	#0x00 /* No Z, no N */
-	tap
 .Lend:
 	rts
 	.endfunc

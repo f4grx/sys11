@@ -4,6 +4,7 @@
 
 	.text
 
+/*===========================================================================*/
 	.func	serial_init
 	.global serial_init
 serial_init:
@@ -15,6 +16,7 @@ serial_init:
 	.endfunc
 
 
+/*===========================================================================*/
 /*
  * SERIAL_PUTCHAR
  * Input : Character in B
@@ -38,6 +40,7 @@ serial_crlf:
 	rts
 	.endfunc
 
+/*===========================================================================*/
 /*
  * SERIAL_PUTS
  * Input : String pointer in sp0
@@ -58,6 +61,7 @@ serial_puts:
 	rts
 	.endfunc
 
+/*===========================================================================*/
 /*
  * SERIAL_GETCHAR
  8 Get a serial char.
