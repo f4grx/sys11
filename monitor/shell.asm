@@ -7,6 +7,8 @@
 	.section .rodata
 sprompt:
 	.asciz "sys11>"
+son:	.asciz "ON"
+soff:	.asciz "OFF"
 
 scommands:
 	.asciz	"echo"
@@ -27,9 +29,18 @@ scmdopts:
 /*===========================================================================*/
 	.func	shell_echo
 shell_echo:
-	ldx	#scommands
+	ldaa	scmdopts
+	eora	#OPT_ECHO
+	beq	.Lnoecho2
+	ldx	#son
+	bra	.Ldisp
+.Lnoecho2:
+	ldx	#soff
+.Ldisp:
+	staa	scmdopts
 	stx	*sp0
 	jsr	serial_puts
+	jsr	serial_crlf
 	rts
 	.endfunc
 

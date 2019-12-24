@@ -1424,7 +1424,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BITA_IND :/*NZV*/ 
               case OP_BITA_DIR :
               case OP_BITA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d>>8) & core->busdat) & 0xFF;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "BITA_DIR_EXT_INX\n");
                 break;
 
               case OP_BITB_IMM : /*NZV*/
@@ -1434,7 +1438,11 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_BITB_IND :/*NZV*/ 
               case OP_BITB_DIR :
               case OP_BITB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d&0xFF) & core->busdat) & 0xFF;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "BITB_DIR_EXT_INX\n");
                 break;
 
               case OP_ANDA_IMM : /*NZV*/
@@ -1444,7 +1452,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ANDA_IND :/*NZV*/ 
               case OP_ANDA_DIR :
               case OP_ANDA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d>>8) & core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ANDA_DIR_EXT_INX\n");
                 break;
 
               case OP_ANDB_IMM : /*NZV*/
@@ -1454,7 +1467,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ANDB_IND :/*NZV*/ 
               case OP_ANDB_DIR :
               case OP_ANDB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d&0xFF) & core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ANDB_DIR_EXT_INX\n");
                 break;
 
               case OP_ORAA_IMM  : /*NZV*/
@@ -1464,7 +1482,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ORAA_IND : /*NZV*/
               case OP_ORAA_DIR :
               case OP_ORAA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d>>8) | core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ORAA_DIR_EXT_INX\n");
                 break;
 
               case OP_ORAB_IMM : /*NZV*/
@@ -1474,7 +1497,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ORAB_IND : /*NZV*/
               case OP_ORAB_DIR :
               case OP_ORAB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d&0xFF) | core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ORAB_DIR_EXT_INX\n");
                 break;
 
               case OP_EORA_IMM  : /*NZV*/
@@ -1484,7 +1512,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_EORA_IND : /*NZV*/
               case OP_EORA_DIR :
               case OP_EORA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d>>8) ^ core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "EORA_DIR_EXT_INX\n");
                 break;
 
               case OP_EORB_IMM : /*NZV*/
@@ -1494,7 +1527,12 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_EORB_IND :/*NZV*/
               case OP_EORB_DIR :
               case OP_EORB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                tmp = ((core->regs.d&0xFF) ^ core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "EORB_DIR_EXT_INX\n");
                 break;
 
               case OP_ADDA_IMM  : /*HNZVC*/
@@ -2017,37 +2055,85 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPD_SUBD_IND:
-                break;
-
-              case OP_ANDA_IND:
-                break;
-
-              case OP_ANDB_IND:
                 log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
-              case OP_ORAA_IND:
-                break;
-
-              case OP_ORAB_IND:
-                break;
-
-              case OP_EORA_IND:
-                break;
-
-              case OP_EORB_IND:
-                break;
-
               case OP_BITA_IND:
+                tmp = ((core->regs.d>>8) & core->busdat) & 0xFF;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "BITA_INY\n");
                 break;
 
               case OP_BITB_IND:
+                tmp = ((core->regs.d&0xFF) & core->busdat) & 0xFF;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "BITB_INY\n");
+                break;
+
+              case OP_ANDA_IND:
+                tmp = ((core->regs.d>>8) & core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ANDA_INY\n");
+                break;
+
+              case OP_ANDB_IND:
+                tmp = ((core->regs.d & 0xFF) & core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ANDB_INY\n");
+                break;
+
+              case OP_ORAA_IND:
+                tmp = ((core->regs.d>>8) | core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ORAA_INY\n");
+                break;
+
+              case OP_ORAB_IND:
+                tmp = ((core->regs.d & 0xFF) | core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "ORAB_INY\n");
+                break;
+
+              case OP_EORA_IND:
+                tmp = ((core->regs.d>>8) ^ core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "EORA_INY\n");
+                break;
+
+              case OP_EORB_IND:
+                tmp = ((core->regs.d & 0xFF) ^ core->busdat) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.V = 0;
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.Z = (tmp == 0);
+                log_msg(SYS_CORE, CORE_ERROR, "EORB_INY\n");
                 break;
 
               case OP_ADDA_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_ADDB_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_ADDD_IND:
@@ -2055,12 +2141,15 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_ADCA_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_ADCB_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_SUBA_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_SUBB_IND:
@@ -2068,6 +2157,7 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_SBCA_IND:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_SBCB_IND:
@@ -2182,11 +2272,13 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPXY_IMM: //prefix 18
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               case OP_CPXY_DIR: //prefix 18
               case OP_CPXY_IND:
               case OP_CPXY_EXT:
+                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
               default:
