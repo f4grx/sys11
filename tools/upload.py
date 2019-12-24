@@ -112,14 +112,14 @@ if args["binary"] == None:
 # Try opening the program to be bootloaded
 #
 
-f = open(args["binary"], "rb")
-if f == None:
-    print("Cannot open:",args["binary"])
-    sys.exit(1)
+try:
+    f = open(args["binary"], "rb")
+except FileNotFoundError:
     if args["binary2"] != None:
-        f = open(args["binary2"], "rb")
-        if f == None:
-            print("Cannot open:",args["binary2"])
+        try:
+            f = open(args["binary2"], "rb")
+        except FileNotFoundError:
+            print("Cannot open stage2 loader")
             sys.exit(1)
         
 f.seek(0, os.SEEK_END)
