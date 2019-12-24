@@ -142,33 +142,33 @@ static const uint8_t opmodes_CD[256] =
 //Define opcodes
 enum
   {
-    OP_TEST_INH  = 0x00,
-    OP_NOP_INH,
-    OP_IDIV_INH,
-    OP_FDIV_INH,
-    OP_LSRD_INH,
-    OP_ASLD_INH,
-    OP_TAP_INH,
-    OP_TPA_INH,
-    OP_INXY_INH,
-    OP_DEXY_INH,
-    OP_CLV_INH,
-    OP_SEV_INH,
-    OP_CLC_INH,
-    OP_SEC_INH,
-    OP_CLI_INH,
-    OP_SEI_INH,
+    OP00_TEST_INH  = 0x00,
+    OP01_NOP_INH,
+    OP02_IDIV_INH,
+    OP03_FDIV_INH,
+    OP04_LSRD_INH,
+    OP05_ASLD_INH,
+    OP06_TAP_INH,
+    OP07_TPA_INH,
+    OP08_INXY_INH,
+    OP09_DEXY_INH,
+    OP0A_CLV_INH,
+    OP0B_SEV_INH,
+    OP0C_CLC_INH,
+    OP0D_SEC_INH,
+    OP0E_CLI_INH,
+    OP0F_SEI_INH,
 
-    OP_SBA_INH   = 0x10,
-    OP_CBA_INH,
-    OP_BRSET_DIR,
-    OP_BRCLR_DIR,
-    OP_BSET_DIR,
-    OP_BCLR_DIR,
-    OP_TAB_INH,
-    OP_TBA_INH,
-    OP_PFX_18,
-    OP_DAA_INH,
+    OP10_SBA_INH   = 0x10,
+    OP11_CBA_INH,
+    OP12_BRSET_DIR,
+    OP13_BRCLR_DIR,
+    OP14_BSET_DIR,
+    OP15_BCLR_DIR,
+    OP16_TAB_INH,
+    OP17_TBA_INH,
+    OP18_PFX,
+    OP19_DAA_INH,
     OP_PFX_1A,
     OP_ABA_INH,
     OP_BSET_IND,
@@ -512,6 +512,7 @@ void hc11_core_clock(struct hc11_core *core)
           log_msg(SYS_CORE, CORE_INST, "----------------------------------------\n");
           core->busadr = core->regs.pc;
           core->busdat = hc11_core_readb(core,core->busadr);
+          core->pc_opcode = core->regs.pc;
           core->regs.pc = core->regs.pc + 1;
           core->operand = 0;         
           if(core->busdat == 0x18 || core->busdat == 0x1A || core->busdat == 0xCD)
@@ -578,7 +579,8 @@ void hc11_core_clock(struct hc11_core *core)
 
                 default:
                   log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined addressing mode %d!\n", core->addmode);
-  
+                  core->busadr  = VECTOR_ILLEGAL;
+                  core->state   = STATE_VECTORFETCH_H;
               }
             }
           break;
@@ -664,6 +666,8 @@ void hc11_core_clock(struct hc11_core *core)
 
               default:
                 log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined operand fetch mode %d!\n", core->addmode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
             }
           core->busadr = core->operand;
           if(core->state != STATE_EXECUTE)
@@ -693,7 +697,7 @@ void hc11_core_clock(struct hc11_core *core)
           core->busadr = core->regs.pc;
           core->op2 = hc11_core_readb(core,core->busadr) & 0xFF;
           core->regs.pc = core->regs.pc + 1;
-          if(core->opcode == OP_BRSET_DIR || core->opcode == OP_BRCLR_DIR ||
+          if(core->opcode == OP12_BRSET_DIR || core->opcode == OP13_BRCLR_DIR ||
              core->opcode == OP_BRSET_IND || core->opcode == OP_BRCLR_IND)
             {
               core->state = STATE_RDREL;
@@ -720,7 +724,7 @@ void hc11_core_clock(struct hc11_core *core)
               uint16_t tmp;
               int16_t  rel;
 
-              case OP_BSET_DIR:
+              case OP14_BSET_DIR:
               case OP_BSET_IND:
                 core->busadr = core->operand;
                 core->busdat = core->busdat | core->op2;
@@ -732,7 +736,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "BSET MASK %02X\n", core->op2);
                 break;
 
-              case OP_BCLR_DIR:
+              case OP15_BCLR_DIR:
               case OP_BCLR_IND:
                 core->busadr = core->operand;
                 core->busdat = core->busdat & (!core->op2);
@@ -744,7 +748,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "BCLR MASK %02X\n", core->op2);
                 break;
 
-              case OP_BRSET_DIR:
+              case OP12_BRSET_DIR:
               case OP_BRSET_IND:
                 tmp = (~(core->busdat) & core->op2) & 0xFF;
                 if(!tmp)
@@ -755,7 +759,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "BRSET MASK %02X REL %02X PC %04X\n", core->op2, core->op3, core->regs.pc);
                 break;
 
-              case OP_BRCLR_DIR:
+              case OP13_BRCLR_DIR:
               case OP_BRCLR_IND:
                 tmp = (core->busdat & core->op2) & 0xFF;
                 if(!tmp)
@@ -779,37 +783,40 @@ void hc11_core_clock(struct hc11_core *core)
             {
               uint16_t tmp,tmp2,tmp3;
               int16_t  rel;
-              case OP_TEST_INH :
+              case OP00_TEST_INH :
                 log_msg(SYS_CORE, CORE_INST, "TEST instruction not available in sim\n");
                 break;
 
-              case OP_NOP_INH  :
+              case OP01_NOP_INH  :
                 log_msg(SYS_CORE, CORE_INST, "NOP\n");
                 break;
 
-              case OP_IDIV_INH : /*ZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+              case OP02_IDIV_INH : /*ZVC*/
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_FDIV_INH : /*ZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+              case OP03_FDIV_INH : /*ZVC*/
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_MUL_INH   : /*C*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_TAP_INH  : /*SXHINZVC*/
+              case OP06_TAP_INH  : /*SXHINZVC*/
                 core->regs.ccr = core->regs.d >> 8;
                 log_msg(SYS_CORE, CORE_INST, "TAP\n");
                 break;
 
-              case OP_TPA_INH  :
+              case OP07_TPA_INH  :
                 core->regs.d = (core->regs.d & 0x00FF) | (core->regs.ccr << 8);
                 log_msg(SYS_CORE, CORE_INST, "TPA\n");
                 break;
 
-              case OP_TAB_INH   : /*NZV*/
+              case OP16_TAB_INH   : /*NZV*/
                 tmp = core->regs.d >> 8; //get A
                 core->regs.d = (core->regs.d & 0xFF00) | tmp;
                 core->regs.flags.N = tmp >> 7;
@@ -818,7 +825,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "TAB\n");
                 break;
 
-              case OP_TBA_INH   : /*NZV*/
+              case OP17_TBA_INH   : /*NZV*/
                 tmp = core->regs.d & 0xFF; //get B
                 core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
                 core->regs.flags.N = tmp >> 7;
@@ -827,32 +834,32 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "TBA\n");
                 break;
 
-              case OP_CLV_INH  : /*V*/
+              case OP0A_CLV_INH  : /*V*/
                 core->regs.flags.V = 0;
                 log_msg(SYS_CORE, CORE_INST, "CLV\n");
                 break;
 
-              case OP_SEV_INH  : /*V*/
+              case OP0B_SEV_INH  : /*V*/
                 core->regs.flags.V = 1;
                 log_msg(SYS_CORE, CORE_INST, "SEV\n");
                 break;
 
-              case OP_CLC_INH  : /*C*/
+              case OP0C_CLC_INH  : /*C*/
                 core->regs.flags.C = 0;
                 log_msg(SYS_CORE, CORE_INST, "CLC\n");
                 break;
 
-              case OP_SEC_INH  : /*C*/
+              case OP0D_SEC_INH  : /*C*/
                 core->regs.flags.C = 1;
                 log_msg(SYS_CORE, CORE_INST, "SEC\n");
                 break;
 
-              case OP_CLI_INH  : /*I*/
+              case OP0E_CLI_INH  : /*I*/
                 core->regs.flags.I = 0;
                 log_msg(SYS_CORE, CORE_INST, "CLI\n");
                 break;
 
-              case OP_SEI_INH  : /*I*/
+              case OP0F_SEI_INH  : /*I*/
                 core->regs.flags.I = 1;
                 log_msg(SYS_CORE, CORE_INST, "SEI\n");
                 break;
@@ -880,7 +887,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "ABA\n");
                 break;
 
-              case OP_SBA_INH   : /*NZVC*/
+              case OP10_SBA_INH   : /*NZVC*/
                 tmp  = core->regs.d >> 8;   //get A
                 tmp2 = core->regs.d & 0xFF; //get B
                 core->regs.d = (core->regs.d & 0x00FF) | ((tmp - tmp2) & 0xFF) << 8;
@@ -894,7 +901,7 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "SBA\n");
                 break;
 
-              case OP_CBA_INH   : /*NZVC*/
+              case OP11_CBA_INH   : /*NZVC*/
                 tmp  = core->regs.d >> 8;   //get A
                 tmp2 = core->regs.d & 0xFF; //get B
                 tmp3 = (tmp - tmp2) & 0xFF;
@@ -908,7 +915,9 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "CBA\n");
                 break;
 
-              case OP_DAA_INH   : /*NZC*/
+              case OP19_DAA_INH   : /*NZC*/
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
                 break;
 
@@ -971,51 +980,63 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_LSRA_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_LSRB_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_LSRD_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+              case OP04_LSRD_INH : /*NZVC*/
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASRA_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASRB_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASLA_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASLB_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_ASLD_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+              case OP05_ASLD_INH : /*NZVC*/
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_RORA_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_RORB_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROLA_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROLB_INH : /*NZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_NEGA_INH : /*NZVC*/
@@ -1121,13 +1142,13 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
 
-              case OP_INXY_INH : /*Z*/
+              case OP08_INXY_INH : /*Z*/
                 core->regs.x = core->regs.x + 1;
                 core->regs.flags.Z = (core->regs.x == 0);
                 log_msg(SYS_CORE, CORE_INST, "INX -> %04X\n", core->regs.x );
                 break;
 
-              case OP_DEXY_INH : /*Z*/
+              case OP09_DEXY_INH : /*Z*/
                 core->regs.x = core->regs.x - 1;
                 core->regs.flags.Z = (core->regs.x == 0);
                 log_msg(SYS_CORE, CORE_INST, "DEX -> %04X\n", core->regs.x );
@@ -1159,40 +1180,45 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_RTI_INH   : /*SXHINZVC*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_WAI_INH   :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_STOP_INH  :
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 log_msg(SYS_CORE, CORE_INST, "TODO stop the clock until an IRQ (SCI?) happens\n");
                 break;
 
               case OP_SWI_INH   :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
+              case OP12_BRSET_DIR :
               case OP_BRSET_IND :
-              case OP_BRSET_DIR :
                 log_msg(SYS_CORE, CORE_INST, "BRSET_DIR_IND %04X\n", core->operand);
                 core->state = STATE_RDMASK;
                 break;
 
+              case OP13_BRCLR_DIR :
               case OP_BRCLR_IND :
-              case OP_BRCLR_DIR :
                 log_msg(SYS_CORE, CORE_INST, "BRCLR_DIR_IND %04X\n", core->operand);
                 core->state = STATE_RDMASK;
                 break;
 
-              case OP_BSET_DIR  : /*NZV*/
+              case OP14_BSET_DIR  : /*NZV*/
               case OP_BSET_IND  :
                 log_msg(SYS_CORE, CORE_INST, "BSET_DIR_IND %04X\n", core->operand);
                 core->state = STATE_RDMASK;
                 break;
 
-              case OP_BCLR_DIR  : /*NZV*/
+              case OP15_BCLR_DIR  : /*NZV*/
               case OP_BCLR_IND  :
                 log_msg(SYS_CORE, CORE_INST, "BCLR_DIR_IND %04X\n", core->operand);
                 core->state = STATE_RDMASK;
@@ -1209,11 +1235,13 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BHI_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BLS_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BHS_REL  :
@@ -1290,19 +1318,23 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BGE_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BLT_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BGT_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BLE_REL  :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                break;
 
               case OP_BSR_REL  :
@@ -1341,27 +1373,32 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_LSR_EXT : /*NZVC*/
               case OP_LSR_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASR_EXT : /*NZVC*/
               case OP_ASR_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASL_EXT : /*NZVC*/
               case OP_ASL_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROL_EXT :/*NZVC*/
               case OP_ROL_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROR_EXT : /*NZVC*/
               case OP_ROR_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_DEC_EXT : /*NZV*/
@@ -1402,7 +1439,8 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_JMP_EXT :
               case OP_JMP_IND :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_CLR_EXT :/*NZVC*/
@@ -1542,7 +1580,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDA_IND : /*HNZVC*/
               case OP_ADDA_DIR :
               case OP_ADDA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADDB_IMM : /*HNZVC*/
@@ -1552,7 +1591,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDB_IND : /*HNZVC*/
               case OP_ADDB_DIR :
               case OP_ADDB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADCA_IMM  : /*HNZVC*/
@@ -1562,7 +1602,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADCA_IND : /*HNZVC*/
               case OP_ADCA_DIR :
               case OP_ADCA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADCB_IMM : /*HNZVC*/
@@ -1572,7 +1613,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADCB_IND : /*HNZVC*/
               case OP_ADCB_DIR :
               case OP_ADCB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SUBA_IMM : /*NZVC*/
@@ -1582,7 +1624,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SUBA_IND :/*NZVC*/
               case OP_SUBA_DIR :
               case OP_SUBA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SUBB_IMM : /*NZVC*/
@@ -1592,7 +1635,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SUBB_IND :/*NZVC*/
               case OP_SUBB_DIR :
               case OP_SUBB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SBCA_IMM : /*NZVC*/
@@ -1602,7 +1646,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SBCA_IND :/*NZVC*/
               case OP_SBCA_DIR :
               case OP_SBCA_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SBCB_IMM : /*NZVC*/
@@ -1612,7 +1657,8 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_SBCB_IND :/*NZVC*/
               case OP_SBCB_DIR :
               case OP_SBCB_EXT :
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
 /* All done below */
@@ -1860,7 +1906,8 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               default:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
             } //normal opcodes
           break;
 
@@ -1871,13 +1918,13 @@ void hc11_core_clock(struct hc11_core *core)
           switch(core->opcode)
             {
               uint16_t tmp;
-              case OP_INXY_INH : /*Z*/
+              case OP08_INXY_INH : /*Z*/
                 core->regs.y = core->regs.y + 1;
                 core->regs.flags.Z = (core->regs.y == 0);
                 log_msg(SYS_CORE, CORE_INST, "INY -> %04X\n", core->regs.y );
                 break;
 
-              case OP_DEXY_INH : /*Z*/
+              case OP09_DEXY_INH : /*Z*/
                 core->regs.y = core->regs.y - 1;
                 core->regs.flags.Z = (core->regs.y == 0);
                 log_msg(SYS_CORE, CORE_INST, "DEY -> %04X\n", core->regs.y );
@@ -1904,9 +1951,13 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_JMP_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_JSR_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_TSXY_INH:
@@ -1956,18 +2007,28 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_LSR_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASR_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ASL_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROR_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ROL_IND:
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_DEC_IND:
@@ -2055,7 +2116,8 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPD_SUBD_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_BITA_IND:
@@ -2129,39 +2191,48 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_ADDA_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADDB_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADDD_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADCA_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_ADCB_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SUBA_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SUBB_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SBCA_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_SBCB_IND:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_LDAA_IND:
@@ -2272,17 +2343,20 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPXY_IMM: //prefix 18
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_CPXY_DIR: //prefix 18
               case OP_CPXY_IND:
               case OP_CPXY_EXT:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               default:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_18!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
             }
             break;
 
@@ -2332,11 +2406,13 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPXY_IND: //prefix 1A
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_1A!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               default:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_1A!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
             }
             break;
 
@@ -2368,15 +2444,18 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_CPD_SUBD_IND: /*CPD*/
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_CD!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP_CPXY_IND: //prefix CD
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_CD!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
                 break;
 
               default:
-                log_msg(SYS_CORE, CORE_ERROR, "ERROR - undefined opcode %02X in EXECUTE_CD!\n", core->opcode);
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
             }
             break;
 
@@ -2427,16 +2506,8 @@ void hc11_core_clock(struct hc11_core *core)
             }
           core->state = STATE_FETCHOPCODE;
           break;
-      }//switch
-  }
 
-//run the clock until we are just ready to fetch the opcode
-void hc11_core_prep(struct hc11_core *core)
-  {
-    while(core->state != STATE_FETCHOPCODE)
-      {
-        hc11_core_clock(core);
-      }
+      }//switch
   }
 
 //run the clock until the current insn being fetched is executed
@@ -2444,8 +2515,19 @@ void hc11_core_step(struct hc11_core *core)
   {
     int i;
 
-    hc11_core_clock(core);
-    hc11_core_prep(core);
+    do
+      {
+        hc11_core_clock(core);
+        if(core->state == STATE_VECTORFETCH_H && core->busadr == VECTOR_ILLEGAL)
+          {
+            //unimplemented opcode
+            core->regs.pc = core->pc_opcode; //reset PC to start of failed instruction
+            core->status = STATUS_STOPPED;
+            return;
+          }
+      }
+    while(core->state != STATE_FETCHOPCODE);
+
 
     for(i=0;i<HC11_BKPT_NUM;i++)
       {

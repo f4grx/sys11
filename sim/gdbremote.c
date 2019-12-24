@@ -106,7 +106,7 @@ void gdbremote_monitor(struct gdbremote_t *gr)
     else if(!strncmp("reset", gr->rxbuf, strlen("reset")))
       {
         hc11_core_reset(gr->core);
-        hc11_core_prep (gr->core);
+        hc11_core_step (gr->core);
         gr->txlen = sprintf(gr->txbuf, "target was reset\n");
       }
   }
@@ -622,14 +622,14 @@ int gdbremote_close(struct gdbremote_t *gr)
     return 0;
   }
 
-int gdbremote_stopped(struct gdbremote_t *gr)
+int gdbremote_stopped(struct gdbremote_t *gr, uint8_t reason)
   {
     printf("gdbremote: core has stopped\n");
     if(gr->lastcommand != 'c' && gr->lastcommand != 's' && gr->lastcommand != 0x03)
       {
         return 0;
       }
-    gdbremote_txnotif(gr,"S02"); //this is a notification, there is no ack!
+    gdbremote_txnotif(gr,"S%02X", (int)(reason&0xFF)); //this is a notification, there is no ack!
     return 0;
   }
 

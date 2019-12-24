@@ -15,6 +15,9 @@
 #define GDBREMOTE_MAX_RX 1023
 #define GDBREMOTE_MAX_TX 1023
 
+#define GDBREMOTE_STOP_NORMAL 0x02
+#define GDBREMOTE_STOP_FAIL   0x05
+
 struct gdbremote_t
   {
     uint16_t port;
@@ -33,7 +36,7 @@ struct gdbremote_t
 
 int gdbremote_init(struct gdbremote_t *gr);
 int gdbremote_close(struct gdbremote_t *gr);
-int gdbremote_stopped(struct gdbremote_t *gr);
+int gdbremote_stopped(struct gdbremote_t *gr, uint8_t reason);
 
 #endif /* __gdb__h__ */
 

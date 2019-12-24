@@ -198,7 +198,9 @@ int main(int argc, char **argv)
             printf("status: %d -> %d\n", prev, core.status);
             if(core.status == STATUS_STOPPED && prev != -1)
               {
-                gdbremote_stopped(&remote);
+                gdbremote_stopped(&remote, (core.busadr == VECTOR_ILLEGAL) ?
+                                           GDBREMOTE_STOP_FAIL :
+                                           GDBREMOTE_STOP_NORMAL);
               }
             prev = core.status;
           }

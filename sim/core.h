@@ -120,6 +120,7 @@ struct hc11_core
     uint8_t              addmode;
     uint16_t             operand;
     uint8_t              op2,op3, pulsel;
+    uint16_t             pc_opcode;
   };
 
 void hc11_core_init(struct hc11_core *core);
@@ -143,7 +144,6 @@ void    hc11_core_writeb(struct hc11_core *core, uint16_t adr,
 void hc11_core_reset(struct hc11_core *core);
 void hc11_core_clock(struct hc11_core *core);
 void hc11_core_step (struct hc11_core *core);
-void hc11_core_prep (struct hc11_core *core);
 
 #endif /* __core__h__ */
 

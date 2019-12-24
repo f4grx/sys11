@@ -12,7 +12,7 @@ void log_init(void)
     int i;
     for(i=0;i<65536;i++)
       {
-        enables[i] = false;
+        enables[i] = true;
       }
   }
 
