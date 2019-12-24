@@ -10,6 +10,7 @@
 #include <semaphore.h>
 #include <signal.h>
 
+#include "log.h"
 #include "core.h"
 #include "sci.h"
 #include "gdbremote.h"
@@ -92,6 +93,8 @@ int main(int argc, char **argv)
     struct sigaction sa_mine;
     int val;
     int prev;
+
+    log_init();
 
     printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
 
