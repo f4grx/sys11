@@ -49,8 +49,9 @@ shell_echo:
 	.global shell_main
 shell_main:
 	clra
-	staa	scmdlen
-	staa	scmdbuf+SCMD_MAX /* Put a final zero */
+	staa	scmdlen			/* Clear command len */
+	staa	scmdopts		/* Clear shell options */
+	staa	scmdbuf+SCMD_MAX	/* Put a final zero */
 
 .Lcmdloop:
 	ldx	#sprompt
@@ -60,8 +61,9 @@ shell_main:
 
 .Lcharloop:
 	jsr	serial_getchar
-	ldy	#scmdopts
-	brclr	0,Y #OPT_ECHO, .Lnoecho
+	ldaa	scmdopts
+	bita	#OPT_ECHO
+	beq	.Lnoecho
 	jsr	serial_putchar /* echo */
 .Lnoecho:
 	cmpb	#0x0D
