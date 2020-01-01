@@ -1,0 +1,22 @@
+linker
+------
+the linker builds a binary image using object files and section placement information
+
+the linker script gives a list of segments and starting addresses
+usually text and edata addresses
+
+-build full section list (stored in temp file)
+-for each section,
+  - check each object input file in order
+    - copy section contents if needed to a temp file for this section.
+    - apply LOC relocations
+    - build list of global symbols
+then at the end
+-for each section,
+  - apply ABS relocations using extern/global references
+
+final pass: binary emission
+Several types of binary files:
+-raw binary image for flashing to monitor EPROM
+-loadable binary with segment information
+

@@ -1,3 +1,41 @@
+assembler
+=========
+
+algorithms
+----------
+
+each line is read one by one
+parse label, instruction opcode, operand.
+this can generate syntax errors
+if b[r][set|clr] : read bitmask, then label
+if short jump: compute offset, error if too large
+there are two passes, similar.
+if a label is declared, it is stored and associated with offset relative to beginning of current section
+if a label is used and was declared before, it is used for computing relative jumps
+if a label is used and was not declared, it is kept as zero and will be defined by next pass.
+after two passes all label adresses should be known.
+any unknown label is either
+an extern declared symbol: emit a relocation
+an undefined symbol: emit an error
+
+generated outputs: multiple binary files, one per section. bytes are appended to the sections as needed.
+final pass: build the final relocatable file structure.
+section list, then for each section: binary code and list of relocations.
+
+types of relocations:
+LOC8, LOC16:
+    Store offset relative to beginning of section in object file
+    Replace by absolute address of same offset relative to beginning of segment
+
+ABS8, ABS16
+    Store: Index of extern symbol that is used at this offset
+    Replace by absolute address of symbol defined globally in another file.
+
+relative jumps across files are not possible so REL8 is not a needed type.
+
+opcode list
+-----------
+
 inherent opcodes
 ABA ABX ABY ASLA ASLB ASLD ASRA ASRB CBA CLC CLI CLRA CLRB CLV COMA COMB DAA DES
 DEX DEY FDIV IDIV INCA INCB INS INX INY LSLA LSLB LSLD LSRA LSRB LSRD MUL NEGA
@@ -27,15 +65,15 @@ BCC BCS BEQ BGE BGT BHI BHS BLE BLO BLS BLT BMI BNE BPL BRA BRN BSR BVC BVS
 addressing modes parsing
 ------------------------
 
-I: #[0x]digits
-D: *[0x]address or *label
+I: #[0x|$]digits
+D: *[0x|$]address or *label
 
 (label must not start by digit)
 
-X: [0x]digits or label followed by ,X
-Y: [0x]digits or label followed by ,Y
+X: [0x|$]digits or label followed by ,X
+Y: [0x|$]digits or label followed by ,Y
 
-E: [0x]digits or label not followed by ,X or ,Y
+E: [0x|$]digits or label not followed by ,X or ,Y
 
 prefixes
 --------
