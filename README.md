@@ -89,7 +89,7 @@ What is already done
 * Schematic (includes errors)
 * I have some chips: 4x 68HC11A0, 1x 68HC11A1, 1x 68HC11E2 (thanks vince),
 some 74xx245, 573, 138, 00, 10, 27256, various 32Kx8 and 8Kx8 RAMs
-* Ordered a 2864 EEPROM from ebay
+* Ordered a 2864 EEPROM from ebay (received, meanwhile I found another one in a junkbox)
 * Bootstrap uploader in Python3.
 * Working hardware prototype on 10x16 perforated board
 * Clock, Reset, UART connection, power supply with decoupling
@@ -106,30 +106,34 @@ Summary: The system is validated on the soldered wirewrap euro board.
 What is being done right now
 ----------------------------
 * Writing a 68HC11 simulator integrated with gdb to debug the monitor.
-* Editing schematic to fix errors and match reality of prototype
-* Writing the monitor ROM including a RAM allocator
+* Writing the monitor ROM including a RAM allocator (SPI bus driver)
 
 What remains to be done
 -----------------------
+* Editing schematic to fix errors and match reality of prototype
 * Finish simulating all opcodes
 * Replace fifth LS245 registers with sth that allows open drain on RST and IRQs.
 * Determine next step for hardware. Secondary board with more RAM? EPROM programmer?
 * NVRAM SSD using these old bq4017 samples maxim generously offered me for free
   multiple years ago (Unfortunately this board will be a one-of-a-kind add-on
   unless you have these chips available or are able to find enough RAM chips)
-* Some kind of documentation storage using big EEPROMs (27C040) mapped in IO
+* Some kind of documentation storage using big EEPROMs (27C040/27C080) mapped in IO
   space using a 256-byte window. This would allow use as block storage. Same idea
   applies to the bq4017 nvrams.
 * I2C bus hardware
+* Design a smaller PCB that can fit in a smaller shielded box.
 
 Software roadmap
 ----------------
 * Bootloader for extended mode - DONE
 * Malloc - WIP, almost validated
 * Simulator - WIP
-* Basic shell to manipulate memory - STARTED
-* SPI and I2C drivers
+* Basic shell to manipulate memory - DONE
+* SPI bus driver - WIP
+* I2C bus driver
+* SPI and/or I2C EEPROM driver
 * Filesystem (RRSF, already half designed)
+* Volume mounting mechanism
 * ed-based text editor
 * Assembler
 * Self host the system
