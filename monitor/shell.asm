@@ -28,6 +28,7 @@ scmdparams:
 	.word	0	/* Pointer to first argument of command */
 
 	.text
+
 /*===========================================================================*/
 	.func	shell_echo
 shell_echo:
@@ -50,9 +51,10 @@ shell_echo:
 	.func	shell_main
 	.global shell_main
 shell_main:
+	ldaa	#OPT_ECHO
+	staa	scmdopts		/* Clear shell options */
 	clra
 	staa	scmdlen			/* Clear command len */
-	staa	scmdopts		/* Clear shell options */
 	staa	scmdbuf+SCMD_MAX	/* Put a final zero */
 
 .Lcmdloop:
@@ -106,26 +108,27 @@ shell_main:
 	ldx	#scommands
 	stx	*sp0		/* Init loop with pointer to first command */
 .Lnextcmd:
+	jsr	strlen
+	addd	*sp0
+	xgdx
+	inx			/* Skip final zero */
+	stx	st0		/* Store in temp for reuse when skipping to next cmd */
 	ldx	#scmdbuf
 	stx	*sp1
-	jsr	strcmp		/* Compare buffered command */
+	jsr	strcmp		/* Compare with buffered command */
 	beq	.Lfound
-	jsr	strlen
-	addd	*sp0
-	addd	#3	/* skip final zero and function pointer */
-	std	*sp0
-	ldx	*sp0
+	/* Typed command is not the current command */
+	ldx	*st0
+	inx
+	inx			/* skip function pointer */
+	stx	*sp0
 	ldaa	0,X
 	cmpa	#0xFF
-	beq	.Lcmdloop
-	bra	.Lnextcmd
+	beq	.Lcmdloop	/* Reached end of command list, nothing found, acq next cmd */
+	bra	.Lnextcmd	/* Compare cmd buffer with next command in list */
 
 .Lfound:
-	jsr	strlen
-	addd	*sp0
-	addd	#1	/* skip final zero */
-	std	*sp0
-	ldx	*sp0
+	ldx	*st0	/* st0 stored the pointer right after the cmd name */
 	ldx	0,X	/* Get address stored right after the name */
 	jsr	0,X
 	
