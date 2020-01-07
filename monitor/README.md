@@ -5,9 +5,6 @@ The monitor has several roles. It mainly provides routines to be used by user
 programs. It also manages the RAM and storage devices. It is really a very
 little kernel.
 
-The functions of the kernel are triggered by the SWI instruction. A function
-index has to be set in the A accumulator.
-
 Runtime environment
 -------------------
 Internal RAM AND Registers are both mapped at 0000h. Because of the access
@@ -60,32 +57,94 @@ Soft registers
 The HC11 definitely does not have enough registers for comfortable programming.
 We will increase the number of available registers by statically allocating some
 internal RAM addresses as static registers. For the moment 8 16-bit soft regs
-are allocated, sp0 to sp3 and st0 to st3. They can be anywhere in the RAM but
-it's a good idea to have them in page0 to avoid the use of extended addressing
-mode.
+are allocated, sp0 to sp3 and st0 to st3. They are allocated in page0 to allow
+access using the direct address mode, avoiding the extended mode.
 
-Calling functions with stack params
------------------------------------
-NOTE: This convention currently does not work because BSR/JSR pushes the return
-PC. We would need a frame pointer, using X as a copy of SP is very wasteful.
-Using Y additionnally wastes program space.
-
-Parameters are pushed right to left on the stack by the caller.
-Parameters are popped from the stack by the callee.
-X is usually used as a copy of SP to access parameters in indexed mode.
-Return value is in D.
-
-Any other register (X,Y,sr0-3) are assumed to be destroyed by the call. If a
-register has to be preserved across a call, it has to be saved on the stack.
-
-This is a kind of stdcall convention.
-
-Caling functions with registers
--------------------------------
-* Parameters in soft registers sp0..sp3, caller-saves (on the stack).
+Caling functions
+----------------
+* Parameters in soft registers sp0..sp3
+* Local vars in st0..st3
+* X,A/B/D,Y can be used for computations (Only A/B/D allows full arithmetics).
+* If any reg has to be preserved across a call, it has to be saved on the stack.
 * Return value in D
-* Any function can destroy any st0..st3 temp register without the need to save
-  them.
+
+Shell
+=====
+The shell reads commands on the HC11 SCI, and then recognizes and execute them.
+
+For the moment there is an echo command that can be used to switch local echo
+on/off.
+
+File System and File Storage
+============================
+A full uniform VFS like in Unix requires a root device or a RAMFS to define the
+mount points. To save this, storage devices are mounted as volumes, like DOS.
+However, unix-style paths are used to refer to files within volumes.
+
+The following rules apply
+* Absolute paths start with a /
+* Relative paths start with something else
+* The root directory / can not hold files, only mount points.
+* It is possible to use ls on the root dir, this is used to enumerate active
+mount points
+* The mount points have single character numeric ASCII identifiers that map
+directly to the volume ID.
+
+VFS state includes the following variables:
+* Current volume ID
+* Current path inside current volume (max 40 chars). Root dir is an empty
+string.
+
+Some filesystems do not support nested directories. In that case all files are
+directly stored in the root directory of the volume.
+
+Block devices
+-------------
+Block devices are registered at boot. They are identified by an integer.
+Devices are stored as a table of N pointers to a set of functions pointers:
+
+* OpenDevice - Mark an open flag to ensure exclusive access
+* CloseDevice - Release flag
+* CountBlocks - Returns number of blocks
+* ReadBlock - Does what it says
+* WriteBlock - Does what it says
+
+There is a ```block``` command that can list registered devices and dump them.
+
+FS types
+--------
+The only FS type used at the moment is a simplified version of RRSF, with
+identifier 0.
+Filesystems are stored as a table of N pointers to a set of function pointers:
+* OpenFile
+* CloseFile
+* Seek
+* Read
+* Write
+* OpenDir
+* GetNextDirEntry
+* DeleteCurEntry
+* RenameCurEntry
+* CloseDir
+
+Volumes
+-------
+Volumes can be registered dynamically using the mount command to bind together a
+block device and a filesystem type with some state.
+
+Volumes are stored in a table that holds the following info:
+* Pointer to block device functions
+* Pointer to FS functions
+* TODO storage for volume state (cur dir, etc)
+
+There is a set of commands to interacting with files in mounted volumes.
+* mount,umount
+* cd,ls,cat,mv,rm
+
+assembler
+=========
+The assembler is critical to sys11 self hosting. It requires storage for the
+source and binary files, but its main binary is stored in the monitor ROM.
 
 Position independent executable format
 ======================================
@@ -122,7 +181,7 @@ System calls made available to the user
 =======================================
 User programs can call the ROM using software IRQs.
 
-Parameters are pushed, function is stored in A, and SWI is executed.
+Parameters are set in sp0..sp3, function is stored in A, and SWI is executed.
 
 A  | Function  | Params                     | Retval in D
 ---+-----------+----------------------------+----------------
@@ -143,7 +202,6 @@ Built in peripherals
 *SPI
 *I2C
 
-
 malloc/free
 ===========
 The 32K RAM in 0100..7FFFh is managed as a heap.
@@ -153,7 +211,8 @@ An additional 8K may be available at 8000..9FFFh (total 40k).
 External memory at A000h..BFFFh can be a ROM extension or even more RAM
 (total 48k).
 
-Actually a few bytes are used in this RAM for the kernel.
+Actually a few bytes are used in this RAM for the kernel. For the moment this
+includes the current command line for the shell.
 
 Algorithm
 ---------
@@ -187,44 +246,6 @@ RTOS:
 * Add a task ID field in the header so all allocations of a killed task can be
 freed automatically
 
-VFS
-===
-If a SPI/I2C EEPROM with a RRSF is available it is mounted in /
-Else, nothing is mounted, we get an empty root dir where it is not possible to
-create any file.
-Registered Devices appear in the root as /dev-%d but they are not managed with
-any inode.
-
-open
-----
-* Try to find path: either device or file in mounted device
-* Allocate an open file
-* Call device functions with pointer to open file in D
-* When opening a dir mode must be read only
-
-close
------
-* Call close of device
-* Deallocate file entry
-
-read/write
-----------
-* check file access mode
-* call the device function for the file
-* When target is a directory, read behaves as readdir to enumerate childs
-(dest buf has to be big enough to hold filename, rights, owner and size)
-
-mount
------
-TODO
-
-umount
-------
-TODO
-
-register_dev
-------------
-TODO alloc device ID, bind file operations to a device id.
 
 exec
 ----
@@ -245,27 +266,6 @@ exec
 For the moment this is a simple execution but in the future we will support
 multiple tasks with code segment sharing.
 
-kernel variables
-----------------
-* 4 char devices
-* Struct for a device: 4 bytes name, then 4 pointers: open/close/read/write
-* Used for SCI and UARTS on external bus
-
-* 4 block devices
-* Struct for a device: 4 bytes name, then 4 pointers: open/close/bread/bwrite
-* Used for I2C and SPI
-
-* 4 mount points
-* Struct for mount point: 4 bytes mount point, 1 byte device
-
-* 2 bytes of DATA pointer
-* this is where the data segment of the executing program is stored
-* RTOS: save this in context switches
-
-* 8 opened files
-* Struct for file: 1 byte device, 1 byte mode, 2 bytes offset
-* RTOS: This will be made per-task
-
 kernel init
 -----------
 * Register sci as char device 0
@@ -274,17 +274,4 @@ kernel init
 * If that fails, start an internal emergency shell
 * Try to exec the shell process in file /shell
 
-shell
-=====
-If we had a lot of RAM, the shell would really be a task with a program image
-loaded from disk.
-
-In reality the shell will be the main kernel loop after all init is done. The
-shell program is stored inside the monitor ROM to avoid depending on any
-storage.
-
-assembler
-=========
-The assembler is critical to sys11 self hosting. It requires storage for the
-source and binary files, but its main binary is stored in the monitor ROM.
 
