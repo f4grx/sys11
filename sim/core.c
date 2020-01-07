@@ -1439,8 +1439,8 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_JMP_EXT :
               case OP_JMP_IND :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                core->regs.pc = core->operand;
+                log_msg(SYS_CORE, CORE_INST, "JMP_EXT_IND %04X\n", core->regs.pc);
                 break;
 
               case OP_CLR_EXT :/*NZVC*/
