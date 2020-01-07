@@ -24,6 +24,8 @@ scmdlen:
 scmdopts:
 	.byte	0
 	.equ	OPT_ECHO, 0x01
+scmdparams:
+	.word	0	/* Pointer to first argument of command */
 
 	.text
 /*===========================================================================*/
@@ -81,8 +83,25 @@ shell_main:
 	staa	0,X		/* Store a final zero */
 	jsr	serial_crlf	/* Skip current line */
 
-	/* TODO: put a zero after the command word, before params */
+	/* Put a zero after the command word, before params */
+	ldx	#0
+	stx	scmdparams	/* Initially, there are no cmd params */
+	ldx	#scmdbuf
+.Lsplit:
+	ldaa	0,X		/* Get command char */
+	cmpa	#0x20		/* If its a space, */
+	beq	.Lfoundspace	/* Then command name is complete */
+	cmpa	#0		/* If end of string, */
+	beq	.Lsplitdone	/* Finish parsing. No args were found */
+	inx			/* Prepare for next char */
+	bra	.Lsplit		/* Try again (next char) */
+.Lfoundspace:
+	clra			/* Load end of string */
+	staa	0,X		/* Where we had a space */
+	inx			/* And point to char right after space */
+	stx	scmdparams /* Is now a pointer to the first argument */
 
+.Lsplitdone:
 	/* Find command in list */
 	ldx	#scommands
 	stx	*sp0		/* Init loop with pointer to first command */
@@ -110,11 +129,6 @@ shell_main:
 	ldx	0,X	/* Get address stored right after the name */
 	jsr	0,X
 	
-	/* Just echo */
-	ldx	#scmdbuf
-	stx	*sp0
-	jsr	serial_puts
-	jsr	serial_crlf
 	bra	.Lcmdloop
 	rts
 	.endfunc
