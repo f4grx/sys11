@@ -1,0 +1,82 @@
+IOconn
+ 1 | SPICS1
+ 2 | SPICS2
+ 3 | SPICS3
+ 4 | SPICS4
+ 5 | SPICS5
+ 6 | SPICS6
+ 7 | SPICS7
+ 8 | SPICS8
+ 9 | GND
+10 | VCC
+11 | MISO
+12 | MOSI
+13 | SCLK
+14 | SDA
+15 | SCL
+16 | TXD
+17 | RXD
+18 | nIRQ
+19 | 
+20 | 
+
+BusConn
+ 1 | AD0
+ 2 | AD1
+ 3 | AD2
+ 4 | AD3
+ 5 | AD4
+ 6 | AD5
+ 7 | AD6
+ 8 | AD7
+ 9 | A8
+10 | A9
+11 | A10
+12 | A11
+13 | A12
+14 | A13
+15 | A14
+16 | A15
+17 | GND
+18 | E
+19 | GND
+20 | RW
+21 | nIRQ
+22 | nXIRQ
+23 | +5V
+24 | nRST
+25 | 
+
+DIN 41612 rack
+GND       |a 1 c|  GND
+5V        |  2  |  5V
+D0        |  3  |  D1
+D2        |  4  |  D3
+D4        |  5  |  D5
+D6        |  6  |  D7
+A0        |  7  |  GND
+A2        |  8  |  A1
+A4        |  9  |  A3
+A6        |  10 |  A5
+A8        |  11 |  A7
+A10       |  12 |  A9
+A12       |  13 |  A11
+A14       |  14 |  A13
+--        |  15 |  A15
+--        |  16 |  --
+(CM0) R/nW|  17 |  --
+(CM2) 5V  |  18 |  (CM1) 5V-mem (0V-IO)
+--        |  19 |  GND
+          |  20 |  E
+--        |  21 |  GND
+IRQ       |  22 |  nRST
+--        |  23 |  XIRQ
+--        |  24 |  --
+--        |  25 |  --
+GND       |  26 |  --
+          |  27 |
+          |  28 |
+16MHz     |  29 |  
+(-12V)    |  30 |  (12V)
+5V        |  31 |  5V
+GND       |  32 |  GND

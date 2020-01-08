@@ -1,0 +1,150 @@
+Keyboard with 40 keys (66 x 100 mm)
+
++-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+| !  ESC| @     | #     | $     | %     | ^     | &     | *     | (     | )  BSP|   SHIFT SYM
+|   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |   9   |   0   |   NONE
++-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+| Q   - | W   _ | E   + | R   = | T   [ | Y   ] | U   { | I   } | O   \ | P   | |   SHIFT SYM
+|   q   |   w   |   e   |   r   |   t   |   y   |   u   |   i   |   o   |   p   |   NONE
++-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+| CAPS  | A   ~ | S   ` | D  DEL| F     | G     | H   : | J   ; | K   " | L   ' |   SHIFT SYM
+| SHIFT |   a   |   s   |   d   |   f   |   g   |   h   |   j   |   k   |   l   |   NONE
++-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+|  CTL  |       | Z   , | X   . | C   / | V   < | B   > | N   ? | M     | LF    |   SHIFT SYM
+|  SYM  |  SPC  |   z   |   x   |   c   |   v   |   b   |   n   |   m   |   CR  |   NONE
++-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+
+scan in 5x8 mode with a pic/avr and emit ASCII
+SHIFT-SYM = CTL = control, generates 0x01..0x1F
+
+Full ascii possible except NUL and 1Ch..1Fh
+
+00  NUL     | 
+01  SOH     | CTRL-A
+02  STX     | CTRL-B
+03  ETX     | CTRL-C
+04  EOT     | CTRL-D
+05  ENQ     | CTRL-E
+06  ACK     | CTRL-F
+07  BEL     | CTRL-G
+08  BS      | SYM-0
+09  HT      | CTRL-I
+0A  LF      | SHIFT-ENTER
+0B  VT      | CTRL-K
+0C  FF      | CTRL-L
+0D  CR      | ENTER
+0E  SO      | CTRL-N
+0F  SI      | CTRL-O
+10  DLE     | CTRL-P
+11  DC1     | CTRL-Q
+12  DC2     | CTRL-R
+13  DC3     | CTRL-S
+14  DC4     | CTRL-T
+15  NAK     | CTRL-U
+16  SYN     | CTRL-V
+17  ETB     | CTRL-W
+18  CAN     | CTRL-X
+19  EM      | CTRL-Y
+1A  SUB     | CTRL-Z
+1B  ESC     | SYM-1
+1C  FS      | 
+1D  GS      | 
+1E  RS      | 
+1F  US      | 
+20  SP      | SPACE
+21  !       | SHIFT-1
+22  "       | SYM-K
+23  #       | SHIFT-3
+24  $       | SHIFT-4
+25  %       | SHIFT-5
+26  &       | SHIFT-7
+27  '       | SYM-L
+28  (       | SHIFT-9
+29  )       | SHIFT-0
+2A  *       | SHIFT-8
+2B  +       | SYM-E
+2C  ,       | SYM-Z
+2D  -       | SYM-Q
+2E  .       | SYM-X
+2F  /       | SYM-C
+30  0       | 0
+31  1       | 1
+32  2       | 2
+33  3       | 3
+34  4       | 4
+35  5       | 5
+36  6       | 6
+37  7       | 7
+38  8       | 8
+39  9       | 9
+3A  :       | SYM-H
+3B  ;       | SYM-J
+3C  <       | SYM-V
+3D  =       | SYM-R
+3E  >       | SYM-B
+3F  ?       | SYM-N
+40  @       | SHIFT-2
+41  A       | SHIFT-a
+42  B       | SHIFT-b
+43  C       | SHIFT-c
+44  D       | SHIFT-d
+45  E       | SHIFT-e
+46  F       | SHIFT-f
+47  G       | SHIFT-g
+48  H       | SHIFT-h
+49  I       | SHIFT-i
+4A  J       | SHIFT-j
+4B  K       | SHIFT-k
+4C  L       | SHIFT-l
+4D  M       | SHIFT-m
+4E  N       | SHIFT-n
+4F  O       | SHIFT-o
+50  P       | SHIFT-p
+51  Q       | SHIFT-q
+52  R       | SHIFT-r
+53  S       | SHIFT-s
+54  T       | SHIFT-t
+55  U       | SHIFT-u
+56  V       | SHIFT-v
+57  W       | SHIFT-w
+58  X       | SHIFT-x
+59  Y       | SHIFT-y
+5A  Z       | SHIFT-z
+5B  [       | SYM-T
+5C  \       | SYM-O
+5D  ]       | SYM-Y
+5E  ^       | SHIFT-6
+5F  _       | SYM-W
+60  `       | SYM-S
+61  a       | a
+62  b       | b
+63  c       | c
+64  d       | d
+65  e       | e
+66  f       | f
+67  g       | g
+68  h       | h
+69  i       | i
+6A  j       | j
+6B  k       | k
+6C  l       | l
+6D  m       | m
+6E  n       | n
+6F  o       | o
+70  p       | p
+71  q       | q
+72  r       | r
+73  s       | s
+74  t       | t
+75  u       | u
+76  v       | v
+77  w       | w
+78  x       | x
+79  y       | y
+7A  z       | z
+7B  {       | SYM-U
+7C  |       | SYM-P
+7D  }       | SYM-I
+7E  ~       | SYM-A
+7F      DEL | SYM-D
+
