@@ -135,7 +135,7 @@ shell_main:
 	/* Find command in list */
 	/* ==================== */
 
-	ldx	argv		/* Command name in argv[0] */
+	ldx	#scommands	/* Command List head */
 	stx	*sp0		/* Init loop with pointer to first command */
 .Lnextcmd:
 	jsr	strlen
@@ -143,8 +143,8 @@ shell_main:
 	xgdx
 	inx			/* Skip final zero */
 	stx	st0		/* Store in temp for reuse when skipping to next cmd */
-	ldx	#scmdbuf
-	stx	*sp1
+	ldx	argv
+	stx	*sp1		/* Command name in sp1 */
 	jsr	strcmp		/* Compare with buffered command */
 	beq	.Lfound
 	/* Typed command is not the current command */
