@@ -2,6 +2,9 @@
 	.include "serial.inc"
 
 	.equ SCMD_MAX, 80
+	.equ ARGV_MAX, 8
+
+	.equ OPT_ECHO, 0x01
 
 /*===========================================================================*/
 	.section .rodata
@@ -23,9 +26,10 @@ scmdlen:
 	.byte	0
 scmdopts:
 	.byte	0
-	.equ	OPT_ECHO, 0x01
-scmdparams:
-	.word	0	/* Pointer to first argument of command */
+argc:
+	.byte	0
+argv:
+	.space	ARGV_MAX * 2
 
 	.text
 
@@ -51,7 +55,7 @@ shell_echo:
 	.func	shell_main
 	.global shell_main
 shell_main:
-	ldaa	#OPT_ECHO
+	ldaa	#OPT_ECHO		/* Default to echo ON */
 	staa	scmdopts		/* Clear shell options */
 	clra
 	staa	scmdlen			/* Clear command len */
@@ -63,6 +67,10 @@ shell_main:
 	jsr	serial_puts
 	ldx	#scmdbuf
 
+	/* ==================== */
+	/* Acquire a line of text */
+	/* ==================== */
+
 .Lcharloop:
 	jsr	serial_getchar
 	ldaa	scmdopts
@@ -71,41 +79,63 @@ shell_main:
 	jsr	serial_putchar /* echo */
 .Lnoecho:
 	cmpb	#0x0D
-	beq	.Lexec
+	beq	.Lparse		/* User pressed return */
 	ldaa	scmdlen
 	cmpa	#SCMD_MAX
-	beq	.Lcharloop /* Overflow: dont store, but wait for LF */
+	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
 	stab	0,X
 	inc	scmdlen
 	inx
 	bra	.Lcharloop
 
-.Lexec:
+	/* ==================== */
+	/* Split command into arguments */
+	/* ==================== */
+
+.Lparse:
 	clra
+	staa	argc		/* No arguments parsed so far */
 	staa	0,X		/* Store a final zero */
 	jsr	serial_crlf	/* Skip current line */
 
-	/* Put a zero after the command word, before params */
-	ldx	#0
-	stx	scmdparams	/* Initially, there are no cmd params */
 	ldx	#scmdbuf
+	stx	*st0		/* st0 contains current string pointer */
+
+.Lparseloop:
+	ldab	argc		/* D now contains cur number of arguments */
+	lsld			/* D now contains offset in argv array to store arg N */
+	addd	#argv		/* D now contains destination pointer to store arg N */
+	ldx	*st0		/* X now contains pointer to beginning of arg N */
+	xgdx			/* Swap X and D because we can only store at X */
+	std	0,X		/* Store pointer to arg N */
+	ldab	argc		/* Prepare for storage of next arg (keep a clear) */
+	cmpb	#ARGV_MAX
+	beq	.Lsplitdone
+	inc	argc
+
+	/* Skip all chars until next space or end of string. */
+	ldx	*st0
 .Lsplit:
 	ldaa	0,X		/* Get command char */
 	cmpa	#0x20		/* If its a space, */
-	beq	.Lfoundspace	/* Then command name is complete */
+	beq	.Lfoundspace	/* Then current arg is complete */
 	cmpa	#0		/* If end of string, */
-	beq	.Lsplitdone	/* Finish parsing. No args were found */
+	beq	.Lsplitdone	/* Then finish parsing. */
 	inx			/* Prepare for next char */
 	bra	.Lsplit		/* Try again (next char) */
 .Lfoundspace:
 	clra			/* Load end of string */
 	staa	0,X		/* Where we had a space */
 	inx			/* And point to char right after space */
-	stx	scmdparams /* Is now a pointer to the first argument */
-
+	stx	*st0		/* Is now a pointer to the first argument */
+	bra	.Lparseloop
 .Lsplitdone:
+
+	/* ==================== */
 	/* Find command in list */
-	ldx	#scommands
+	/* ==================== */
+
+	ldx	argv		/* Command name in argv[0] */
 	stx	*sp0		/* Init loop with pointer to first command */
 .Lnextcmd:
 	jsr	strlen
