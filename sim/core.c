@@ -1015,8 +1015,10 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP05_ASLD_INH : /*NZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+		tmp = core->regs.d;
+		tmp = tmp << 1;
+		core->regs.d = tmp;
+                log_msg(SYS_CORE, CORE_INST, "LSLD/ASLD -> %02X\n", tmp);
                 break;
 
               case OP_RORA_INH : /*NZVC*/
