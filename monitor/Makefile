@@ -4,7 +4,7 @@ monitor_OBJS=start.o vectors.o softregs.o
 monitor_OBJS+=serial.o spibus.o
 #lib
 #monitor_OBJS+=mm.o
-monitor_OBJS+=string.o
+monitor_OBJS+=stdlib.o string.o
 #app
 monitor_OBJS+=shell.o
 

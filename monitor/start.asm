@@ -2,6 +2,7 @@
 	.include "ioport.inc"
 	.include "mm.inc"
 	.include "serial.inc"
+	.include "stdlib.inc"
 	.text
 
 	.extern shell_main
@@ -42,9 +43,23 @@ _start:
 	jsr	serial_puts
 
 	/* ==================== */
-	/* Simple test */
+	/* Simple tests */
 	/* ==================== */
 .if 0
+	/* Test for inttostr */
+	ldx	#adr1
+	stx	*sp0
+	ldx	#1234
+	stx	*sp1
+	ldx	#16
+	stx	*sp2
+	jsr	inttostr
+	jsr	serial_puts
+	jsr	serial_crlf
+.endif
+
+.if 0
+	/* Tests for malloc/free */
 	ldx	#10
 	stx	*sp0
 	jsr	mm_alloc
@@ -72,6 +87,11 @@ _start:
 	stx	*sp0
 	jsr	mm_free
 .endif
+
+	/* ==================== */
+	/* Start the command interpreter shell*/
+	/* ==================== */
+
 	jsr	shell_main
 
 	/* ==================== */
