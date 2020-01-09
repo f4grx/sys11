@@ -792,8 +792,21 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP02_IDIV_INH : /*ZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                core->regs.flags.V = 0;
+                log_msg(SYS_CORE, CORE_INST, "IDIV %04X / %04X\n", core->regs.x, core->regs.d);
+                if(core->regs.x == 0)
+                  {
+                    //divide by zero
+                    core->regs.x = 0xFFFF;
+                    core->regs.flags.C = 1;
+                  }
+                else
+                  {
+                    tmp = core->regs.x;
+                    core->regs.x = core->regs.d / tmp;
+                    core->regs.d = core->regs.d % tmp;
+                    core->regs.flags.Z = (core->regs.x == 0);
+                  }
                 break;
 
               case OP03_FDIV_INH : /*ZVC*/
@@ -873,31 +886,33 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ABA_INH   : /*HNZCV*/
                 tmp  = core->regs.d >> 8;   //get A
                 tmp2 = core->regs.d & 0xFF; //get B
-                core->regs.d = (core->regs.d & 0x00FF) | ((tmp + tmp2) & 0xFF) << 8;
-                core->regs.flags.N = (core->regs.d>>15);
-                core->regs.flags.Z = ((core->regs.d>>8) == 0);
-                core->regs.flags.H = ( ((tmp         >> 3)&0x01) &&  ((tmp2        >> 3)&0x01)) ||
-                                     ( ((tmp2        >> 3)&0x01) && !((core->regs.d>>12)&0x01)) ||
-                                     (!((core->regs.d>>12)&0x01) &&  ((tmp         >> 3)&0x01));
-                core->regs.flags.V = ( (tmp>>7) &&  (tmp2>>7) && !(core->regs.d>>15)) ||
-                                     (!(tmp>>7) && !(tmp2>>7) &&  (core->regs.d>>15));
-                core->regs.flags.C = ( (tmp         >> 7) &&  (tmp2        >> 7)) ||
-                                     ( (tmp2        >> 7) && !(core->regs.d>>15)) ||
-                                     (!(core->regs.d>>15) &&  (tmp         >> 7));
+                tmp3 = (tmp + tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3 << 8);
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
                 log_msg(SYS_CORE, CORE_INST, "ABA\n");
                 break;
 
               case OP10_SBA_INH   : /*NZVC*/
                 tmp  = core->regs.d >> 8;   //get A
                 tmp2 = core->regs.d & 0xFF; //get B
-                core->regs.d = (core->regs.d & 0x00FF) | ((tmp - tmp2) & 0xFF) << 8;
-                core->regs.flags.N = (core->regs.d>>15);
-                core->regs.flags.Z = ((core->regs.d>>8) == 0);
-                core->regs.flags.V = ( (tmp>>7) && !(tmp2>>7) && !(core->regs.d>>15)) ||
-                                     (!(tmp>>7) &&  (tmp2>>7) &&  (core->regs.d>>15));
-                core->regs.flags.C = (!(tmp         >> 7) &&  (tmp2        >> 7)) ||
-                                     ( (tmp2        >> 7) &&  (core->regs.d>>15)) ||
-                                     ( (core->regs.d>>15) && !(tmp         >> 7));
+                tmp3 = (tmp - tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3) << 8;
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.V = ( (tmp >> 7) && !(tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) &&  (tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = (!(tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) &&  (tmp3 >> 7)) ||
+                                     ( (tmp3 >> 7) && !(tmp  >> 7));
                 log_msg(SYS_CORE, CORE_INST, "SBA\n");
                 break;
 
@@ -1016,8 +1031,12 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP05_ASLD_INH : /*NZVC*/
 		tmp = core->regs.d;
-		tmp = tmp << 1;
-		core->regs.d = tmp;
+                core->regs.flags.C = (tmp >> 15); //set before shift
+                tmp = tmp << 1;
+                core->regs.d = tmp;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 15);
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
                 log_msg(SYS_CORE, CORE_INST, "LSLD/ASLD -> %02X\n", tmp);
                 break;
 
@@ -1582,8 +1601,21 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDA_IND : /*HNZVC*/
               case OP_ADDA_DIR :
               case OP_ADDA_EXT :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d >> 8;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3 << 8);
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADDA_IND_DIR_EXT\n");
                 break;
 
               case OP_ADDB_IMM : /*HNZVC*/
@@ -1593,8 +1625,21 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADDB_IND : /*HNZVC*/
               case OP_ADDB_DIR :
               case OP_ADDB_EXT :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d & 0xFF;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp3) & 0xFF;
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADDB_IND_DIR_EXT\n");
                 break;
 
               case OP_ADCA_IMM  : /*HNZVC*/
@@ -1604,8 +1649,21 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADCA_IND : /*HNZVC*/
               case OP_ADCA_DIR :
               case OP_ADCA_EXT :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d >> 8;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2 + core->regs.flags.C) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3 << 8);
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADCA_IND_DIR_EXT\n");
                 break;
 
               case OP_ADCB_IMM : /*HNZVC*/
@@ -1615,8 +1673,21 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ADCB_IND : /*HNZVC*/
               case OP_ADCB_DIR :
               case OP_ADCB_EXT :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d & 0xFF;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2 + core->regs.flags.C) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp3) & 0xFF;
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADCB_IND_DIR_EXT\n");
                 break;
 
               case OP_SUBA_IMM : /*NZVC*/
@@ -1919,7 +1990,7 @@ void hc11_core_clock(struct hc11_core *core)
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
           switch(core->opcode)
             {
-              uint16_t tmp;
+              uint16_t tmp,tmp2,tmp3;
               case OP08_INXY_INH : /*Z*/
                 core->regs.y = core->regs.y + 1;
                 core->regs.flags.Z = (core->regs.y == 0);
@@ -2193,28 +2264,88 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_ADDA_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d >> 8;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3 << 8);
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADDA_INY\n");
                 break;
 
               case OP_ADDB_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d & 0xFF;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp3) & 0xFF;
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADDB_IND_DIR_EXT\n");
                 break;
 
               case OP_ADDD_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d + core->busdat;
+                core->regs.flags.N = tmp >> 15;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.V = ( (core->regs.d>>15) &&  (core->busdat>>15) && !(tmp>>15)) ||
+                                     (!(core->regs.d>>15) && !(core->busdat>>15) &&  (tmp>>15));
+                core->regs.flags.C = ( (core->regs.d>>15) &&  (core->busdat>>15)) || 
+                                     ( (core->busdat>>15) && !(tmp         >>15)) ||
+                                     (!(tmp         >>15) &&  (core->regs.d>>15));
+                log_msg(SYS_CORE, CORE_INST, "ADDD_INY D=%04X M=%04X R=%04X\n", core->regs.d, core->busdat, tmp);
+                core->regs.d = tmp;
                 break;
 
               case OP_ADCA_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d >> 8;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2 + core->regs.flags.C) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp3 << 8);
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADCA_INY\n");
                 break;
 
               case OP_ADCB_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = core->regs.d & 0xFF;
+                tmp2 = core->busdat & 0xFF;
+                tmp3 = (tmp + tmp2 + core->regs.flags.C) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp3) & 0xFF;
+                core->regs.flags.N = (tmp3 >> 7);
+                core->regs.flags.Z = (tmp3 == 0);
+                core->regs.flags.H = ( ((tmp  >> 4)&0x01) &&  ((tmp2 >> 4)&0x01)) ||
+                                     ( ((tmp2 >> 4)&0x01) && !((tmp3 >> 4)&0x01)) ||
+                                     (!((tmp3 >> 4)&0x01) &&  ((tmp  >> 4)&0x01));
+                core->regs.flags.V = ( (tmp >> 7) &&  (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp >> 7) && !(tmp2 >> 7) &&  (tmp3 >> 7));
+                core->regs.flags.C = ( (tmp  >> 7) &&  (tmp2 >> 7)) ||
+                                     ( (tmp2 >> 7) && !(tmp3 >> 7)) ||
+                                     (!(tmp3 >> 7) &&  (tmp  >> 7));
+                log_msg(SYS_CORE, CORE_INST, "ADCB_IND_DIR_EXT\n");
                 break;
 
               case OP_SUBA_IND:
