@@ -1256,13 +1256,21 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BHI_REL  :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                if(!(core->regs.flags.C | core->regs.flags.Z))
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                log_msg(SYS_CORE, CORE_INST, "BHI -> C=%d Z=%d pc=%04X\n", core->regs.flags.C, core->regs.flags.Z, core->regs.pc);
                 break;
 
               case OP_BLS_REL  :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                if(core->regs.flags.C | core->regs.flags.Z)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                log_msg(SYS_CORE, CORE_INST, "BLS -> C=%d Z=%d pc=%04X\n", core->regs.flags.C, core->regs.flags.Z, core->regs.pc);
                 break;
 
               case OP_BHS_REL  :
@@ -1271,7 +1279,7 @@ void hc11_core_clock(struct hc11_core *core)
                   rel = (int16_t)((int8_t)core->operand);
                   core->regs.pc = core->regs.pc + rel;
                   }
-                log_msg(SYS_CORE, CORE_INST, "BHS/BCC -> C=%d pc=%04X\n" , core->regs.flags.C, core->regs.pc);
+                log_msg(SYS_CORE, CORE_INST, "BHS/BCC -> C=%d pc=%04X\n", core->regs.flags.C, core->regs.pc);
                 break;
 
               case OP_BLO_REL  :
@@ -1280,7 +1288,7 @@ void hc11_core_clock(struct hc11_core *core)
                   rel = (int16_t)((int8_t)core->operand);
                   core->regs.pc = core->regs.pc + rel;
                   }
-                log_msg(SYS_CORE, CORE_INST, "BLO/BCS -> C=%d pc=%04X\n" , core->regs.flags.C, core->regs.pc);
+                log_msg(SYS_CORE, CORE_INST, "BLO/BCS -> C=%d pc=%04X\n", core->regs.flags.C, core->regs.pc);
                 break;
 
               case OP_BNE_REL  :
