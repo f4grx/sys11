@@ -30,6 +30,20 @@ spi_setup:
 	.endfunc
 
 /*===========================================================================*/
+	.func	spi_select
+	.global	spi_select
+spi_select:
+	rts
+	.endfunc
+
+/*===========================================================================*/
+	.func	spi_deselect
+	.global	spi_deselect
+spi_deselect:
+	rts
+	.endfunc
+
+/*===========================================================================*/
 	.func	spi_transac
 	.global	spi_transac
 spi_transac:
