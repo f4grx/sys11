@@ -159,6 +159,7 @@ static void* sci_thread(void *param)
                     log_msg(SYS_SCI, 0, "zero ret\n");
                     sci->connected = false;
 //                  }
+                usleep(1000);
               }
             else if(ret < 0)
               {
@@ -167,6 +168,7 @@ static void* sci_thread(void *param)
                     log_msg(SYS_SCI, 0, "neg ret\n");
                     sci->connected = false;
                   }
+                usleep(1000);
               }
             else if(ret == 1)
               {
