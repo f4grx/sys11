@@ -20,7 +20,7 @@
 	.include "serial.inc"
 
 	.section .scommands
-	.asciz	"devlist"
+	.asciz	"lsdev"
 	.word	devlist
 
 	.equ	NUM_DEVS, 8	/* Max number of devices */
@@ -58,25 +58,20 @@ devlist:
 
 	/* Prepare dev enumeration */
 
-	ldx	#scratchpad
-	stx	*sp0
 	clra
-	ldab	#10
-	std	*sp2
-	staa	*st0
+	clrb
+	std	*st0
 .Ldodev:
-	clra
-	ldab	*st0
-	std	*sp1
-	jsr	inttostr
-	jsr	serial_puts
+	ldd	*st0
+	std	*sp0
+	jsr	serial_putdec
 	jsr	serial_crlf
 
 	/* Prepare for next device */
 
-	ldab	*st0
+	ldab	*(st0+1)
 	incb
-	stab	*st0
+	stab	*(st0+1)
 	cmpb	#NUM_DEVS
 	blo	.Ldodev		
 	rts

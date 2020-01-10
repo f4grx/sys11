@@ -2,6 +2,9 @@
 
 	.include "sci.inc"
 
+	.data
+numbuf:	.space 6	/* storage for 5 decimal digits + final zero */
+
 	.text
 
 /*===========================================================================*/
@@ -59,6 +62,21 @@ serial_puts:
 	bra	.Lnext
 .Ldone:
 	rts
+	.endfunc
+
+/*===========================================================================*/
+	.func	serial_putdec
+	.global	serial_putdec
+serial_putdec:
+	ldx	*sp0	/* Transfer argument to correct place */
+	stx	*sp1
+	clra
+	ldab	#10
+	std	*sp2
+	ldx	#numbuf
+	stx	*sp0
+	jsr	inttostr
+	jmp	serial_puts /* tail call */
 	.endfunc
 
 /*===========================================================================*/
