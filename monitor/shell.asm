@@ -1,4 +1,7 @@
 /* sys11 shell */
+/* TODO modularize this in two calls: readline and execute,
+ * so each can be reused. */
+
 	.include "serial.inc"
 
 	.equ SCMD_MAX, 80
@@ -84,12 +87,25 @@ shell_main:
 .Lnoecho:
 	cmpb	#0x0D
 	beq	.Lparse		/* User pressed return */
+	cmpb	#0x08
+	beq	.Lbackspace
+	cmpb	#0x7F
+	beq	.Lbackspace
 	ldaa	scmdlen
 	cmpa	#SCMD_MAX
 	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
 	stab	0,X
 	inc	scmdlen
 	inx
+	bra	.Lcharloop
+
+	/* If character is a backspace (0x08 or 0x7F), special handling */
+.Lbackspace:
+	ldaa	scmdlen
+	beq	.Lcharloop	/* Len already zero: do nothing */
+	deca
+	staa	scmdlen		/* Remove one char in buf */
+	dex
 	bra	.Lcharloop
 
 	/* ==================== */
