@@ -8,7 +8,7 @@ monitor_OBJS+=stdlib.o string.o
 #app
 monitor_OBJS+=shell.o
 
-monitor_LKR=../link/full.ld
+monitor_LKR=../link/monitor.ld
 
 TARGETS=monitor
 

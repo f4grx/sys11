@@ -13,9 +13,12 @@ sprompt:
 son:	.asciz "ON"
 soff:	.asciz "OFF"
 
+	.section .scommands
 scommands:
 	.asciz	"echo"
 	.word	shell_echo
+
+	.section .scommands_end
 	.byte	0xFF	/* End of list */
 
 /*===========================================================================*/
