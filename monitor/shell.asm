@@ -12,6 +12,7 @@ sprompt:
 	.asciz "sys11>"
 son:	.asciz "ON"
 soff:	.asciz "OFF"
+snocom:	.asciz "???"
 
 	.section .scommands
 scommands:
@@ -157,9 +158,29 @@ shell_main:
 	stx	*sp0
 	ldaa	0,X
 	cmpa	#0xFF
-	beq	.Lcmdloop	/* Reached end of command list, nothing found, acq next cmd */
+	beq	.Lnocommand	/* Reached end of command list, nothing found, acq next user cmd */
 	bra	.Lnextcmd	/* Compare cmd buffer with next command in list */
+.Lnocommand:
+	ldx	#snocom
+	stx	*sp0
+	jsr	serial_puts
+	jsr	serial_crlf
 
+.if 1
+	/* Debug: display arg count */
+	ldx	#scmdbuf
+	stx	*sp0
+	clra
+	ldab	argc
+	std	*sp1
+	ldx	#10
+	stx	*sp2
+	jsr	inttostr
+	jsr	serial_puts
+	jsr	serial_crlf
+.endif
+
+	bra	.Lcmdloop
 .Lfound:
 	ldx	*st0	/* st0 stored the pointer right after the cmd name */
 	ldx	0,X	/* Get address stored right after the name */
