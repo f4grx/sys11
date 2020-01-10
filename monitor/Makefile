@@ -7,6 +7,7 @@ monitor_OBJS+=serial.o spibus.o
 monitor_OBJS+=stdlib.o string.o
 #app
 monitor_OBJS+=shell.o
+monitor_OBJS+=as11.o
 
 monitor_LKR=../link/monitor.ld
 
