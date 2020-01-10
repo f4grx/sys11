@@ -12,7 +12,11 @@
 	.func	inttostr
 	.global	inttostr
 inttostr:
+	ldx	*st0
+	pshx
+
 	/* First step: Compute length of result */
+
 	clra
 	staa	*st0		/* Clear number of digits (single byte) */
 	ldd	*sp1		/* Load number once */
@@ -50,6 +54,12 @@ inttostr:
 	/* Done, return number of emitted chars in D */
 	clra
 	ldab	*st0
+
+	/* Restore temp */
+
+	pulx
+	stx	*st0
+
 	rts
 	.endfunc
 

@@ -23,6 +23,7 @@ SECTIONS
 
 	.rodata : {
 		*(.rodata)
+		*(.scommands_start)
 		*(.scommands)
 		*(.scommands_end)
 	} > rom

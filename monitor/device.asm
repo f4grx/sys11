@@ -17,6 +17,7 @@
  */
 
 	.include "softregs.inc"
+	.include "serial.inc"
 
 	.section .scommands
 	.asciz	"devlist"
@@ -24,9 +25,14 @@
 
 	.equ	NUM_DEVS, 8	/* Max number of devices */
 
-	.section edata
+	.section .rodata
+dhdr:	.asciz	"dev blocks name"
+
+	.section .edata
 devices:
 	.space NUM_DEVS * 2
+scratchpad:
+	.space 32
 
 	.text
 
@@ -43,6 +49,36 @@ device_init:
 	.func	devlist
 	.global devlist
 devlist:
+	/* Disp list header */
+
+	ldx	#dhdr
+	stx	*sp0
+	jsr	serial_puts
+	jsr	serial_crlf
+
+	/* Prepare dev enumeration */
+
+	ldx	#scratchpad
+	stx	*sp0
+	clra
+	ldab	#10
+	std	*sp2
+	staa	*st0
+.Ldodev:
+	clra
+	ldab	*st0
+	std	*sp1
+	jsr	inttostr
+	jsr	serial_puts
+	jsr	serial_crlf
+
+	/* Prepare for next device */
+
+	ldab	*st0
+	incb
+	stab	*st0
+	cmpb	#NUM_DEVS
+	blo	.Ldodev		
 	rts
 	.endfunc
 

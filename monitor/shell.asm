@@ -17,7 +17,7 @@ son:	.asciz "ON"
 soff:	.asciz "OFF"
 snocom:	.asciz "???"
 
-	.section .scommands
+	.section .scommands_start
 scommands:
 	.asciz	"echo"
 	.word	shell_echo
