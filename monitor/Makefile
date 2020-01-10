@@ -1,11 +1,13 @@
 #runtime
 monitor_OBJS=start.o vectors.o softregs.o
+#OS
+#monitor_OBJS+=mm.o
+monitor_OBJS+=device.o
 #drivers
 monitor_OBJS+=serial.o spibus.o
-#lib
-#monitor_OBJS+=mm.o
+#libs
 monitor_OBJS+=stdlib.o string.o
-#app
+#apps
 monitor_OBJS+=shell.o
 monitor_OBJS+=as11.o
 
