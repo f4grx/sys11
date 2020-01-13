@@ -1,0 +1,1366 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L keyboard:btn BTN1
+U 1 1 5E175C32
+P 1750 1600
+F 0 "BTN1" H 1928 1397 45  0000 L CNN
+F 1 "1" H 1928 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 1750 1600 45  0001 C CNN
+F 3 "" H 1750 1600 45  0001 C CNN
+	1    1750 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D1
+U 1 1 5E175EC5
+P 1450 1950
+F 0 "D1" H 1450 2142 40  0000 C CNN
+F 1 "DIODE" H 1450 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 1450 1950 60  0001 C CNN
+F 3 "" H 1450 1950 60  0001 C CNN
+	1    1450 1950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1650 1750 1550 1750
+Wire Wire Line
+	1550 1750 1550 2200
+Wire Wire Line
+	1550 2200 1650 2200
+Wire Wire Line
+	2550 1750 2450 1750
+Wire Wire Line
+	2450 1750 2450 2200
+Wire Wire Line
+	2450 2200 2550 2200
+Wire Wire Line
+	1250 1950 1250 2050
+Wire Wire Line
+	1250 2050 2150 2050
+Wire Wire Line
+	1250 2400 1250 2500
+Wire Wire Line
+	1250 2500 2150 2500
+Wire Wire Line
+	2150 2500 2150 2400
+Wire Wire Line
+	1650 2650 1550 2650
+Wire Wire Line
+	1550 2650 1550 3100
+Wire Wire Line
+	1550 3100 1650 3100
+Wire Wire Line
+	2550 2650 2450 2650
+Wire Wire Line
+	2450 2650 2450 3100
+Wire Wire Line
+	2450 3100 2550 3100
+Wire Wire Line
+	1250 2850 1250 2950
+Wire Wire Line
+	1250 2950 2150 2950
+Wire Wire Line
+	2150 2950 2150 2850
+Wire Wire Line
+	1250 3300 1250 3400
+Wire Wire Line
+	1250 3400 2150 3400
+Wire Wire Line
+	2150 3400 2150 3300
+Wire Wire Line
+	6050 2200 6150 2200
+Wire Wire Line
+	6950 1750 6950 2200
+Wire Wire Line
+	6950 2200 7050 2200
+Wire Wire Line
+	5750 2050 6650 2050
+Wire Wire Line
+	6650 2050 6650 1950
+Wire Wire Line
+	5750 2500 6650 2500
+Wire Wire Line
+	6650 2500 6650 2400
+Wire Wire Line
+	6150 2650 6050 2650
+Wire Wire Line
+	6050 2650 6050 3100
+Wire Wire Line
+	6050 3100 6150 3100
+Wire Wire Line
+	7050 2650 6950 2650
+Wire Wire Line
+	6950 2650 6950 3100
+Wire Wire Line
+	6950 3100 7050 3100
+Wire Wire Line
+	5750 2950 6650 2950
+Wire Wire Line
+	6650 2950 6650 2850
+Wire Wire Line
+	5750 3400 6650 3400
+Wire Wire Line
+	6650 3400 6650 3300
+Wire Wire Line
+	1550 2200 1550 2650
+Connection ~ 1550 2200
+Connection ~ 1550 2650
+Wire Wire Line
+	6150 1750 6050 1750
+Connection ~ 6050 1750
+Wire Wire Line
+	6050 1750 6050 2200
+Wire Wire Line
+	6050 2200 6050 2650
+Connection ~ 6050 2200
+Connection ~ 6050 2650
+Wire Wire Line
+	6950 2650 6950 2200
+Connection ~ 6950 2650
+Connection ~ 6950 2200
+Wire Wire Line
+	6950 1750 7050 1750
+Wire Wire Line
+	6950 1750 6950 1250
+Connection ~ 6950 1750
+Wire Wire Line
+	2450 2650 2450 2200
+Connection ~ 2450 2650
+Connection ~ 2450 2200
+Wire Wire Line
+	5750 1950 5750 2050
+Wire Wire Line
+	5750 2400 5750 2500
+Wire Wire Line
+	5750 2850 5750 2950
+Wire Wire Line
+	5750 3300 5750 3400
+Wire Wire Line
+	3450 1750 3350 1750
+Wire Wire Line
+	3350 1750 3350 2200
+Wire Wire Line
+	3350 2200 3450 2200
+Wire Wire Line
+	4350 1750 4250 1750
+Wire Wire Line
+	4250 1750 4250 2200
+Wire Wire Line
+	4250 2200 4350 2200
+Wire Wire Line
+	3050 1950 3050 2050
+Wire Wire Line
+	3050 2050 3950 2050
+Wire Wire Line
+	3950 2050 3950 1950
+Wire Wire Line
+	3050 2400 3050 2500
+Wire Wire Line
+	3050 2500 3950 2500
+Wire Wire Line
+	3950 2500 3950 2400
+Wire Wire Line
+	3450 2650 3350 2650
+Wire Wire Line
+	3350 2650 3350 3100
+Wire Wire Line
+	3350 3100 3450 3100
+Wire Wire Line
+	4350 2650 4250 2650
+Wire Wire Line
+	4250 2650 4250 3100
+Wire Wire Line
+	4250 3100 4350 3100
+Wire Wire Line
+	3050 2850 3050 2950
+Wire Wire Line
+	3050 2950 3950 2950
+Wire Wire Line
+	3950 2950 3950 2850
+Wire Wire Line
+	3050 3300 3050 3400
+Wire Wire Line
+	3050 3400 3950 3400
+Wire Wire Line
+	3950 3400 3950 3300
+Wire Wire Line
+	7850 2200 7950 2200
+Wire Wire Line
+	8750 1750 8750 2200
+Wire Wire Line
+	8750 2200 8850 2200
+Wire Wire Line
+	7550 2050 8450 2050
+Wire Wire Line
+	8450 2050 8450 1950
+Wire Wire Line
+	7550 2500 8450 2500
+Wire Wire Line
+	8450 2500 8450 2400
+Wire Wire Line
+	7950 2650 7850 2650
+Wire Wire Line
+	7850 2650 7850 3100
+Wire Wire Line
+	7850 3100 7950 3100
+Wire Wire Line
+	8850 2650 8750 2650
+Wire Wire Line
+	8750 2650 8750 3100
+Wire Wire Line
+	8750 3100 8850 3100
+Wire Wire Line
+	8450 2950 8450 2850
+Wire Wire Line
+	7550 3400 8450 3400
+Wire Wire Line
+	8450 3400 8450 3300
+Wire Wire Line
+	3350 2200 3350 2650
+Connection ~ 3350 2200
+Connection ~ 3350 2650
+Wire Wire Line
+	7950 1750 7850 1750
+Connection ~ 7850 1750
+Wire Wire Line
+	7850 1750 7850 2200
+Wire Wire Line
+	7850 2200 7850 2650
+Connection ~ 7850 2200
+Connection ~ 7850 2650
+Wire Wire Line
+	8750 2650 8750 2200
+Connection ~ 8750 2650
+Connection ~ 8750 2200
+Wire Wire Line
+	8750 1750 8850 1750
+Connection ~ 8750 1750
+Wire Wire Line
+	4250 2650 4250 2200
+Connection ~ 4250 2650
+Connection ~ 4250 2200
+Wire Wire Line
+	7550 1950 7550 2050
+Wire Wire Line
+	7550 2400 7550 2500
+Wire Wire Line
+	7550 2850 7550 2950
+Wire Wire Line
+	7550 3300 7550 3400
+Wire Wire Line
+	6650 3400 7550 3400
+Connection ~ 6650 3400
+Connection ~ 7550 3400
+Wire Wire Line
+	5250 1750 5150 1750
+Wire Wire Line
+	5150 1750 5150 2200
+Wire Wire Line
+	5150 2200 5250 2200
+Wire Wire Line
+	4850 1950 4850 2050
+Wire Wire Line
+	4850 2400 4850 2500
+Wire Wire Line
+	5250 2650 5150 2650
+Wire Wire Line
+	5150 2650 5150 3100
+Wire Wire Line
+	5150 3100 5250 3100
+Wire Wire Line
+	4850 2850 4850 2950
+Wire Wire Line
+	4850 3300 4850 3400
+Wire Wire Line
+	9650 2200 9750 2200
+Wire Wire Line
+	9750 2650 9650 2650
+Wire Wire Line
+	9650 2650 9650 3100
+Wire Wire Line
+	9650 3100 9750 3100
+Wire Wire Line
+	5150 2200 5150 2650
+Connection ~ 5150 2200
+Connection ~ 5150 2650
+Wire Wire Line
+	9750 1750 9650 1750
+Connection ~ 9650 1750
+Wire Wire Line
+	9650 1750 9650 2200
+Wire Wire Line
+	9650 2200 9650 2650
+Connection ~ 9650 2200
+Connection ~ 9650 2650
+Wire Wire Line
+	9350 1950 9350 2050
+Wire Wire Line
+	9350 2400 9350 2500
+Wire Wire Line
+	9350 2850 9350 2950
+Wire Wire Line
+	9350 3300 9350 3400
+Wire Wire Line
+	9350 3400 8450 3400
+Connection ~ 8450 3400
+Wire Wire Line
+	2150 2050 3050 2050
+Connection ~ 2150 2050
+Connection ~ 3050 2050
+Wire Wire Line
+	3050 2500 2150 2500
+Connection ~ 3050 2500
+Connection ~ 2150 2500
+Wire Wire Line
+	2150 2950 3050 2950
+Connection ~ 2150 2950
+Connection ~ 3050 2950
+Wire Wire Line
+	2150 3400 3050 3400
+Connection ~ 2150 3400
+Connection ~ 3050 3400
+Wire Wire Line
+	6650 2050 7550 2050
+Connection ~ 6650 2050
+Connection ~ 7550 2050
+Wire Wire Line
+	6650 2500 7550 2500
+Connection ~ 6650 2500
+Connection ~ 7550 2500
+Wire Wire Line
+	6650 2950 7550 2950
+Connection ~ 6650 2950
+Connection ~ 7550 2950
+Wire Wire Line
+	9350 2950 8450 2950
+Connection ~ 8450 2950
+Wire Wire Line
+	9350 2500 8450 2500
+Connection ~ 8450 2500
+Wire Wire Line
+	9350 2050 8450 2050
+Connection ~ 8450 2050
+Wire Wire Line
+	4850 3400 3950 3400
+Connection ~ 3950 3400
+Wire Wire Line
+	3950 2950 4850 2950
+Connection ~ 3950 2950
+Wire Wire Line
+	4850 2500 3950 2500
+Connection ~ 3950 2500
+Wire Wire Line
+	4850 2050 3950 2050
+Connection ~ 3950 2050
+Wire Wire Line
+	6050 1350 5150 1350
+Wire Wire Line
+	5150 1350 5150 1750
+Wire Wire Line
+	6050 1350 6050 1750
+Connection ~ 5150 1750
+Wire Wire Line
+	6950 1250 4250 1250
+Wire Wire Line
+	4250 1250 4250 1750
+Connection ~ 4250 1750
+Wire Wire Line
+	3350 1150 3350 1750
+Wire Wire Line
+	7850 1150 7850 1750
+Wire Wire Line
+	3350 1150 7850 1150
+Connection ~ 3350 1750
+Wire Wire Line
+	8750 1050 2450 1050
+Wire Wire Line
+	2450 1050 2450 1750
+Wire Wire Line
+	8750 1050 8750 1750
+Connection ~ 2450 1750
+Wire Wire Line
+	9650 950  1550 950 
+Wire Wire Line
+	1550 950  1550 1750
+Wire Wire Line
+	9650 950  9650 1750
+Connection ~ 1550 1750
+Text Label 5450 950  0    50   ~ 0
+ROW1
+Text Label 5450 1050 0    50   ~ 0
+ROW2
+Text Label 5450 1150 0    50   ~ 0
+ROW3
+Text Label 5450 1250 0    50   ~ 0
+ROW4
+Text Label 5450 1350 0    50   ~ 0
+ROW5
+Wire Wire Line
+	1250 2050 1150 2050
+Connection ~ 1250 2050
+Wire Wire Line
+	1250 2500 1150 2500
+Connection ~ 1250 2500
+Text Label 1150 2050 2    50   ~ 0
+COL1
+Text Label 1150 2500 2    50   ~ 0
+COL2
+Wire Wire Line
+	1250 2950 1150 2950
+Connection ~ 1250 2950
+Wire Wire Line
+	1150 3400 1250 3400
+Connection ~ 1250 3400
+Text Label 1150 2950 2    50   ~ 0
+COL3
+Text Label 1150 3400 2    50   ~ 0
+COL4
+Wire Wire Line
+	9350 2050 10200 2050
+Connection ~ 9350 2050
+Wire Wire Line
+	10200 2500 9350 2500
+Connection ~ 9350 2500
+Wire Wire Line
+	10200 2950 9350 2950
+Connection ~ 9350 2950
+Wire Wire Line
+	10200 3400 9350 3400
+Connection ~ 9350 3400
+Text Label 10200 2050 0    50   ~ 0
+COL5
+Text Label 10200 2500 0    50   ~ 0
+COL6
+Text Label 10200 2950 0    50   ~ 0
+COL7
+Text Label 10200 3400 0    50   ~ 0
+COL8
+$Comp
+L keyboard:btn BTN5
+U 1 1 5E308034
+P 2650 1600
+F 0 "BTN5" H 2828 1397 45  0000 L CNN
+F 1 "2" H 2828 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 2650 1600 45  0001 C CNN
+F 3 "" H 2650 1600 45  0001 C CNN
+	1    2650 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN9
+U 1 1 5E30829D
+P 3550 1600
+F 0 "BTN9" H 3728 1397 45  0000 L CNN
+F 1 "3" H 3728 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 3550 1600 45  0001 C CNN
+F 3 "" H 3550 1600 45  0001 C CNN
+	1    3550 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN13
+U 1 1 5E308551
+P 4450 1600
+F 0 "BTN13" H 4628 1397 45  0000 L CNN
+F 1 "4" H 4628 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 4450 1600 45  0001 C CNN
+F 3 "" H 4450 1600 45  0001 C CNN
+	1    4450 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN2
+U 1 1 5E308897
+P 1750 2050
+F 0 "BTN2" H 1928 1847 45  0000 L CNN
+F 1 "Q" H 1928 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 1750 2050 45  0001 C CNN
+F 3 "" H 1750 2050 45  0001 C CNN
+	1    1750 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN6
+U 1 1 5E308B5D
+P 2650 2050
+F 0 "BTN6" H 2828 1847 45  0000 L CNN
+F 1 "W" H 2828 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 2650 2050 45  0001 C CNN
+F 3 "" H 2650 2050 45  0001 C CNN
+	1    2650 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN10
+U 1 1 5E308DBE
+P 3550 2050
+F 0 "BTN10" H 3728 1847 45  0000 L CNN
+F 1 "E" H 3728 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 3550 2050 45  0001 C CNN
+F 3 "" H 3550 2050 45  0001 C CNN
+	1    3550 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN14
+U 1 1 5E309084
+P 4450 2050
+F 0 "BTN14" H 4628 1847 45  0000 L CNN
+F 1 "R" H 4628 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 4450 2050 45  0001 C CNN
+F 3 "" H 4450 2050 45  0001 C CNN
+	1    4450 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN4
+U 1 1 5E30A31D
+P 1750 2950
+F 0 "BTN4" H 1928 2747 45  0000 L CNN
+F 1 "SHIFT" H 1928 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 1750 2950 45  0001 C CNN
+F 3 "" H 1750 2950 45  0001 C CNN
+	1    1750 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN8
+U 1 1 5E30A7B0
+P 2650 2950
+F 0 "BTN8" H 2828 2747 45  0000 L CNN
+F 1 "SYM" H 2828 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 2650 2950 45  0001 C CNN
+F 3 "" H 2650 2950 45  0001 C CNN
+	1    2650 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN12
+U 1 1 5E30ACA0
+P 3550 2950
+F 0 "BTN12" H 3728 2747 45  0000 L CNN
+F 1 "Z" H 3728 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 3550 2950 45  0001 C CNN
+F 3 "" H 3550 2950 45  0001 C CNN
+	1    3550 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN16
+U 1 1 5E30B064
+P 4450 2950
+F 0 "BTN16" H 4628 2747 45  0000 L CNN
+F 1 "X" H 4628 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 4450 2950 45  0001 C CNN
+F 3 "" H 4450 2950 45  0001 C CNN
+	1    4450 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN20
+U 1 1 5E30B457
+P 5350 2950
+F 0 "BTN20" H 5528 2747 45  0000 L CNN
+F 1 "C" H 5528 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 5350 2950 45  0001 C CNN
+F 3 "" H 5350 2950 45  0001 C CNN
+	1    5350 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN18
+U 1 1 5E30BDD2
+P 5350 2050
+F 0 "BTN18" H 5528 1847 45  0000 L CNN
+F 1 "T" H 5528 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 5350 2050 45  0001 C CNN
+F 3 "" H 5350 2050 45  0001 C CNN
+	1    5350 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN17
+U 1 1 5E30C2DA
+P 5350 1600
+F 0 "BTN17" H 5528 1397 45  0000 L CNN
+F 1 "5" H 5528 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 5350 1600 45  0001 C CNN
+F 3 "" H 5350 1600 45  0001 C CNN
+	1    5350 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN21
+U 1 1 5E30DEDD
+P 6250 1600
+F 0 "BTN21" H 6428 1397 45  0000 L CNN
+F 1 "6" H 6428 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 6250 1600 45  0001 C CNN
+F 3 "" H 6250 1600 45  0001 C CNN
+	1    6250 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN22
+U 1 1 5E30E495
+P 6250 2050
+F 0 "BTN22" H 6428 1847 45  0000 L CNN
+F 1 "Y" H 6428 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 6250 2050 45  0001 C CNN
+F 3 "" H 6250 2050 45  0001 C CNN
+	1    6250 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN23
+U 1 1 5E30E99E
+P 6250 2500
+F 0 "BTN23" H 6428 2297 45  0000 L CNN
+F 1 "H" H 6428 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 6250 2500 45  0001 C CNN
+F 3 "" H 6250 2500 45  0001 C CNN
+	1    6250 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN24
+U 1 1 5E30EE73
+P 6250 2950
+F 0 "BTN24" H 6428 2747 45  0000 L CNN
+F 1 "V" H 6428 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 6250 2950 45  0001 C CNN
+F 3 "" H 6250 2950 45  0001 C CNN
+	1    6250 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN25
+U 1 1 5E30F363
+P 7150 1600
+F 0 "BTN25" H 7328 1397 45  0000 L CNN
+F 1 "7" H 7328 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 7150 1600 45  0001 C CNN
+F 3 "" H 7150 1600 45  0001 C CNN
+	1    7150 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN26
+U 1 1 5E30F8BA
+P 7150 2050
+F 0 "BTN26" H 7328 1847 45  0000 L CNN
+F 1 "U" H 7328 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 7150 2050 45  0001 C CNN
+F 3 "" H 7150 2050 45  0001 C CNN
+	1    7150 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN27
+U 1 1 5E30FD41
+P 7150 2500
+F 0 "BTN27" H 7328 2297 45  0000 L CNN
+F 1 "J" H 7328 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 7150 2500 45  0001 C CNN
+F 3 "" H 7150 2500 45  0001 C CNN
+	1    7150 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN28
+U 1 1 5E310262
+P 7150 2950
+F 0 "BTN28" H 7328 2747 45  0000 L CNN
+F 1 "B" H 7328 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 7150 2950 45  0001 C CNN
+F 3 "" H 7150 2950 45  0001 C CNN
+	1    7150 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN29
+U 1 1 5E31073D
+P 8050 1600
+F 0 "BTN29" H 8228 1397 45  0000 L CNN
+F 1 "8" H 8228 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8050 1600 45  0001 C CNN
+F 3 "" H 8050 1600 45  0001 C CNN
+	1    8050 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN30
+U 1 1 5E310D89
+P 8050 2050
+F 0 "BTN30" H 8228 1847 45  0000 L CNN
+F 1 "I" H 8228 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8050 2050 45  0001 C CNN
+F 3 "" H 8050 2050 45  0001 C CNN
+	1    8050 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN31
+U 1 1 5E31121F
+P 8050 2500
+F 0 "BTN31" H 8228 2297 45  0000 L CNN
+F 1 "K" H 8228 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8050 2500 45  0001 C CNN
+F 3 "" H 8050 2500 45  0001 C CNN
+	1    8050 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN32
+U 1 1 5E31452D
+P 8050 2950
+F 0 "BTN32" H 8228 2747 45  0000 L CNN
+F 1 "N" H 8228 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8050 2950 45  0001 C CNN
+F 3 "" H 8050 2950 45  0001 C CNN
+	1    8050 2950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7550 2950 8450 2950
+$Comp
+L keyboard:btn BTN36
+U 1 1 5E3153E9
+P 8950 2950
+F 0 "BTN36" H 9128 2747 45  0000 L CNN
+F 1 "btn" H 9128 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8950 2950 45  0001 C CNN
+F 3 "" H 8950 2950 45  0001 C CNN
+	1    8950 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN35
+U 1 1 5E3157C7
+P 8950 2500
+F 0 "BTN35" H 9128 2297 45  0000 L CNN
+F 1 "L" H 9128 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8950 2500 45  0001 C CNN
+F 3 "" H 8950 2500 45  0001 C CNN
+	1    8950 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN34
+U 1 1 5E315C1E
+P 8950 2050
+F 0 "BTN34" H 9128 1847 45  0000 L CNN
+F 1 "o" H 9128 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8950 2050 45  0001 C CNN
+F 3 "" H 8950 2050 45  0001 C CNN
+	1    8950 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN33
+U 1 1 5E316006
+P 8950 1600
+F 0 "BTN33" H 9128 1397 45  0000 L CNN
+F 1 "9" H 9128 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 8950 1600 45  0001 C CNN
+F 3 "" H 8950 1600 45  0001 C CNN
+	1    8950 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN40
+U 1 1 5E316391
+P 9850 2950
+F 0 "BTN40" H 10028 2747 45  0000 L CNN
+F 1 "SPC" H 10028 2663 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 9850 2950 45  0001 C CNN
+F 3 "" H 9850 2950 45  0001 C CNN
+	1    9850 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN39
+U 1 1 5E31676F
+P 9850 2500
+F 0 "BTN39" H 10028 2297 45  0000 L CNN
+F 1 "RET" H 10028 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 9850 2500 45  0001 C CNN
+F 3 "" H 9850 2500 45  0001 C CNN
+	1    9850 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN38
+U 1 1 5E316B44
+P 9850 2050
+F 0 "BTN38" H 10028 1847 45  0000 L CNN
+F 1 "P" H 10028 1763 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 9850 2050 45  0001 C CNN
+F 3 "" H 9850 2050 45  0001 C CNN
+	1    9850 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN37
+U 1 1 5E316F36
+P 9850 1600
+F 0 "BTN37" H 10028 1397 45  0000 L CNN
+F 1 "0" H 10028 1313 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 9850 1600 45  0001 C CNN
+F 3 "" H 9850 1600 45  0001 C CNN
+	1    9850 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D2
+U 1 1 5E31C818
+P 1450 2400
+F 0 "D2" H 1450 2592 40  0000 C CNN
+F 1 "DIODE" H 1450 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 1450 2400 60  0001 C CNN
+F 3 "" H 1450 2400 60  0001 C CNN
+	1    1450 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D3
+U 1 1 5E31CD80
+P 1450 2850
+F 0 "D3" H 1450 3042 40  0000 C CNN
+F 1 "DIODE" H 1450 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 1450 2850 60  0001 C CNN
+F 3 "" H 1450 2850 60  0001 C CNN
+	1    1450 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D4
+U 1 1 5E31D276
+P 1450 3300
+F 0 "D4" H 1450 3492 40  0000 C CNN
+F 1 "DIODE" H 1450 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 1450 3300 60  0001 C CNN
+F 3 "" H 1450 3300 60  0001 C CNN
+	1    1450 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D8
+U 1 1 5E31D747
+P 2350 3300
+F 0 "D8" H 2350 3492 40  0000 C CNN
+F 1 "DIODE" H 2350 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 2350 3300 60  0001 C CNN
+F 3 "" H 2350 3300 60  0001 C CNN
+	1    2350 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D7
+U 1 1 5E31DC7D
+P 2350 2850
+F 0 "D7" H 2350 3042 40  0000 C CNN
+F 1 "DIODE" H 2350 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 2350 2850 60  0001 C CNN
+F 3 "" H 2350 2850 60  0001 C CNN
+	1    2350 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D6
+U 1 1 5E320E64
+P 2350 2400
+F 0 "D6" H 2350 2592 40  0000 C CNN
+F 1 "DIODE" H 2350 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 2350 2400 60  0001 C CNN
+F 3 "" H 2350 2400 60  0001 C CNN
+	1    2350 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D5
+U 1 1 5E321310
+P 2350 1950
+F 0 "D5" H 2350 2142 40  0000 C CNN
+F 1 "DIODE" H 2350 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 2350 1950 60  0001 C CNN
+F 3 "" H 2350 1950 60  0001 C CNN
+	1    2350 1950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2150 1950 2150 2050
+$Comp
+L keyboard:DIODE D9
+U 1 1 5E325C99
+P 3250 1950
+F 0 "D9" H 3250 2142 40  0000 C CNN
+F 1 "DIODE" H 3250 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 3250 1950 60  0001 C CNN
+F 3 "" H 3250 1950 60  0001 C CNN
+	1    3250 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D10
+U 1 1 5E326030
+P 3250 2400
+F 0 "D10" H 3250 2592 40  0000 C CNN
+F 1 "DIODE" H 3250 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 3250 2400 60  0001 C CNN
+F 3 "" H 3250 2400 60  0001 C CNN
+	1    3250 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D11
+U 1 1 5E3263A7
+P 3250 2850
+F 0 "D11" H 3250 3042 40  0000 C CNN
+F 1 "DIODE" H 3250 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 3250 2850 60  0001 C CNN
+F 3 "" H 3250 2850 60  0001 C CNN
+	1    3250 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D12
+U 1 1 5E3266EC
+P 3250 3300
+F 0 "D12" H 3250 3492 40  0000 C CNN
+F 1 "DIODE" H 3250 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 3250 3300 60  0001 C CNN
+F 3 "" H 3250 3300 60  0001 C CNN
+	1    3250 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D16
+U 1 1 5E327F2F
+P 4150 3300
+F 0 "D16" H 4150 3492 40  0000 C CNN
+F 1 "DIODE" H 4150 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 4150 3300 60  0001 C CNN
+F 3 "" H 4150 3300 60  0001 C CNN
+	1    4150 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D15
+U 1 1 5E32839E
+P 4150 2850
+F 0 "D15" H 4150 3042 40  0000 C CNN
+F 1 "DIODE" H 4150 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 4150 2850 60  0001 C CNN
+F 3 "" H 4150 2850 60  0001 C CNN
+	1    4150 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D14
+U 1 1 5E328794
+P 4150 2400
+F 0 "D14" H 4150 2592 40  0000 C CNN
+F 1 "DIODE" H 4150 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 4150 2400 60  0001 C CNN
+F 3 "" H 4150 2400 60  0001 C CNN
+	1    4150 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D13
+U 1 1 5E328B79
+P 4150 1950
+F 0 "D13" H 4150 2142 40  0000 C CNN
+F 1 "DIODE" H 4150 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 4150 1950 60  0001 C CNN
+F 3 "" H 4150 1950 60  0001 C CNN
+	1    4150 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D17
+U 1 1 5E3295FC
+P 5050 1950
+F 0 "D17" H 5050 2142 40  0000 C CNN
+F 1 "DIODE" H 5050 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5050 1950 60  0001 C CNN
+F 3 "" H 5050 1950 60  0001 C CNN
+	1    5050 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D18
+U 1 1 5E32A66E
+P 5050 2400
+F 0 "D18" H 5050 2592 40  0000 C CNN
+F 1 "DIODE" H 5050 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5050 2400 60  0001 C CNN
+F 3 "" H 5050 2400 60  0001 C CNN
+	1    5050 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D19
+U 1 1 5E32AB47
+P 5050 2850
+F 0 "D19" H 5050 3042 40  0000 C CNN
+F 1 "DIODE" H 5050 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5050 2850 60  0001 C CNN
+F 3 "" H 5050 2850 60  0001 C CNN
+	1    5050 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D20
+U 1 1 5E32AFE4
+P 5050 3300
+F 0 "D20" H 5050 3492 40  0000 C CNN
+F 1 "DIODE" H 5050 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5050 3300 60  0001 C CNN
+F 3 "" H 5050 3300 60  0001 C CNN
+	1    5050 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D21
+U 1 1 5E32BFD8
+P 5950 1950
+F 0 "D21" H 5950 2142 40  0000 C CNN
+F 1 "DIODE" H 5950 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5950 1950 60  0001 C CNN
+F 3 "" H 5950 1950 60  0001 C CNN
+	1    5950 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D22
+U 1 1 5E32C3FD
+P 5950 2400
+F 0 "D22" H 5950 2592 40  0000 C CNN
+F 1 "DIODE" H 5950 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5950 2400 60  0001 C CNN
+F 3 "" H 5950 2400 60  0001 C CNN
+	1    5950 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D23
+U 1 1 5E32C863
+P 5950 2850
+F 0 "D23" H 5950 3042 40  0000 C CNN
+F 1 "DIODE" H 5950 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5950 2850 60  0001 C CNN
+F 3 "" H 5950 2850 60  0001 C CNN
+	1    5950 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D24
+U 1 1 5E32CC97
+P 5950 3300
+F 0 "D24" H 5950 3492 40  0000 C CNN
+F 1 "DIODE" H 5950 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 5950 3300 60  0001 C CNN
+F 3 "" H 5950 3300 60  0001 C CNN
+	1    5950 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D25
+U 1 1 5E32DB47
+P 6850 1950
+F 0 "D25" H 6850 2142 40  0000 C CNN
+F 1 "DIODE" H 6850 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 6850 1950 60  0001 C CNN
+F 3 "" H 6850 1950 60  0001 C CNN
+	1    6850 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D26
+U 1 1 5E32E05E
+P 6850 2400
+F 0 "D26" H 6850 2592 40  0000 C CNN
+F 1 "DIODE" H 6850 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 6850 2400 60  0001 C CNN
+F 3 "" H 6850 2400 60  0001 C CNN
+	1    6850 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D27
+U 1 1 5E32E435
+P 6850 2850
+F 0 "D27" H 6850 3042 40  0000 C CNN
+F 1 "DIODE" H 6850 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 6850 2850 60  0001 C CNN
+F 3 "" H 6850 2850 60  0001 C CNN
+	1    6850 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D28
+U 1 1 5E32E8BB
+P 6850 3300
+F 0 "D28" H 6850 3492 40  0000 C CNN
+F 1 "DIODE" H 6850 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 6850 3300 60  0001 C CNN
+F 3 "" H 6850 3300 60  0001 C CNN
+	1    6850 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D29
+U 1 1 5E330656
+P 7750 1950
+F 0 "D29" H 7750 2142 40  0000 C CNN
+F 1 "DIODE" H 7750 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 7750 1950 60  0001 C CNN
+F 3 "" H 7750 1950 60  0001 C CNN
+	1    7750 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D34
+U 1 1 5E330A15
+P 8650 2400
+F 0 "D34" H 8650 2592 40  0000 C CNN
+F 1 "DIODE" H 8650 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 8650 2400 60  0001 C CNN
+F 3 "" H 8650 2400 60  0001 C CNN
+	1    8650 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D39
+U 1 1 5E330E7E
+P 9550 2850
+F 0 "D39" H 9550 3042 40  0000 C CNN
+F 1 "DIODE" H 9550 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 9550 2850 60  0001 C CNN
+F 3 "" H 9550 2850 60  0001 C CNN
+	1    9550 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D33
+U 1 1 5E3312D1
+P 8650 1950
+F 0 "D33" H 8650 2142 40  0000 C CNN
+F 1 "DIODE" H 8650 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 8650 1950 60  0001 C CNN
+F 3 "" H 8650 1950 60  0001 C CNN
+	1    8650 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D38
+U 1 1 5E331716
+P 9550 2400
+F 0 "D38" H 9550 2592 40  0000 C CNN
+F 1 "DIODE" H 9550 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 9550 2400 60  0001 C CNN
+F 3 "" H 9550 2400 60  0001 C CNN
+	1    9550 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D31
+U 1 1 5E331B4F
+P 7750 2850
+F 0 "D31" H 7750 3042 40  0000 C CNN
+F 1 "DIODE" H 7750 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 7750 2850 60  0001 C CNN
+F 3 "" H 7750 2850 60  0001 C CNN
+	1    7750 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D36
+U 1 1 5E331F21
+P 8650 3300
+F 0 "D36" H 8650 3492 40  0000 C CNN
+F 1 "DIODE" H 8650 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 8650 3300 60  0001 C CNN
+F 3 "" H 8650 3300 60  0001 C CNN
+	1    8650 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D37
+U 1 1 5E33249C
+P 9550 1950
+F 0 "D37" H 9550 2142 40  0000 C CNN
+F 1 "DIODE" H 9550 2066 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 9550 1950 60  0001 C CNN
+F 3 "" H 9550 1950 60  0001 C CNN
+	1    9550 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D30
+U 1 1 5E332981
+P 7750 2400
+F 0 "D30" H 7750 2592 40  0000 C CNN
+F 1 "DIODE" H 7750 2516 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 7750 2400 60  0001 C CNN
+F 3 "" H 7750 2400 60  0001 C CNN
+	1    7750 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D35
+U 1 1 5E332DAB
+P 8650 2850
+F 0 "D35" H 8650 3042 40  0000 C CNN
+F 1 "DIODE" H 8650 2966 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 8650 2850 60  0001 C CNN
+F 3 "" H 8650 2850 60  0001 C CNN
+	1    8650 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D40
+U 1 1 5E3331F5
+P 9550 3300
+F 0 "D40" H 9550 3492 40  0000 C CNN
+F 1 "DIODE" H 9550 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 9550 3300 60  0001 C CNN
+F 3 "" H 9550 3300 60  0001 C CNN
+	1    9550 3300
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:DIODE D32
+U 1 1 5E333648
+P 7750 3300
+F 0 "D32" H 7750 3492 40  0000 C CNN
+F 1 "DIODE" H 7750 3416 40  0000 C CNN
+F 2 "keyboard:D_DO-34_SOD68_P7.62mm_Horizontal" H 7750 3300 60  0001 C CNN
+F 3 "" H 7750 3300 60  0001 C CNN
+	1    7750 3300
+	1    0    0    -1  
+$EndComp
+Text Label 1650 1950 2    50   ~ 0
+1
+Text Label 2550 1950 2    50   ~ 0
+2
+Text Label 1650 2400 2    50   ~ 0
+Q
+Text Label 2550 2400 2    50   ~ 0
+W
+$Comp
+L keyboard:btn BTN19
+U 1 1 5E30B8E7
+P 5350 2500
+F 0 "BTN19" H 5528 2297 45  0000 L CNN
+F 1 "G" H 5528 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 5350 2500 45  0001 C CNN
+F 3 "" H 5350 2500 45  0001 C CNN
+	1    5350 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN15
+U 1 1 5E309DD2
+P 4450 2500
+F 0 "BTN15" H 4628 2297 45  0000 L CNN
+F 1 "F" H 4628 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 4450 2500 45  0001 C CNN
+F 3 "" H 4450 2500 45  0001 C CNN
+	1    4450 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN11
+U 1 1 5E309A9C
+P 3550 2500
+F 0 "BTN11" H 3728 2297 45  0000 L CNN
+F 1 "D" H 3728 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 3550 2500 45  0001 C CNN
+F 3 "" H 3550 2500 45  0001 C CNN
+	1    3550 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN7
+U 1 1 5E309767
+P 2650 2500
+F 0 "BTN7" H 2828 2297 45  0000 L CNN
+F 1 "S" H 2828 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 2650 2500 45  0001 C CNN
+F 3 "" H 2650 2500 45  0001 C CNN
+	1    2650 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L keyboard:btn BTN3
+U 1 1 5E3093C8
+P 1750 2500
+F 0 "BTN3" H 1928 2297 45  0000 L CNN
+F 1 "A" H 1928 2213 45  0000 L CNN
+F 2 "keyboard:SW_PUSH_6mm" H 1750 2500 45  0001 C CNN
+F 3 "" H 1750 2500 45  0001 C CNN
+	1    1750 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L f4grx_passive:PIN J1
+U 1 1 5E3A587D
+P 5550 3950
+F 0 "J1" H 5523 4124 45  0000 C CNN
+F 1 "PIN" H 5523 4040 45  0000 C CNN
+F 2 "keyboard:HOLE_2mm_Keep4mm" H 5550 3950 45  0001 C CNN
+F 3 "" H 5550 3950 45  0000 C CNN
+	1    5550 3950
+	1    0    0    -1  
+$EndComp
+$Comp
+L f4grx_passive:PIN J2
+U 1 1 5E3A8777
+P 5750 3950
+F 0 "J2" H 5723 4124 45  0000 C CNN
+F 1 "PIN" H 5723 4040 45  0000 C CNN
+F 2 "keyboard:HOLE_2mm_Keep4mm" H 5750 3950 45  0001 C CNN
+F 3 "" H 5750 3950 45  0000 C CNN
+	1    5750 3950
+	1    0    0    -1  
+$EndComp
+$Comp
+L f4grx_passive:PIN J3
+U 1 1 5E3AF9B9
+P 5950 3950
+F 0 "J3" H 5923 4124 45  0000 C CNN
+F 1 "PIN" H 5923 4040 45  0000 C CNN
+F 2 "keyboard:HOLE_2mm_Keep4mm" H 5950 3950 45  0001 C CNN
+F 3 "" H 5950 3950 45  0000 C CNN
+	1    5950 3950
+	1    0    0    -1  
+$EndComp
+$Comp
+L f4grx_passive:PIN J4
+U 1 1 5E3AF9C3
+P 6150 3950
+F 0 "J4" H 6123 4124 45  0000 C CNN
+F 1 "PIN" H 6123 4040 45  0000 C CNN
+F 2 "keyboard:HOLE_2mm_Keep4mm" H 6150 3950 45  0001 C CNN
+F 3 "" H 6150 3950 45  0000 C CNN
+	1    6150 3950
+	1    0    0    -1  
+$EndComp
+$EndSCHEMATC
