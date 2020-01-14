@@ -184,16 +184,37 @@ shell_main:
 
 .if 1
 	/* Debug: display arg count */
-	ldx	#scmdbuf
-	stx	*sp0
 	clra
 	ldab	argc
-	std	*sp1
-	ldx	#10
-	stx	*sp2
-	jsr	inttostr
+	std	*sp0
+	jsr	serial_putdec
+	jsr	serial_crlf
+	clra
+	clrb
+	std	*st0
+.Lnextarg:
+	std	*sp0
+	jsr	serial_putdec
+	.section .rodata
+arrow:	.asciz	" -> "
+	.text
+	ldx	#arrow
+	stx	*sp0
+	jsr	serial_puts
+	ldd	*st0
+	lsld
+	ldx	#argv
+	abx
+	ldd	0,X
+	std	*sp0
 	jsr	serial_puts
 	jsr	serial_crlf
+	/* set for next arg */
+	ldd	*st0
+	incb
+	std	*st0
+	cmpb	argc
+	blo	.Lnextarg
 .endif
 
 	bra	.Lcmdloop
