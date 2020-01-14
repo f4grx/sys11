@@ -354,7 +354,7 @@ void gdbremote_command(struct gdbremote_t *gr)
         printf("adr=%04X len=%d\n",adr,len);
         for(i=0;i<len;i++)
           {
-            printf("%02X", next[i]);
+            //printf("%02X", next[i]);
             hc11_core_writeb(gr->core, adr+i, next[i] & 0xFF);
           }
         gdbremote_txstr(gr, "OK");
