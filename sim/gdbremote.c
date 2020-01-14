@@ -116,7 +116,7 @@ void gdbremote_query(struct gdbremote_t *gr)
     if(!strncmp("qSupported", gr->rxbuf, strlen("qSupported")))
       {
         //gdb request supported features at boot
-        gdbremote_txstr(gr, "PacketSize=%d", GDBREMOTE_MAX_RX);
+        gdbremote_txstr(gr, "PacketSize=%x", GDBREMOTE_MAX_RX);
         //gdbremote_tx(gr, io, "");
       }
     else if(!strncmp("qfThreadInfo", gr->rxbuf, strlen("qfThreadInfo")))
@@ -342,7 +342,6 @@ void gdbremote_command(struct gdbremote_t *gr)
       }
     else if(gr->rxbuf[0] == 'X')
       {
-#if 0
         unsigned int adr, len, count, i, buf;
         uint8_t *next;
         // memory write: XAAAA,len:binary
@@ -352,15 +351,13 @@ void gdbremote_command(struct gdbremote_t *gr)
             return;
           }
         next = (uint8_t*)(gr->rxbuf+1+count);
-        printf("adr=%04X len=%d next->%s\n",adr,len,next);
+        printf("adr=%04X len=%d\n",adr,len);
         for(i=0;i<len;i++)
           {
-          printf("%02X\n", next[i]);
+            printf("%02X", next[i]);
+            hc11_core_writeb(gr->core, adr+i, next[i] & 0xFF);
           }
         gdbremote_txstr(gr, "OK");
-#else
-        gdbremote_txstr(gr, ""); //not supported
-#endif
       }
     else if(gr->rxbuf[0] == 'Z')
       {
@@ -423,11 +420,7 @@ int gdbremote_rx(struct gdbremote_t *gr)
         if(ret < 0) return -1;
         if(ret == 0) return -1;
 
-        if(c == EOF)
-          {
-            break;
-          }
-      //  printf(">> %02X (%c)\n", c, c);
+        //printf(">> %02X (%c) state=%d\n", c&0xFF, c, state);
 
         switch(state)
           {
@@ -448,7 +441,7 @@ int gdbremote_rx(struct gdbremote_t *gr)
               break;
 
             case STATE_WAIT_CSUM:
-              if(c == '}')
+              if(c == 0x7D)
                 {
                   sum = sum + (uint8_t)c;
                   state = STATE_ESCAPE;
@@ -457,15 +450,18 @@ int gdbremote_rx(struct gdbremote_t *gr)
                 {
                   state = STATE_CSUM_1;
                 }
-              else if(gr->rxlen < GDBREMOTE_MAX_RX)
-                {
-                  gr->rxbuf[gr->rxlen] = c;
-                  sum = sum + (uint8_t)c;
-                  gr->rxlen += 1;
-                }
               else
                 {
-                  printf("gdbremote: rx buf ovf prevented\n");
+                  if(gr->rxlen < GDBREMOTE_MAX_RX)
+                    {
+                      gr->rxbuf[gr->rxlen] = c;
+                      sum = sum + (uint8_t)c;
+                      gr->rxlen += 1;
+                    }
+                  else
+                    {
+                      printf("gdbremote: rx buf ovf prevented\n");
+                    }
                 }
               break;
 
@@ -474,6 +470,7 @@ int gdbremote_rx(struct gdbremote_t *gr)
               gr->rxbuf[gr->rxlen] = c ^ 0x20;
               gr->rxlen += 1;
               state = STATE_WAIT_CSUM;
+              //printf("escape 7D %02X -> %02X\n", c&0xFF, (c^0x20)&0xFF);
               break;
 
             case STATE_CSUM_1:
