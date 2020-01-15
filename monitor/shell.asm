@@ -59,24 +59,18 @@ shell_echo:
 	.endfunc
 
 /*===========================================================================*/
-	.func	shell_main
-	.global shell_main
-shell_main:
-	ldaa	#OPT_ECHO		/* Default to echo ON */
-	staa	scmdopts		/* Clear shell options */
+/* Read a line in buffer pointed by sp0, whith length (byte) in sp1.L */
+	.func	shell_readline
+	.global	shell_readline
+shell_readline:
 	clra
-	staa	scmdlen			/* Clear command len */
-	staa	scmdbuf+SCMD_MAX	/* Put a final zero */
-
-.Lcmdloop:
-	ldx	#sprompt
-	stx	*sp0
-	jsr	serial_puts
-	ldx	#scmdbuf
-
-	/* ==================== */
-	/* Acquire a line of text */
-	/* ==================== */
+	clrb
+	std	*st0		/* Clear current command len */
+	ldx	*sp0
+	ldab	*(sp1+1)
+	abx
+	dex
+	staa	0,X		/* Put a final zero */
 
 .Lcharloop:
 	jsr	serial_getchar
@@ -86,37 +80,40 @@ shell_main:
 	jsr	serial_putchar /* echo */
 .Lnoecho:
 	cmpb	#0x0D
-	beq	.Lparse		/* User pressed return */
+	beq	.Lrdldone	/* User pressed return -> readline done */
 	cmpb	#0x08
 	beq	.Lbackspace
 	cmpb	#0x7F
 	beq	.Lbackspace
-	ldaa	scmdlen
+	ldaa	*(st0+1)
 	cmpa	#SCMD_MAX
 	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
 	stab	0,X
-	inc	scmdlen
+	inc	*(st0+1)
 	inx
 	bra	.Lcharloop
 
 	/* If character is a backspace (0x08 or 0x7F), special handling */
 .Lbackspace:
-	ldaa	scmdlen
+	ldaa	*(st0+1)
 	beq	.Lcharloop	/* Len already zero: do nothing */
 	deca
-	staa	scmdlen		/* Remove one char in buf */
-	dex
+	staa	*(st0+1)	/* Decrese char count */
+	dex			/* Point to previous char */
 	bra	.Lcharloop
+.Lrdldone:
+	clra
+	staa	0,X		/* Store a final zero */
+	rts
+	.endfunc
 
-	/* ==================== */
-	/* Split command into arguments */
-	/* ==================== */
-
-.Lparse:
+/*===========================================================================*/
+/* Parse sp1 bytes stored at address sp0 */
+	.func	shell_parse
+	.global	shell_parse
+shell_parse:
 	clra
 	staa	argc		/* No arguments parsed so far */
-	staa	0,X		/* Store a final zero */
-	jsr	serial_crlf	/* Skip current line */
 
 	ldx	#scmdbuf
 	stx	*st0		/* st0 contains current string pointer */
@@ -140,7 +137,7 @@ shell_main:
 	cmpa	#0x20		/* If its a space, */
 	beq	.Lfoundspace	/* Then current arg is complete */
 	cmpa	#0		/* If end of string, */
-	beq	.Lsplitdone	/* Then finish parsing. */
+	beq	.Lparsedone	/* Then finish parsing. */
 	inx			/* Prepare for next char */
 	bra	.Lsplit		/* Try again (next char) */
 .Lfoundspace:
@@ -149,7 +146,45 @@ shell_main:
 	inx			/* And point to char right after space */
 	stx	*st0		/* Is now a pointer to the first argument */
 	bra	.Lparseloop
-.Lsplitdone:
+.Lparsedone:
+	rts
+	.endfunc
+
+/*===========================================================================*/
+	.func	shell_main
+	.global shell_main
+shell_main:
+
+	ldaa	#OPT_ECHO		/* Default to echo ON */
+	staa	scmdopts
+
+.Lcmdloop:
+	/* ==================== */
+	/* Display main prompt */
+	/* ==================== */
+
+	ldx	#sprompt
+	stx	*sp0
+	jsr	serial_puts
+
+	jsr	serial_crlf	/* Skip current line */
+
+	/* ==================== */
+	/* Acquire a line of text */
+	/* ==================== */
+
+	ldx	#scmdbuf
+	stx	*sp0
+	ldx	SCMD_MAX+1	/* scmdbuf has additional byte to store 80 chars + final zero */
+	stx	*sp1
+	jsr	shell_readline
+
+	/* ==================== */
+	/* Split command into arguments */
+	/* ==================== */
+
+	std	*sp0
+	jsr	shell_parse
 
 	/* ==================== */
 	/* Find command in list */
