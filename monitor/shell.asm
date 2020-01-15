@@ -61,6 +61,8 @@ shell_echo:
 	.func	shell_readline
 	.global	shell_readline
 shell_readline:
+	ldaa	*(st0+1)
+	psha
 	clrb
 	stab	*(st0+1)	/* Clear current command len */
 	dec	*(sp1+1)	/* Reduce buffer length so a final zero can be stored */
@@ -96,37 +98,44 @@ shell_readline:
 	dex			/* Point to previous char */
 	bra	.Lcharloop
 .Lrdldone:
-	clra
-	staa	0,X		/* Store a final zero */
-	stab	*(st0+1)
+	ldab	*(st0+1)	/* Return nr of chars in result LSB */
+
+	pula			/* Restore st0.L */
+	staa	*(st0+1)
+
+	clra			/* Cleanup Result MSB */
+	staa	0,X		/* Meanwhile, store a final zero */
+
 	rts
 	.endfunc
 
 /*===========================================================================*/
-/* Parse sp1 bytes stored at address sp0 */
+/* Parse zero terminated string at address sp0.
+   Store arguments in array at address sp1 (max entries in sp2.L).
+   Returns argc in B (D.L)
+ */
 	.func	shell_parse
 	.global	shell_parse
 shell_parse:
 	clra
-	staa	argc		/* No arguments parsed so far */
-
-	ldx	#scmdbuf
-	stx	*st0		/* st0 contains current string pointer */
+	staa	*(st1+1)		/* No arguments parsed so far */
+	ldx	*sp0
+	stx	*st0		/* Current string pointer */
 
 .Lparseloop:
-	ldab	argc		/* D now contains cur number of arguments */
+	ldab	*(st1+1)	/* D now contains cur number of arguments */
 	lsld			/* D now contains offset in argv array to store arg N */
-	addd	#argv		/* D now contains destination pointer to store arg N */
+	addd	sp1		/* D now contains destination pointer to store arg N */
 	ldx	*st0		/* X now contains pointer to beginning of arg N */
 	xgdx			/* Swap X and D because we can only store at X */
 	std	0,X		/* Store pointer to arg N */
-	ldab	argc		/* Prepare for storage of next arg (keep a clear) */
-	cmpb	#ARGV_MAX
-	beq	.Lparsedone
-	inc	argc
+	inc	*(st1+1)	/* Increment arg count */
+	ldab	*(st1+1)	/* Prepare for storage of next arg (keep a clear) */
+	cmpb	*(sp2+1)	/* Max num of args reached ? */
+	beq	.Lparsedone	/* Then we're finished */
 
 	/* Skip all chars until next space or end of string. */
-	ldx	*st0
+	ldx	*st0		/* This is the current char pointer */
 .Lsplit:
 	ldaa	0,X		/* Get command char */
 	cmpa	#0x20		/* If its a space, */
@@ -136,11 +145,11 @@ shell_parse:
 	inx			/* Prepare for next char */
 	bra	.Lsplit		/* Try again (next char) */
 .Lfoundspace:
-	clra			/* Load end of string */
+	clra			/* Put an end of arg/str marker */
 	staa	0,X		/* Where we had a space */
 	inx			/* And point to char right after space */
-	stx	*st0		/* Is now a pointer to the first argument */
-	bra	.Lparseloop
+	stx	*st0		/* X is now a pointer to the next char */
+	bra	.Lparseloop	/* This next char is not the start of a new arg */
 .Lparsedone:
 	rts
 	.endfunc
@@ -172,19 +181,64 @@ shell_main:
 	stx	*sp1
 	jsr	shell_readline
 
+.if 0
+	/* Test display for readline */
 	jsr	serial_crlf	/* Skip current line */
 	ldx	#scmdbuf
 	stx	*sp0
 	jsr	serial_puts
 	jsr	serial_crlf	/* Skip current line */
 	bra	.Lcmdloop
+.endif
 
 	/* ==================== */
 	/* Split command into arguments */
 	/* ==================== */
 
-	std	*sp0
+	ldx	#argv
+	stx	*sp1
+	clra
+	ldab	#ARGV_MAX
+	std	*sp2
 	jsr	shell_parse
+	stab	argc
+
+.if 1
+	/* Debug: display arg count */
+	jsr	serial_crlf	/* Skip current line */
+	clra
+	ldab	argc
+	std	*sp0
+	jsr	serial_putdec
+	jsr	serial_crlf
+	clra
+	clrb
+	std	*st0
+.Lnextarg:
+	std	*sp0
+	jsr	serial_putdec
+	.section .rodata
+arrow:	.asciz	" -> "
+	.text
+	ldx	#arrow
+	stx	*sp0
+	jsr	serial_puts
+	ldd	*st0
+	lsld
+	ldx	#argv
+	abx
+	ldd	0,X
+	std	*sp0
+	jsr	serial_puts
+	jsr	serial_crlf
+	/* set for next arg */
+	ldd	*st0
+	incb
+	std	*st0
+	cmpb	argc
+	blo	.Lnextarg
+	bra	.Lcmdloop
+.endif
 
 	/* ==================== */
 	/* Find command in list */
@@ -217,40 +271,6 @@ shell_main:
 	jsr	serial_puts
 	jsr	serial_crlf
 
-.if 1
-	/* Debug: display arg count */
-	clra
-	ldab	argc
-	std	*sp0
-	jsr	serial_putdec
-	jsr	serial_crlf
-	clra
-	clrb
-	std	*st0
-.Lnextarg:
-	std	*sp0
-	jsr	serial_putdec
-	.section .rodata
-arrow:	.asciz	" -> "
-	.text
-	ldx	#arrow
-	stx	*sp0
-	jsr	serial_puts
-	ldd	*st0
-	lsld
-	ldx	#argv
-	abx
-	ldd	0,X
-	std	*sp0
-	jsr	serial_puts
-	jsr	serial_crlf
-	/* set for next arg */
-	ldd	*st0
-	incb
-	std	*st0
-	cmpb	argc
-	blo	.Lnextarg
-.endif
 
 	bra	.Lcmdloop
 .Lfound:
