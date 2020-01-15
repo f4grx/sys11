@@ -126,7 +126,7 @@ shell_parse:
 	ldab	*(st1+1)	/* D now contains cur number of arguments */
 	lsld			/* D now contains offset in argv array to store arg N */
 	addd	sp1		/* D now contains destination pointer to store arg N */
-	ldx	*st0		/* X now contains pointer to beginning of arg N */
+	ldx	*st0		/* This is the current char pointer */
 	xgdx			/* Swap X and D because we can only store at X */
 	std	0,X		/* Store pointer to arg N */
 	inc	*(st1+1)	/* Increment arg count */
@@ -147,8 +147,14 @@ shell_parse:
 .Lfoundspace:
 	clra			/* Put an end of arg/str marker */
 	staa	0,X		/* Where we had a space */
-	inx			/* And point to char right after space */
-	stx	*st0		/* X is now a pointer to the next char */
+	/* Check for more spaces after this one*/
+.Lspaceagain:
+	inx			/* Point to char right after space */
+	ldab	0,X		/* Get this following char */
+	cmpb	#0x20		/* Still a space? */
+	beq	.Lspaceagain	/* Then skip. */
+
+	stx	*st0		/* X is now a pointer to the next non-space char */
 	bra	.Lparseloop	/* This next char is not the start of a new arg */
 .Lparsedone:
 	rts
