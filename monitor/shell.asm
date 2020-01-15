@@ -4,7 +4,7 @@
 
 	.include "serial.inc"
 
-	.equ SCMD_MAX, 80
+	.equ SCMD_MAX, 80+1	/* Include final zero */
 	.equ ARGV_MAX, 8
 
 	.equ OPT_ECHO, 0x01
@@ -28,9 +28,7 @@ scommands:
 /*===========================================================================*/
 	.section .edata
 scmdbuf:
-	.space	SCMD_MAX+1 /* Storage for command line */
-scmdlen:
-	.byte	0
+	.space	SCMD_MAX /* Storage for command line */
 scmdopts:
 	.byte	0
 argc:
@@ -63,14 +61,10 @@ shell_echo:
 	.func	shell_readline
 	.global	shell_readline
 shell_readline:
-	clra
 	clrb
-	std	*st0		/* Clear current command len */
-	ldx	*sp0
-	ldab	*(sp1+1)
-	abx
-	dex
-	staa	0,X		/* Put a final zero */
+	stab	*(st0+1)	/* Clear current command len */
+	dec	*(sp1+1)	/* Reduce buffer length so a final zero can be stored */
+	ldx	*sp0		/* Reload dest ptr for char acq */
 
 .Lcharloop:
 	jsr	serial_getchar
@@ -86,7 +80,7 @@ shell_readline:
 	cmpb	#0x7F
 	beq	.Lbackspace
 	ldaa	*(st0+1)
-	cmpa	#SCMD_MAX
+	cmpa	*(sp1+1)
 	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
 	stab	0,X
 	inc	*(st0+1)
@@ -104,6 +98,7 @@ shell_readline:
 .Lrdldone:
 	clra
 	staa	0,X		/* Store a final zero */
+	stab	*(st0+1)
 	rts
 	.endfunc
 
@@ -127,7 +122,7 @@ shell_parse:
 	std	0,X		/* Store pointer to arg N */
 	ldab	argc		/* Prepare for storage of next arg (keep a clear) */
 	cmpb	#ARGV_MAX
-	beq	.Lsplitdone
+	beq	.Lparsedone
 	inc	argc
 
 	/* Skip all chars until next space or end of string. */
@@ -167,17 +162,22 @@ shell_main:
 	stx	*sp0
 	jsr	serial_puts
 
-	jsr	serial_crlf	/* Skip current line */
-
 	/* ==================== */
 	/* Acquire a line of text */
 	/* ==================== */
 
 	ldx	#scmdbuf
 	stx	*sp0
-	ldx	SCMD_MAX+1	/* scmdbuf has additional byte to store 80 chars + final zero */
+	ldx	#(SCMD_MAX)	/* scmdbuf has additional byte to store 80 chars + final zero */
 	stx	*sp1
 	jsr	shell_readline
+
+	jsr	serial_crlf	/* Skip current line */
+	ldx	#scmdbuf
+	stx	*sp0
+	jsr	serial_puts
+	jsr	serial_crlf	/* Skip current line */
+	bra	.Lcmdloop
 
 	/* ==================== */
 	/* Split command into arguments */
