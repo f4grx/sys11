@@ -3,6 +3,8 @@ monitor_OBJS=start.o vectors.o softregs.o
 #OS
 #monitor_OBJS+=mm.o
 monitor_OBJS+=device.o
+monitor_OBJS+=bdev_ram.o
+
 #drivers
 monitor_OBJS+=serial.o spibus.o
 #libs

@@ -33,6 +33,7 @@ serial_putchar:
 	rts
 	.endfunc
 
+/*===========================================================================*/
 	.func	serial_crlf
 	.global	serial_crlf
 serial_crlf:

@@ -18,29 +18,52 @@
 
 	.include "softregs.inc"
 	.include "serial.inc"
+	.include "errno.inc"
 
 	.section .scommands
 	.asciz	"lsdev"
 	.word	devlist
 
 	.equ	NUM_DEVS, 8	/* Max number of devices */
+	/* Offsets in the vtable */
+	.equ	BDEV_NAMEPTR  , 0
+	.equ	BDEV_GETBLOCKS, 2
+	.equ	BDEV_BREAD    , 4
+	.equ	BDEV_BWRITE   , 6
 
 	.section .rodata
-dhdr:	.asciz	"dev blocks name"
+dhdr:	.asciz	"dev\tblocks\tname"
 
 	.section .edata
 devices:
-	.space NUM_DEVS * 2
-scratchpad:
-	.space 32
+	.space NUM_DEVS * 4	/* Each dev has a vtable pointer and a private pointer */
 
 	.text
+
+	.extern	bdev_ram
 
 /*===========================================================================*/
 /* Initialize the device layer */
 	.func	device_init
 	.global device_init
 device_init:
+	clra
+	clrb
+	ldx	#devices
+	ldab	#NUM_DEVS
+	lslb		/* get 2*NDEV */
+	lslb		/* get 4*NDEV */
+	decb		/* get 4*NDEV-1 */
+	clra
+.Linitdev:
+	staa	0,X
+	inx
+	decb
+	bne	.Linitdev
+
+	/* Install the bdev_ram device */
+	ldx	#bdev_ram
+	stx	devices
 	rts
 	.endfunc
 
@@ -49,6 +72,9 @@ device_init:
 	.func	devlist
 	.global devlist
 devlist:
+	ldx	*st0
+	pshx
+
 	/* Disp list header */
 
 	ldx	#dhdr
@@ -62,9 +88,47 @@ devlist:
 	clrb
 	std	*st0
 .Ldodev:
+
+	/* Print device index */
+
 	ldd	*st0
 	std	*sp0
 	jsr	serial_putdec
+
+	ldab	#'\t'
+	jsr	serial_putchar
+
+	/* Get blocks for device N */
+
+	ldx	*st0
+	stx	*sp0
+	jsr	device_getblocks
+	std	*sp0
+	blt	.Ldonodev
+	jsr	serial_putdec
+	ldab	#'\t'
+	jsr	serial_putchar
+
+	/* Display device name */
+
+	ldx	*st0
+	stx	*sp0
+	jsr	device_getname
+	std	*sp0
+	jsr	serial_puts
+	
+	bra	.Lnextdev
+
+.Ldonodev:
+	.section .rodata
+nodev:	.asciz "None"
+	.text
+	ldx	#nodev
+	stx	*sp0
+	jsr	serial_puts
+	bra	.Lnextdev
+
+.Lnextdev:
 	jsr	serial_crlf
 
 	/* Prepare for next device */
@@ -73,15 +137,55 @@ devlist:
 	incb
 	stab	*(st0+1)
 	cmpb	#NUM_DEVS
-	blo	.Ldodev		
+	blo	.Ldodev	
+
+	pulx
+	stx	*st0	
 	rts
 	.endfunc
 
 /*===========================================================================*/
-/* Returns in D the num of blocks for device in sp0 */
+/* Find device pointer */
+	.func	dev_findptr
+dev_findptr:
+	ldd	*sp0		/* Get device index */
+	lsld			/* Convert to... */
+	lsld			/* Dev table offset */
+	addd	#devices	/* Add beginning of table */
+	xgdx			/* store dev vtable store addr in X*/
+	ldx	0,X		/* Get vtable address */
+	rts
+	.endfunc
+
+/*===========================================================================*/
+/* Returns in D the name (or null) of blocks for device in sp0 */
+	.func	device_getname
+	.global device_getname
+device_getname:
+	jsr	dev_findptr
+	beq	.Lnullret
+	ldd	BDEV_NAMEPTR,X/* Get str ptr for name */
+	bra	.Lgnret
+.Lnullret:
+	clra
+	clrb
+.Lgnret:
+	rts
+	.endfunc
+
+/*===========================================================================*/
+/* Returns in D the num of blocks (or -ENODEV) for device in sp0 */
 	.func	device_getblocks
 	.global device_getblocks
 device_getblocks:
+	jsr	dev_findptr
+	beq	.Lenodev
+	ldx	BDEV_GETBLOCKS,X/* Get fn ptr for getblocks */
+	jsr	0,X		/* Execute and define retcode*/
+	bra	.Lgbret
+.Lenodev:
+	ldd	#(-ENODEV)
+.Lgbret:
 	rts
 	.endfunc
 
@@ -90,6 +194,10 @@ device_getblocks:
 	.func	device_readb
 	.global device_readb
 device_readb:
+	jsr	dev_findptr
+	beq	.Lenodev
+	ldx	BDEV_BREAD,X/* Get fn ptr for getblocks */
+	jsr	0,X		/* Execute and define retcode*/
 	rts
 	.endfunc
 
@@ -98,6 +206,11 @@ device_readb:
 	.func	device_writeb
 	.global device_writeb
 device_writeb:
+	jsr	dev_findptr
+	beq	.Lenodev
+	ldx	BDEV_BWRITE,X/* Get fn ptr for getblocks */
+	jsr	0,X		/* Execute and define retcode*/
+	rts
 	rts
 	.endfunc
 

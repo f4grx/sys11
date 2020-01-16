@@ -1020,13 +1020,25 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_ASLA_INH : /*NZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+		tmp = core->regs.d >> 8;
+                core->regs.flags.C = (tmp >> 7); //set before shift
+                tmp = (tmp << 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0x00FF) | (tmp << 8);
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "ASLA -> %02X\n", tmp);
                 break;
 
               case OP_ASLB_INH : /*NZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+		tmp = core->regs.d & 0xFF;
+                core->regs.flags.C = (tmp >> 7); //set before shift
+                tmp = (tmp << 1) & 0xFF;
+                core->regs.d = (core->regs.d & 0xFF00) | tmp;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "ASLB -> %02X\n", tmp);
                 break;
 
               case OP05_ASLD_INH : /*NZVC*/
@@ -1347,13 +1359,21 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_BGE_REL  :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                if(!(core->regs.flags.N ^ core->regs.flags.V))
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                log_msg(SYS_CORE, CORE_INST, "BGE -> N=%d V=%d pc=%04X\n" , core->regs.flags.N, core->regs.flags.V, core->regs.pc);
                 break;
 
               case OP_BLT_REL  :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                if(core->regs.flags.N ^ core->regs.flags.V)
+                  {
+                  rel = (int16_t)((int8_t)core->operand);
+                  core->regs.pc = core->regs.pc + rel;
+                  }
+                log_msg(SYS_CORE, CORE_INST, "BLT -> N=%d V=%d pc=%04X\n" , core->regs.flags.N, core->regs.flags.V, core->regs.pc);
                 break;
 
               case OP_BGT_REL  :
@@ -1414,8 +1434,16 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP_ASL_EXT : /*NZVC*/
               case OP_ASL_IND :
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+		tmp = core->busdat & 0xFF;
+                core->regs.flags.C = (tmp >> 7); //set before shift
+                tmp = (tmp << 1) & 0xFF;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                core->busdat = tmp;
+                core->busadr = core->operand;
+                core->state = STATE_WRITEOP_L;
+                log_msg(SYS_CORE, CORE_INST, "ASL_EXT_INX -> %02X\n", tmp);
                 break;
 
               case OP_ROL_EXT :/*NZVC*/
@@ -2098,8 +2126,16 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_ASL_IND:
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+		tmp = core->busdat & 0xFF;
+                core->regs.flags.C = (tmp >> 7); //set before shift
+                tmp = (tmp << 1) & 0xFF;
+                core->regs.flags.Z = (tmp == 0);
+                core->regs.flags.N = (tmp >> 7);
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                core->busdat = tmp;
+                core->busadr = core->operand;
+                core->state = STATE_WRITEOP_L;
+                log_msg(SYS_CORE, CORE_INST, "ASL_INY -> %02X\n", tmp);
                 break;
 
               case OP_ROR_IND:
