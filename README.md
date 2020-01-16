@@ -128,10 +128,12 @@ Software roadmap
 * Bootloader for extended mode - DONE
 * Malloc - WIP, almost validated
 * Simulator - WIP
-* Basic shell to manipulate memory - DONE
+* Basic shell - DONE
 * SPI bus driver - WIP
-* I2C bus driver
+* Block device system - WIP
+
 * SPI and/or I2C EEPROM driver
+* I2C bus driver
 * Filesystem (RRSF, already half designed)
 * Volume mounting mechanism
 * ed-based text editor
@@ -173,5 +175,14 @@ Q: Why not use a Z80?
 
 A: Because I did not have one when I started this project. However, I plan to
 have an assembler for this target. If you want to play with the Z80, have a
-look at the RC2014 project and/or github.com/hsoft/collapseos
+look at the RC2014 project and/or github.com/hsoft/collapseos.
+
+The HC11 is a microcontroller, which usefully comes with an integrated UART and
+SPI peripherals. The Z80 does not, so it requires external bus peripherals.
+However, the Z80 can hook these devices to its IO bus, saving space for more RAM
+on the memory bus.
+
+At some point it may be more interesting to build a Z80 system, to benefit from
+more RAM, and also more registers, even if the Z80 requires more cycles to
+execute every instruction.
 
