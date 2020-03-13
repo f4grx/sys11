@@ -50,7 +50,9 @@ parser.add_argument('--srec',
                     default=None,
                     help='program to upload using stage2-srec after bootstrap is done')
 parser.add_argument('--term',
-                    action='store_true',
+                    nargs='?',
+                    default=None,
+                    type=int,
                     help='Keep running in terminal mode after upload')
 parser.add_argument('binary',
                     nargs='?',
@@ -200,6 +202,11 @@ if srec != None:
 if args["term"] == None:
     ser.close()
     sys.exit(0)
+
+ser.baudrate = args["term"]
+print("Starting terminal with baud rate:",ser.baudrate)
+ser.reset_output_buffer()
+ser.reset_input_buffer()
 
 #
 # Start behaving as a RAW serial terminal.

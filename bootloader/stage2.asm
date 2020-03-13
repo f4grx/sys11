@@ -5,8 +5,7 @@
  * This GNU AS listing assembles to a short binary that is padded to 256
  * bytes by the linker script.
  * It can be loaded at address 0x0000 in the hc11 via the bootstrap mechanism.
- * Once executed it waits for HDLC packets at 9600 bauds on the SCI, and if
- * checksum (last byte) is valid, it executes the command in the first byte.
+ * Once executed it waits for S-records at the current SCI speed.
  */
 
 	.equ REGS  , 0x1000

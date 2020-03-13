@@ -84,9 +84,10 @@ void sig(int sig)
     sem_post(&end);
   }
 
+struct hc11_core core;
+
 int main(int argc, char **argv)
   {
-    struct hc11_core core;
     struct hc11_sci *sci;
     struct gdbremote_t remote;
     int c;

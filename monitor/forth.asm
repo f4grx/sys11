@@ -1,21 +1,20 @@
-/* 68HC11 assembler */
-/* Used to test commands */
+/* forth interpreter */
 
 	.include "softregs.inc"
 	.include "serial.inc"
 
 	.section .scommands
-	.asciz	"as11"
-	.word	as11
+	.asciz	"forth"
+	.word	forth
 
 	.section .rodata
-msg:	.asciz "AS11 not implemented yet"
+msg:	.asciz "Forth for sys11 TODO"
 
 	.text
 
-	.func	as11
-	.global as11
-as11:
+	.func	forth
+	.global forth
+forth:
 	ldx	#msg
 	stx	*sp0
 	jsr	serial_puts

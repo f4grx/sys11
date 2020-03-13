@@ -11,7 +11,7 @@ numbuf:	.space 6	/* storage for 5 decimal digits + final zero */
 	.func	serial_init
 	.global serial_init
 serial_init:
-	ldaa	#0x22
+	ldaa	#0x30
 	staa	BAUD
 	ldaa	#0x0C
 	staa	SCCR2
@@ -40,8 +40,7 @@ serial_crlf:
 	ldab	#0x0D
 	jsr	serial_putchar
 	ldab	#0x0A
-	jsr	serial_putchar
-	rts
+	jmp	serial_putchar /* tail call */
 	.endfunc
 
 /*===========================================================================*/

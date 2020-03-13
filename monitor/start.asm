@@ -34,11 +34,13 @@ _start:
 	jsr	serial_init
 	#jsr	mm_init
 
+.if 0
 	/* ==================== */
 	/* Init block devices */
 	/* ==================== */
 
 	jsr	device_init
+.endif
 
 	/* ==================== */
 	/* Start message */
