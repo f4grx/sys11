@@ -273,9 +273,9 @@ shell_exec:
 	.endfunc
 
 /*===========================================================================*/
-	.func	shell_main
-	.global shell_main
-shell_main:
+	.func	app_main
+	.global app_main
+app_main:
 
 	ldaa	#OPT_ECHO		/* Default to echo ON */
 	staa	scmdopts

@@ -5,7 +5,7 @@
 	.include "stdlib.inc"
 	.text
 
-	.extern shell_main
+	.extern app_main
 
 	.func	_start
 	.global	_start
@@ -97,10 +97,11 @@ _start:
 .endif
 
 	/* ==================== */
-	/* Start the command interpreter shell*/
+	/* Start the command interpreter shell (shell.asm) */
+        /* Or the forth interpreter (forth.asm) */
 	/* ==================== */
 
-	jsr	shell_main
+	jsr	app_main
 
 	/* ==================== */
 	/* Fall in the idle loop */
