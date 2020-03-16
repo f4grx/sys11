@@ -8,7 +8,7 @@ monitor_OBJS+=serial.o spibus.o
 #monitor_OBJS+=mm.o
 
 #libs
-monitor_OBJS+=stdlib.o string.o
+monitor_OBJS+=stdio.o stdlib.o string.o
 
 #apps for basic shell with modular apps
 monitor_OBJS+=shell.o

@@ -3,11 +3,10 @@
  * so each can be reused. */
 
 	.include "serial.inc"
+	.include "stdio.inc"
 
 	.equ SCMD_MAX, 80+1	/* Include final zero */
 	.equ ARGV_MAX, 8
-
-	.equ OPT_ECHO, 0x01
 
 /*===========================================================================*/
 	.section .rodata
@@ -29,8 +28,6 @@ scommands:
 	.section .edata
 scmdbuf:
 	.space	SCMD_MAX /* Storage for command line */
-scmdopts:
-	.byte	0
 argc:
 	.byte	0
 argv:
@@ -41,7 +38,7 @@ argv:
 /*===========================================================================*/
 	.func	shell_echo
 shell_echo:
-	ldaa	scmdopts
+	ldaa	rlopts
 	eora	#OPT_ECHO
 	beq	.Lnoecho2
 	ldx	#son
@@ -49,73 +46,10 @@ shell_echo:
 .Lnoecho2:
 	ldx	#soff
 .Ldisp:
-	staa	scmdopts
+	staa	rlopts
 	stx	*sp0
 	jsr	serial_puts
 	jsr	serial_crlf
-	rts
-	.endfunc
-
-/*===========================================================================*/
-/* Read a line in buffer pointed by sp0, whith length (byte) in sp1.L */
-	.func	shell_readline
-	.global	shell_readline
-shell_readline:
-
-	/* Save used temps */
-
-	ldx	*st0
-	pshx
-
-	clrb
-	stab	*(st0+1)	/* Clear current command len */
-	dec	*(sp1+1)	/* Reduce buffer length so a final zero can be stored */
-	ldx	*sp0		/* Reload dest ptr for char acq */
-
-.Lcharloop:
-	jsr	serial_getchar
-	ldaa	scmdopts
-	bita	#OPT_ECHO
-	beq	.Lnoecho
-	jsr	serial_putchar /* echo */
-.Lnoecho:
-	cmpb	#0x0D
-	beq	.Lrdldone	/* User pressed return -> readline done */
-	cmpb	#0x08
-	beq	.Lbackspace
-	cmpb	#0x7F
-	beq	.Lbackspace
-	ldaa	*(st0+1)
-	cmpa	*(sp1+1)
-	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
-	stab	0,X
-	inc	*(st0+1)
-	inx
-	bra	.Lcharloop
-
-	/* If character is a backspace (0x08 or 0x7F), special handling */
-
-.Lbackspace:
-	ldaa	*(st0+1)
-	beq	.Lcharloop	/* Len already zero: do nothing */
-	deca
-	staa	*(st0+1)	/* Decrese char count */
-	dex			/* Point to previous char */
-	bra	.Lcharloop
-
-.Lrdldone:
-
-	/* Set return value */
-
-	clra			/* Cleanup Result MSB */
-	staa	0,X		/* Meanwhile, store a final zero */
-	ldab	*(st0+1)	/* Return nr of chars in result LSB */
-
-	/* Restore temps */
-
-	pulx
-	stx	*st0
-
 	rts
 	.endfunc
 
@@ -278,7 +212,7 @@ shell_exec:
 app_main:
 
 	ldaa	#OPT_ECHO		/* Default to echo ON */
-	staa	scmdopts
+	staa	rlopts
 
 .Lcmdloop:
 	/* ==================== */
@@ -297,7 +231,7 @@ app_main:
 	stx	*sp0
 	ldx	#(SCMD_MAX)	/* scmdbuf has additional byte to store 80 chars + final zero */
 	stx	*sp1
-	jsr	shell_readline
+	jsr	readline
 	jsr	serial_crlf	/* Skip current line */
 
 .if 0

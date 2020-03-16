@@ -1,49 +1,73 @@
 /* Usual routines */
+	.include "serial.inc"
+	.include "stdio.inc"
 
-	.equ	FMT_HEX , 0x01 /* Display as base 16, else base 10 */
-	.equ	FMT_WIDE, 0x02 /* Display 4 (not 2) hex digits or 5 (not 3) decimal digits */
+	.section .edata
+	.global  rlopts
+rlopts:
+	.byte	0
+
 	.text
-	.global kprintf
 
-kprintf:
-	pulx
+/*===========================================================================*/
+/* Read a line in buffer pointed by sp0, whith length (byte) in sp1.L */
+	.func	readline
+	.global	readline
+readline:
+
+	/* Save used temps */
+
+	ldx	*st0
+	pshx
+
+	clrb
+	stab	*(st0+1)	/* Clear current command len */
+	dec	*(sp1+1)	/* Reduce buffer length so a final zero can be stored */
+	ldx	*sp0		/* Reload dest ptr for char acq */
+
 .Lcharloop:
-	stx	sr0
-	ldaa	0,X
-	beq	.Lend		/* Final zero */
-	cmpaa	#'%'
-	bne	.Lnormal	/* Normal char */
-	/* Else, format char */
-	clr	sr1		/* sr1 contains format options */
-.Lmorefmt:
-	inx
-	ldaa	0,X
-	beq	.Lend		/* end of string just after format char ! */
-	cmpaa	#'%'
-	beq	.Lnormal	/* %% sequence to print a single % */
-	cmpaa	#'X'
-	beq	.Lhexw
-	cmpaa	#'x'
-	beq	.Lhexn
-	cmpaa	#'D'
-	beq	.Ldecw
-	cmpaa	#'d'
-	bne	.Lnext
-.Ldecw:
-	bset	*sr1, FMT_WIDE
-	bra	.Lconvert
-.Lhexw:
-	bset	*sr1, FMT_WIDE
-.Lhexn:
-	bset	*sr1, FMT_HEX
-	
-.Lprint:
-	
-.Lnormal:
-	jsr	sci_putchar
-.Lnext:
-	ldx	sr0
+	jsr	serial_getchar
+	ldaa	rlopts
+	bita	#OPT_ECHO
+	beq	.Lnoecho
+	jsr	serial_putchar /* echo */
+.Lnoecho:
+	cmpb	#0x0D
+	beq	.Lrdldone	/* User pressed return -> readline done */
+	cmpb	#0x08
+	beq	.Lbackspace
+	cmpb	#0x7F
+	beq	.Lbackspace
+	ldaa	*(st0+1)
+	cmpa	*(sp1+1)
+	beq	.Lcharloop	/* Overflow: dont store char, but still wait for LF */
+	stab	0,X
+	inc	*(st0+1)
 	inx
 	bra	.Lcharloop
-.Lend:
+
+	/* If character is a backspace (0x08 or 0x7F), special handling */
+
+.Lbackspace:
+	ldaa	*(st0+1)
+	beq	.Lcharloop	/* Len already zero: do nothing */
+	deca
+	staa	*(st0+1)	/* Decrese char count */
+	dex			/* Point to previous char */
+	bra	.Lcharloop
+
+.Lrdldone:
+
+	/* Set return value */
+
+	clra			/* Cleanup Result MSB */
+	staa	0,X		/* Meanwhile, store a final zero */
+	ldab	*(st0+1)	/* Return nr of chars in result LSB */
+
+	/* Restore temps */
+
+	pulx
+	stx	*st0
+
 	rts
+	.endfunc
