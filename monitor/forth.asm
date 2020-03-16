@@ -31,8 +31,12 @@
             other:   native code implementation
    P bytes: parameter field.
 
-  Compilation: Each word is recognized and replaced by the address of its
-  definition.
+  Compilation: Each word is recognized and replaced by the address of its code pointer.
+  Note this is not the address of the definition but the code pointer itself.
+  This means that the NEXT operation is just:
+  - load the contents of the next cell
+  - jump to its contents.
+  The last 
 
    Data area
    ---------
@@ -48,17 +52,19 @@
 	.include "serial.inc"
 	.include "stdio.inc"
 
-	.equ	IBUF_LEN, 80
+	.equ	IBUF_LEN, 80+1 /* Include space for terminal zero */
 	.equ	DATA_STACK_SIZE, 512
 
 	.section .edata
 mtemp:	.word	0	/* Temp for maths */
+IP:	.word	0	/* Instruction pointer. This is the address of the compiled opcode being executed. */
 dsp:	.word	0	/* Data stack pointer */
-ibuf:	.space	IBUF_LEN+1
+ibuf:	.space	IBUF_LEN
 dstack:	.space	DATA_STACK_SIZE
 
 	.section .rodata
 msg:	.asciz "Forth for 68hc11\r\n"
+msgok:	.asciz "    OK\r\n"
 
 bi_DOT:
 	.byte 1
@@ -104,10 +110,22 @@ ENTER:
 DOCONST:
 DOVAR:
 
+
 NEXT:
+	/* Load the next compiled opcode (address to a code field) */
+	ldx	IP	/* Load the instruction pointer in X*/
+	ldd	0,X	/* Load the opcode, which is a code pointer */
+	inx		/* Skip it: prepare to exec next opcode */
+	inx
+	stx	IP	/* Save the instruction pointer */
+	xgdx		/* Put D (code address) in X so we can jump */
+	jmp	0,x	/* Execute this opcode */
+
 	/* Find a word in the definitions and return its address */
+	.func findword
 findword:
 	rts
+	.endfunc
 
 	.func	app_main
 	.global app_main
@@ -134,6 +152,39 @@ app_main:
 	jsr	serial_crlf	/* Skip current line */
 
 	/* Interpret each word */
+
+	/* Skip spaces */
+
+	ldx	#ibuf
+.Lspaceagain:
+	ldaa	0,X
+	inx			/* Postinc */
+	beq	.Lspaceagain	/* zero may have been used to replace a space */
+	cmpa	#0x20
+	beq	.Lspaceagain
+	cpx	#(ibuf+IBUF_LEN)
+	beq	.Lbufend
+	stx	*sp0 /* Save beginning of word */
+	dec	*sp0 /* X was postinced */
+.Lnotwordend:
+	ldaa	0,X
+	inx
+	beq	.Lwordend /* End of buffer */
+	cmpa	#0x20
+	bne	.Lnotwordend
+	clra			/* End of word reached, put zero byte */
+	staa	0,X
+.Lwordend:
+	/* Now we have a zero terminated word in sp0 */
+	jsr	serial_puts
+	jsr	serial_crlf
+	ldaa	#0x20
+
+.Lbufend:
+	ldx	#msgok
+	stx	*sp1
+	jsr	serial_puts
+	bra	.Linterp
 
 .if 0
 	/* Test display for readline */

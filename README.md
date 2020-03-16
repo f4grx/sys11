@@ -6,6 +6,12 @@ This is a development board for the 68hc11 microcontroller.
 The goal is to build a robust, simple, reliable, and repairable computer from
 scrap, similar to what collapseOS is seeking.
 
+The main shell is a forth interpreter. The "old" shell (readline/parse args/execute)
+is still retained for the moment but it may go away as soon as Forth is working properly.
+
+Forth is a portable stack-based language wich is surprisingly powerful, even on
+small targets. It has the potential to describe complex programs in a very compact way.
+
 CPU: 68HC11A0, the most basic one. This is what I found in my drawer, and is
 more desirable than a basic 6502 or other because it has integrated peripherals.
 I only choose chips that I have replacement for.
@@ -74,14 +80,11 @@ Planned vaporware features
 --------------------------
 
 * Removable SPI/I2C flash cardriges
-* SCSI controller
+* SCSI
 * Additional UARTs and various comm interfaces (fiber, RS422 RS485...)
-* Ethernet
 * Wireless communication interfaces (AX.25, 1200 bauds packet modem)
 * Audio cassette program storage (Kansas)
-* MCP 2515 CAN Bus on SPI
 * Dual-port RAM in IO space for communication and shared mem with another HC11.
-* Infinite ROM space for device drivers :)
 
 What is already done
 --------------------
@@ -91,7 +94,7 @@ What is already done
 some 74xx245, 573, 138, 00, 10, 27256, various 32Kx8 and 8Kx8 RAMs
 * Ordered a 2864 EEPROM from ebay (received, meanwhile I found another one in a junkbox)
 * Bootstrap uploader in Python3.
-* Working hardware prototype on 10x16 perforated board
+* Working hardware prototype on 100x160 perforated board
 * Clock, Reset, UART connection, power supply with decoupling
 * Memory map decoder using logic gates
 * The HC11 starts in bootstrap mode and successfully executes code to drive LED.
@@ -102,11 +105,6 @@ some 74xx245, 573, 138, 00, 10, 27256, various 32Kx8 and 8Kx8 RAMs
 * IRQ lines from expansion board to cpu (were broken due to lack of pullups)
 
 Summary: The system is validated on the soldered wirewrap euro board.
-
-What is being done right now
-----------------------------
-* Writing a 68HC11 simulator integrated with gdb to debug the monitor.
-* Writing the monitor ROM including a RAM allocator (SPI bus driver)
 
 What remains to be done
 -----------------------
@@ -128,17 +126,23 @@ Software roadmap
 * Bootloader for extended mode - DONE
 * Malloc - WIP, almost validated
 * Simulator - WIP
-* Basic shell - DONE
-* SPI bus driver - WIP
-* Block device system - WIP
+* Basic shell - ABANDONED
+* SPI bus driver - Should workd
+* Block device system - ABANDONED
+* Forth - WIP
 
 * SPI and/or I2C EEPROM driver
 * I2C bus driver
-* Filesystem (RRSF, already half designed)
-* Volume mounting mechanism
-* ed-based text editor
+
+Abandoned features that should be implementable in forth
+--------------------------------------------------------
 * Assembler
 * Self host the system
+
+Abandoned features that are useless or too complex
+--------------------------------------------------
+Or may be done later...
+* ed-based text editor
 * Definition of a position independent binary format
 * IO kernel
 * Program loader
@@ -146,14 +150,12 @@ Software roadmap
 
 SPI bus
 -------
-
 The HC11 hardware SPI bus wil be used in master mode.
 * The SS line is used as OE for a 74138 decoder that provides 8 CS lines from
 3 OC lines of port A.
 
 I2C bus
 -------
-
 A proper i2c bus needs two bidirectionnal open drain lines, which are not
 available on the HC11 if one wants to benefit from the hardware SPI block on
 PORTD. Moreover, the HC11 does not have a hardware i2c, so bitbanging must be
@@ -166,10 +168,32 @@ the bits to write, which is not a big problem for the driver.
 
 FAQ
 ---
+Q: Why move to Forth?
+
+A: At first I did not want it, and I planned to build an assembler and shell to
+be able to compile source assembly files and rebuild the system from itself.
+While doable, this will use a lot of memory, both flash and RAM. Just a shell and
+still-not-working block device system was using 800 bytes, or 1/10 of the rom space.
+
+It is pitiful to have 8k of ROM and only be able to have an assembler program, and
+nothing else.
+
+Meanwhile CollapseOS, which was going in the same direction, realized the potential
+of forth and started implementing it. I followed the movement for several reasons:
+* Forth is portable, the same routines are able to work on "any" forth implementing
+machine, whatever the underlying CPU. This greatly increases the potential of collapse
+recovery machines.
+* It is still possible to write an assembler in forth, even cross assemblers are possible,
+which still increases the ability to mix different machine in a portable software environment.
+* It has the potential to express quite complex software constructs in a very compact manner
+
 Q: Why not use a 6502?
 
 A: Because the 6502 has a 8-bit stack pointer which is ridiculously restrictive.
 We are not anymore in the situation where the 6800 was $179 and the 6502 was $29.
+
+A2: Going to forth, the underlying CPU is not so important since Forth can be implemented
+on a variety of machines.
 
 Q: Why not use a Z80?
 
@@ -185,4 +209,7 @@ on the memory bus.
 At some point it may be more interesting to build a Z80 system, to benefit from
 more RAM, and also more registers, even if the Z80 requires more cycles to
 execute every instruction.
+
+Other CPUs are also interesting to increase the potential for collapse recovery:
+ARM and MSP430 are such interesting targets, even the x86.
 
