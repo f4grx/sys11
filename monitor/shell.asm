@@ -210,7 +210,6 @@ shell_exec:
 	.func	app_main
 	.global app_main
 app_main:
-
 	ldaa	#OPT_ECHO		/* Default to echo ON */
 	staa	rlopts
 

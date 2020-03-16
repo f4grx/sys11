@@ -11,13 +11,13 @@ monitor_OBJS+=serial.o spibus.o
 monitor_OBJS+=stdio.o stdlib.o string.o
 
 #apps for basic shell with modular apps
-monitor_OBJS+=shell.o
-monitor_OBJS+=as11.o
-monitor_OBJS+=device.o
-monitor_OBJS+=bdev_ram.o
+#monitor_OBJS+=shell.o
+#monitor_OBJS+=as11.o
+#monitor_OBJS+=device.o
+#monitor_OBJS+=bdev_ram.o
 
 #forth system
-#monitor_OBJS+=forth.o
+monitor_OBJS+=forth.o
 
 monitor_LKR=../link/monitor.ld
 
