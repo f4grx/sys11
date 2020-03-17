@@ -61,7 +61,6 @@
 	.equ	VEC_END     , 0xFFFF
 
     .text
-	.org	ROM_START
     .globl _start
 _start:
 	jmp	_start
