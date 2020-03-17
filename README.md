@@ -6,11 +6,16 @@ This is a development board for the 68hc11 microcontroller.
 The goal is to build a robust, simple, reliable, and repairable computer from
 scrap, similar to what collapseOS is seeking.
 
-The main shell is a forth interpreter. The "old" shell (readline/parse args/execute)
-is still retained for the moment but it may go away as soon as Forth is working properly.
+The project defines two ROM images:
+* a shell interface with assemble-time modular commands, development is halted.
+* a forth interpreter.
 
-Forth is a portable stack-based language wich is surprisingly powerful, even on
+Forth is a portable stack supported language wich is surprisingly powerful, even on
 small targets. It has the potential to describe complex programs in a very compact way.
+
+A lot of resources about forth are available online. This project defines a minimally small
+forth interpreter with indirect threading. The goal is to build a 68hc11 interpreter that can
+be used to write the interpreter itself, so it has to be as small as possible.
 
 CPU: 68HC11A0, the most basic one. This is what I found in my drawer, and is
 more desirable than a basic 6502 or other because it has integrated peripherals.
@@ -81,6 +86,8 @@ Planned vaporware features
 
 * Removable SPI/I2C flash cardriges
 * SCSI
+* Ethernet
+* MCP2515 SPI CAN
 * Additional UARTs and various comm interfaces (fiber, RS422 RS485...)
 * Wireless communication interfaces (AX.25, 1200 bauds packet modem)
 * Audio cassette program storage (Kansas)
