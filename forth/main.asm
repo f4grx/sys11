@@ -88,6 +88,8 @@
 	.equ SCCR2, 0x2D
 	.equ SCSR , 0x2E
 	.equ SCDR , 0x2F
+	.equ SCSR_RDRF     ,0x20 /* Receive buffer full */
+	.equ SCSR_TDRE     ,0x80 /* Transmit buffer empty */
 
 
 	/* Forth config */
@@ -115,6 +117,7 @@ IN:	.word	0		/* Parse position in the input buffer */
 /*                ^      ^            */
 /*                IP    nxtIP=IP+2     */
 
+	.globl PUSHD
 PUSHD:
 	psha			/* We can use this instead of next to push a result before ending a word */
 	pshb
@@ -155,9 +158,39 @@ EXIT:
 
 /*===========================================================================*/
 	.section .rodata
+word_EMIT:
+	.asciz	"EMIT"
+	.word	0
+	.word	code_KEY
+
+	.text
+code_EMIT:
+	pulb
+	pula
+.Lemit2:
+	brclr	*SCSR #SCSR_TDRE, .Lemit2
+	stab	*SCDR
+	bra	NEXT
+
+/*===========================================================================*/
+	.section .rodata
+word_KEY:
+	.asciz	"KEY"
+	.word	word_EMIT
+	.word	code_KEY
+
+	.text
+code_KEY:
+	brclr	*SCSR #SCSR_RDRF, code_KEY
+	ldab	*SCDR
+	clra
+	bra	PUSHD
+
+/*===========================================================================*/
+	.section .rodata
 word_STORE:
 	.asciz	"!"
-	.word	0
+	.word	word_KEY
 	.word	code_STORE
 
 	.text
@@ -169,22 +202,26 @@ code_STORE:
 	bra	NEXT
 
 /*===========================================================================*/
+	.section .rodata
 word_LOAD:
 	.asciz "@"
 	.word	word_STORE
 	.word	code_LOAD
 
+	.text
 code_LOAD:
 	pulx
 	ldd	0,X
 	bra	PUSHD
 
 /*===========================================================================*/
+	.section .rodata
 word_DUP:
 	.asciz "DUP"
 	.word	word_STORE
 	.word	code_DUP
 
+	.text
 code_DUP:
 	tsx			/* Get stack pointer in X */
 	ldd	0,X		/* Load top of stack in D */
@@ -225,7 +262,7 @@ code_QUIT: /* Main forth interpreter loop */
 	clr	*SOURCEID
 	clr	*(SOURCEID+1)
 
-loop:
+.Lquit2:
 	/* Push buffer length */
 	ldx	#IBUF_LEN
 	pshx
@@ -251,6 +288,6 @@ loop:
 	/* Display prompt */
 
 	/* Do it again */
-	bra	loop
+	bra	.Lquit2
 	
 
