@@ -1,7 +1,7 @@
 #runtime
 forth_OBJS=main.o vectors.o
 
-forth_LKR=../link/monitor.ld
+forth_LKR=hc11.ld
 
 TARGETS=forth
 
