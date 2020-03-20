@@ -95,7 +95,7 @@
 
 
 	/* Forth config */
-	.equ	IBUF_LEN, 80
+	.equ	TIB_LEN, 80
 
 	/* Define variables in internal HC11 RAM */
 	.data
@@ -103,13 +103,12 @@ IP:	.word	0		/* Instruction pointer */
 
 	/* Input text buffering */
 
-IBUF:	.space	IBUF_LEN	/* Input buffer */
-ILEN:	.word	0		/* Number of characters in current line */
-IN:	.word	0		/* Parse position in the input buffer */
-BASE:	.word	0		/* Value of the base used for number parsing */
-LAST:	.word	0		/* Pointer to the last defined word or name */
-
-	.text
+BASE:	.word	0	/* Value of the base used for number parsing */
+NTIB:	.word	0	/* Number of characters in current line */
+TIB:	.space	TIB_LEN	/* Input buffer */
+IN:	.word	0	/* Parse position in the input buffer */
+HERE:	.word	0	/* Address of next free byte in dic/data space */
+LAST:	.word	0	/* Pointer to the last defined word or name */
 
 /*===========================================================================*/
 /* Structure of a compiled word: We have a suite of code pointers. Each code pointer has to be executed in turn. */
@@ -120,7 +119,16 @@ LAST:	.word	0		/* Pointer to the last defined word or name */
 /*                ^      ^            */
 /*                IP    nxtIP=IP+2     */
 
-	.globl PUSHD
+/*===========================================================================*/
+/* Core routines for word execution */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* Execute the next word. IP is incremented, stored back, and the cell pointed
+ * by IP is loaded. It contains a code address, which is jumped at.
+ */
+	.text
+	.globl PUSHD /* ensure GNU as makes this symbol visible */
 PUSHD:
 	psha			/* We can use this instead of next to push a result before ending a word */
 	pshb
@@ -129,13 +137,13 @@ NEXT:
 NEXT2:				/* We can call here if X already has the value for IP */
 	inx			/* Increment IP to look at next word */
 	inx
-	stx	*IP		/* IP+1->IP Save IP for next execution */
+	stx	*IP		/* Save IP for next execution round */
 	dex			/* Redecrement, because we need the original IP */
 	dex
-	ldx	0,X		/* (IP)->W Deref: This IP contains a code pointer */
-	jmp	0,X		/* JMP (W) */
+	ldx	0,X		/* Deref: This IP contains a code pointer */
+	jmp	0,X		/* Call the code that must run now */
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 ENTER:
 	ldx	*IP
@@ -144,7 +152,7 @@ ENTER:
 	stx	0,Y		/* Push the next IP to be executed after return from this thread */
 	bra	NEXT2		/* Manage text opcode address */
 	
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
 EXIT:
 	ldx	0,Y		/* Get previous value for IP from top of return stack */
@@ -153,32 +161,62 @@ EXIT:
 	bra	NEXT2		
 
 /*===========================================================================*/
+/* Internal words */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
 /* Do litteral: Next cell in thread is a litteral value to be pushed. */
 DOLIT:
-	ldx	*IP		/* Get the instruction pointer */
+	ldx	*IP	/* Load next word in D */
 	ldd	0,X
-	inx			/* Increment IP to look at next word */
+	inx		/* Increment IP to look at next word */
 	inx
-	stx	*IP		/* IP+1->IP Save IP for next execution */
+	stx	*IP	/* IP+1->IP Save IP for next execution */
 	bra	PUSHD
 
-/*===========================================================================*/
-/* Next word contains an address that will be pushed on the param stack */
-DOVAR:
+/*---------------------------------------------------------------------------*/
+/* Execute the code whose address is on the stack */
+EXECUTE:
+	pulx
+	jmp	0,X
 
-/*===========================================================================*/
-/* Next word contains an address that will be pushed on the param stack */
-DOCONST:
-	
+/*---------------------------------------------------------------------------*/
+/* Load next word in IP */
+BRANCH:
+	ldx	*IP	/* Load next word in D */
+	ldd	0,X
+	inx
+	inx
+	stx	*IP
+	xgdx
+	bra	NEXT2
+
+/*---------------------------------------------------------------------------*/
+/* Pull a value. If zero, load next word in IP */
+QBRANCH:
+	ldx	*IP	/* Load next word in D */
+	ldd	0,X
+	inx
+	inx
+	stx	*IP
+
+	pulx		/* Get flag */
+	cpx	#0x0000 /* TODO make it more efficient */
+	beq	qbranch1
+	bra	NEXT	/* Not zero */
+
+qbranch1: /* Pulled value has zero, do the branch */
+	xgdx /* get the next word in X, then execute it */
+	bra	NEXT2
+
+/*---------------------------------------------------------------------------*/
+/* */
+code_NEXT:
+
 /*===========================================================================*/
 /* Native words */
 /*===========================================================================*/
 
-/* Internal opcodes generated by compiler for loop management */
-code_BRANCH:
-code_QBRANCH:
-code_NEXT:
-	bra	NEXT
 
 /*===========================================================================*/
 	.section .rodata
@@ -270,8 +308,8 @@ word_QUIT:
 code_QUIT:
 	.word	ENTER
 QUIT2:
-	.word	DOLIT, IBUF
-	.word	DOLIT, IBUF_LEN
+	.word	DOLIT, TIB
+	.word	DOLIT, TIB_LEN
 	.word	code_ACCEPT
 	.word	code_BRANCH, QUIT2
 
