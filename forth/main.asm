@@ -138,15 +138,11 @@ NEXT2:				/* We can call here if X already has the value for IP */
 /*===========================================================================*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 ENTER:
-	ldd	*IP
+	ldx	*IP
 	dey			/* Pre-Decrement Y by 2 to push */
 	dey
-	std	0,Y		/* Push the next IP to be executed after return from this thread */
-
-	ldx	*IP
-	inx
-	inx
-	bra	NEXT2
+	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+	bra	NEXT2		/* Manage text opcode address */
 	
 /*===========================================================================*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
@@ -156,8 +152,15 @@ EXIT:
 	aby			/* Increment Y by 2 to pop */
 	bra	NEXT2		
 
-
+/*===========================================================================*/
+/* Do litteral: Next cell in thread is a litteral value to be pushed. */
 DOLIT:
+	ldx	*IP		/* Get the instruction pointer */
+	ldd	0,X
+	inx			/* Increment IP to look at next word */
+	inx
+	stx	*IP		/* IP+1->IP Save IP for next execution */
+	bra	PUSHD
 
 /*===========================================================================*/
 /* Next word contains an address that will be pushed on the param stack */
@@ -272,8 +275,9 @@ QUIT2:
 	.word	code_ACCEPT
 	.word	code_BRANCH, QUIT2
 
+	.text
 /*===========================================================================*/
-    .globl _start
+	.globl _start
 _start:
 
 	/* Init serial port */
@@ -294,8 +298,6 @@ _start:
 
 	lds	#0x8000		/* Parameter stack at end of RAM */
 	ldy	#0x7C00		/* Return stack 1K before end of RAM */
-	ldx	code_QUIT	/* load pointer to startup code */
+	ldx	#code_QUIT	/* load pointer to startup code */
 	bra	NEXT2		/* Start execution */
-
-	
 
