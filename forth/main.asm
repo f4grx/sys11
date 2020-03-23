@@ -145,11 +145,14 @@ NEXT2:				/* We can call here if X already has the value for IP */
 
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
+/* This function is always called by the execution of NEXT. */
 ENTER:
-	ldx	*IP
+	inx			/* X has the address of the ENTER function. */
+	inx
+	ldd	*IP
 	dey			/* Pre-Decrement Y by 2 to push */
 	dey
-	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+	std	0,Y		/* Push the next IP to be executed after return from this thread */
 	bra	NEXT2		/* Manage text opcode address */
 	
 /*---------------------------------------------------------------------------*/
@@ -221,9 +224,9 @@ code_NEXT:
 /*===========================================================================*/
 	.section .rodata
 word_EMIT:
-	.asciz	"EMIT"
 	.word	0
-	.word	code_KEY
+	.asciz	"EMIT"
+	.word	code_EMIT
 
 	.text
 code_EMIT:
@@ -237,8 +240,8 @@ code_EMIT:
 /*===========================================================================*/
 	.section .rodata
 word_KEY:
-	.asciz	"KEY"
 	.word	word_EMIT
+	.asciz	"KEY"
 	.word	code_KEY
 
 	.text
@@ -251,8 +254,8 @@ code_KEY:
 /*===========================================================================*/
 	.section .rodata
 word_STORE:
-	.asciz	"!"
 	.word	word_KEY
+	.asciz	"!"
 	.word	code_STORE
 
 	.text
@@ -266,8 +269,8 @@ code_STORE:
 /*===========================================================================*/
 	.section .rodata
 word_LOAD:
-	.asciz "@"
 	.word	word_STORE
+	.asciz "@"
 	.word	code_LOAD
 
 	.text
@@ -279,8 +282,8 @@ code_LOAD:
 /*===========================================================================*/
 	.section .rodata
 word_DUP:
+	.word	word_LOAD
 	.asciz "DUP"
-	.word	word_STORE
 	.word	code_DUP
 
 	.text
@@ -293,9 +296,9 @@ code_DUP:
 /*===========================================================================*/
 	.section .rodata
 word_ACCEPT:
-	.asciz "ACCEPT"
 	.word	word_DUP
-code_ACCEPT:
+	.asciz "ACCEPT"
+ACCEPT:
 	.word	ENTER
 	.word	EXIT
 
@@ -303,15 +306,15 @@ code_ACCEPT:
 /* Main forth interactive interpreter loop */
 	.section .rodata
 word_QUIT:
-	.asciz "QUIT"
 	.word	word_ACCEPT
-code_QUIT:
+	.asciz "QUIT"
+QUIT:
 	.word	ENTER
 QUIT2:
 	.word	DOLIT, TIB
 	.word	DOLIT, TIB_LEN
-	.word	code_ACCEPT
-	.word	code_BRANCH, QUIT2
+	.word	ACCEPT
+	.word	BRANCH, QUIT2
 
 	.text
 /*===========================================================================*/
@@ -336,6 +339,6 @@ _start:
 
 	lds	#0x8000		/* Parameter stack at end of RAM */
 	ldy	#0x7C00		/* Return stack 1K before end of RAM */
-	ldx	#code_QUIT	/* load pointer to startup code */
+	ldx	#QUIT		/* load pointer to startup code */
 	bra	NEXT2		/* Start execution */
 
