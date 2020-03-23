@@ -111,6 +111,7 @@ adrexit  = findsymaddr(b"EXIT")
 
 print("ENTER=%04X EXIT=%04X" % (adrenter,adrexit))
 
+base = dic.addr
 cnt = dic.content
 length = len(cnt)
 print("dic size: ", length)
@@ -125,11 +126,13 @@ ptr=0
 while ptr < length:
     print()
 
+    print("[%04X] " % (base+ptr), end='')
     lnk = struct.Struct(">H").unpack_from(cnt, ptr)
     lnk = lnk[0]
     ptr += 2
     print("link=%04X" % lnk, findsymname(lnk) )
 
+    print("[%04X] " % (base+ptr), end='')
     name = ""
     while cnt[ptr] != 0:
         name = name + chr(cnt[ptr])
@@ -137,6 +140,7 @@ while ptr < length:
     print("name=%s" % name)
     ptr+=1
 
+    print("[%04X] " % (base+ptr), end='')
     code = struct.Struct(">H").unpack_from(cnt, ptr)
     code = code[0]
     ptr += 2
@@ -147,6 +151,7 @@ while ptr < length:
 
     #we have a wordlist. display words
     while code != adrexit and ptr < length:
+        print("[%04X] " % (base+ptr), end='')
         code = struct.Struct(">H").unpack_from(cnt, ptr)
         code = code[0]
         ptr += 2

@@ -214,7 +214,6 @@ qbranch1: /* Pulled value has zero, do the branch */
 
 /*---------------------------------------------------------------------------*/
 /* */
-code_NEXT:
 
 /*===========================================================================*/
 /* Native words */
@@ -222,7 +221,7 @@ code_NEXT:
 
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_EMIT:
 	.word	0
 	.asciz	"EMIT"
@@ -238,7 +237,7 @@ code_EMIT:
 	bra	NEXT
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_KEY:
 	.word	word_EMIT
 	.asciz	"KEY"
@@ -252,7 +251,7 @@ code_KEY:
 	bra	PUSHD
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_STORE:
 	.word	word_KEY
 	.asciz	"!"
@@ -267,7 +266,7 @@ code_STORE:
 	bra	NEXT
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_LOAD:
 	.word	word_STORE
 	.asciz "@"
@@ -280,7 +279,7 @@ code_LOAD:
 	bra	PUSHD
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_DUP:
 	.word	word_LOAD
 	.asciz "DUP"
@@ -294,7 +293,7 @@ code_DUP:
 
 
 /*===========================================================================*/
-	.section .rodata
+	.section .dic
 word_ACCEPT:
 	.word	word_DUP
 	.asciz "ACCEPT"
@@ -304,7 +303,7 @@ ACCEPT:
 
 /*===========================================================================*/
 /* Main forth interactive interpreter loop */
-	.section .rodata
+	.section .dic
 word_QUIT:
 	.word	word_ACCEPT
 	.asciz "QUIT"

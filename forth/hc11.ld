@@ -25,6 +25,10 @@ SECTIONS
 		*(.rodata)
 	} > rom
 
+	.dic : {
+		*(.dic)
+	} > rom
+
 	.vectors : {
 		*(.vectors)
 	} > vecs
