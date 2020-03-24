@@ -12,6 +12,14 @@ MEMORY
 
 ENTRY(_start)
 
+PHDRS
+{
+	text PT_LOAD ;
+	rodata PT_LOAD ;
+	dic PT_LOAD ;
+	vectors PT_LOAD ;
+}
+
 SECTIONS
 {
 
@@ -19,36 +27,37 @@ SECTIONS
 
 	.text : {
 		*(.text)
-	} > rom
+	} >rom :text
 
 	.rodata : {
 		*(.rodata)
-	} > rom
+	} >rom :rodata
 
-	.dic : {
+	.rodata1 : {
 		*(.dic)
-	} > rom
+	} >rom :dic
 
 	.vectors : {
 		*(.vectors)
-	} > vecs
+	} >vecs :vectors
 
 /* RAM SECTIONS */
 
-	.data : {
+	.data (NOLOAD) : {
 		*(.data)
-	} > iram
-	.bss : {
+	} >iram
+	.bss (NOLOAD) : {
 		*(.bss)
 		*(COMMON)
-	} > iram
+	} >iram
 
 /* EXTERNAL RAM */
-	.edata : {
+
+	.edata (NOLOAD) : {
 		*(.edata)
-	} > ram
-	.xdata : {
+	} >ram
+	.xdata (NOLOAD) : {
 		*(.xdata)
-	} > xram
+	} >xram
 }
 

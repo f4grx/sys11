@@ -8,7 +8,7 @@ ENTRY(_start)
 
 PHDRS
 {
-  load PT_LOAD;
+  load PT_LOAD ;
 }
 
 SECTIONS

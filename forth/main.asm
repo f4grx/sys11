@@ -238,6 +238,7 @@ code_DJNZ:
 /* Native words */
 /*===========================================================================*/
 
+dic_start:
 
 /*---------------------------------------------------------------------------*/
 /* Execute the code whose address is on the stack */
@@ -361,6 +362,11 @@ QUIT2:
 	.word	LITTERAL, TIB_LEN
 	.word	ACCEPT
 	.word	BRANCH, QUIT2
+	.word	RETURN /* Unreached */
+
+	.section .rodata
+dic_end:
+	nop
 
 	.text
 /*===========================================================================*/
