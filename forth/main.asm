@@ -84,6 +84,8 @@
 
 */
 
+	/* System definitions */
+	.equ INIT , 0x3D
 	/* Serial definitions */
 	.equ BAUD , 0x2B
 	.equ SCCR1, 0x2C
@@ -122,6 +124,38 @@ LAST:	.word	0	/* Pointer to the last defined word or name */
    words implemented in assembly are only made of a code pointer.
  */
 
+	.text
+/*===========================================================================*/
+/* Startup code */
+/*===========================================================================*/
+	.globl _start
+_start:
+
+	/* Map registers in zero page */
+	clra
+	staa	INIT+0x1000
+
+	/* Init serial port */
+
+	ldaa	#0x30
+	staa	BAUD
+	ldaa	#0x0C
+	staa	SCCR2
+
+	/* Init default values */
+	ldx	#10
+	stx	*BASE
+
+	ldx	#word_QUIT
+	stx	*LAST
+
+	/* Setup the runtime environment */
+
+	lds	#0x8000		/* Parameter stack at end of RAM */
+	ldy	#0x7C00		/* Return stack 1K before end of RAM */
+	ldx	#QUIT2		/* load pointer to startup code, skipping the native ENTER pointer! */
+	bra	NEXT2		/* Start execution */
+
 /*===========================================================================*/
 /* Core routines for word execution */
 /*===========================================================================*/
@@ -144,24 +178,30 @@ NEXT2:				/* We can call here if X already has the value for IP */
 	stx	*IP		/* Save IP for next execution round */
 	dex			/* Redecrement, because we need the original IP */
 	dex
-	ldx	0,X		/* Deref: This IP contains a code pointer */
+	ldx	0,X		/* Deref: X contains a word pointer */
+	ldd	0,X		/* Deref: D contains a code pointer */
+	xgdx			/* Copy D in X so we can call the code, while saving the code ptr */
 	jmp	0,X		/* Call the code that must run now */
 
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
 code_ENTER:
-	inx			/* X has the address of the ENTER function. */
-	inx
-	ldd	*IP
+	/* At this point D contains the address of the code_ENTER cell */
+	ldx	*IP
 	dey			/* Pre-Decrement Y by 2 to push */
 	dey
-	std	0,Y		/* Push the next IP to be executed after return from this thread */
+	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+	xgdx			/* Put enter opcode address in X */
+	inx			/* Increment, now X is the address of the first word in the list */
+	inx
 	bra	NEXT2		/* Manage text opcode address */
 
 /*---------------------------------------------------------------------------*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
 RETURN:
+	.word	code_RETURN
+code_RETURN:
 	ldx	0,Y		/* Get previous value for IP from top of return stack */
 	ldab	#2
 	aby			/* Increment Y by 2 to pop */
@@ -362,29 +402,4 @@ QUIT2:
 	.word	BRANCH, QUIT2
 	.word	RETURN /* Unreached */
 
-	.text
-/*===========================================================================*/
-	.globl _start
-_start:
-
-	/* Init serial port */
-
-	ldaa	#0x30
-	staa	BAUD
-	ldaa	#0x0C
-	staa	SCCR2
-
-	/* Init default values */
-	ldx	#10
-	stx	*BASE
-
-	ldx	#word_QUIT
-	stx	*LAST
-
-	/* Setup the runtime environment */
-
-	lds	#0x8000		/* Parameter stack at end of RAM */
-	ldy	#0x7C00		/* Return stack 1K before end of RAM */
-	ldx	#QUIT		/* load pointer to startup code */
-	bra	NEXT2		/* Start execution */
 
