@@ -12,14 +12,6 @@ MEMORY
 
 ENTRY(_start)
 
-PHDRS
-{
-	text PT_LOAD ;
-	rodata PT_LOAD ;
-	dic PT_LOAD ;
-	vectors PT_LOAD ;
-}
-
 SECTIONS
 {
 
@@ -27,19 +19,18 @@ SECTIONS
 
 	.text : {
 		*(.text)
-	} >rom :text
+	} >rom
 
 	.rodata : {
 		*(.rodata)
-	} >rom :rodata
-
-	.rodata1 : {
+		__DEBUG__DICSTART__ = . ;
 		*(.dic)
-	} >rom :dic
+		__DEBUG__DICEND__ = . ;
+	} >rom
 
 	.vectors : {
 		*(.vectors)
-	} >vecs :vectors
+	} >vecs
 
 /* RAM SECTIONS */
 

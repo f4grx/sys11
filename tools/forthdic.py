@@ -56,14 +56,14 @@ except Exception as e:
     print(e)
     sys.exit(1)
 
-dic = None
+rodata  = None
 symbols = None
 strings = None
 
 for sec in elf.sectionHeaders:
     if sec.name == b".rodata":
         print("    .rodata found")
-        dic = sec
+        rodata = sec
     elif sec.name == b".symtab":
         symbols = sec
         print("    Symbol table found, %u bytes" % len(symbols.content))
@@ -102,52 +102,52 @@ def findsymname(addr):
     return "None@%04X" % addr
 
 #------------------------------------------------------------------------------
-if dic == None:
+if rodata == None:
     print("No dic found")
     sys.exit(0)
 
-dicstart = findsymaddr(b"dic_start")
-dicend = findsymaddr(b"dic_end")
+dicstart = findsymaddr(b"__DEBUG__DICSTART__")
+dicend = findsymaddr(b"__DEBUG__DICEND__")
 adrenter = findsymaddr(b"code_ENTER")
 adrexit  = findsymaddr(b"RETURN")
 
 print("ENTER=%04X EXIT=%04X" % (adrenter,adrexit))
 print("start=%04X end=%04X" % (dicstart,dicend))
 
-base = dic.addr
-cnt = dic.content
-length = len(cnt)
-print("dic size: ", length)
-for i in range(dicend-dicstart):
+base = rodata.addr
+off  = dicstart - rodata.addr
+cnt = rodata.content
+length = dicend - dicstart
+print("rodata size: ", len(cnt))
+print("dic size: ", length, "at offset", off)
+for i in range(length):
     if i%16==0: print("%04X: "%i, end='')
-    print("%02X" % cnt[i+dicstart-base], end='')
+    print("%02X" % cnt[i+off], end='')
     if i%16==15: print()
 print()
 
-ptr = dicstart
-
-while ptr < dicend:
+ptr  = off
+while ptr < off+length:
     print()
 
-    print("[%04X] " % ptr, end='')
-    lnk = struct.Struct(">H").unpack_from(cnt, ptr-base)
-    lnk = lnk[0]
+    print("[%04X] " % (ptr+base), end='')
+    lnk = struct.Struct(">H").unpack_from(cnt, ptr)[0]
     ptr += 2
-    print("link=%04X" % lnk, findsymname(lnk) )
+    print("prev=%04X" % lnk, findsymname(lnk) )
 
-    print("[%04X] " % ptr, end='')
+    print("[%04X] " % (ptr+base), end='')
     name = ""
-    while cnt[ptr-base] != 0:
-        name = name + chr(cnt[ptr-base])
+    while cnt[ptr] != 0:
+        name = name + chr(cnt[ptr])
         ptr+=1
     print("name=%s" % name)
     ptr+=1
 
-    print("[%04X] " % ptr, end='')
-    code = struct.Struct(">H").unpack_from(cnt, ptr-base)
+    print("[%04X] " % (ptr+base), end='')
+    code = struct.Struct(">H").unpack_from(cnt, ptr)
     code = code[0]
     ptr += 2
-    print("code=%04X" % code, findsymname(code) )
+    print("  code=%04X" % code, findsymname(code) )
 
     if code != adrenter:
         continue
@@ -155,9 +155,8 @@ while ptr < dicend:
     #we have a wordlist. display words
     word = 0
     while word != adrexit and ptr < dicend:
-        print("[%04X] " % ptr, end='')
-        word = struct.Struct(">H").unpack_from(cnt, ptr-base)
-        word = word[0]
+        print("[%04X] " % (ptr+base), end='')
+        word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         ptr += 2
-        print("word=%04X" % word, findsymname(word) )
+        print("    %04X" % word, findsymname(word) )
 
