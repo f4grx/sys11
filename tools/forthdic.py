@@ -106,8 +106,8 @@ if dic == None:
     print("No dic found")
     sys.exit(0)
 
-adrenter = findsymaddr(b"ENTER")
-adrexit  = findsymaddr(b"EXIT")
+adrenter = findsymaddr(b"code_ENTER")
+adrexit  = findsymaddr(b"RETURN")
 
 print("ENTER=%04X EXIT=%04X" % (adrenter,adrexit))
 

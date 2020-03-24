@@ -111,13 +111,16 @@ HERE:	.word	0	/* Address of next free byte in dic/data space */
 LAST:	.word	0	/* Pointer to the last defined word or name */
 
 /*===========================================================================*/
-/* Structure of a compiled word: We have a suite of code pointers. Each code pointer has to be executed in turn. */
-/* The last code pointer of the list has to be "exit", which returns to the caller. */
-/* +---+-------+------+------+------+-----+------+ */
-/* |HDR| ENTER | PTR1 | PTR2 | PTR3 | ... | EXIT | */
-/* +---+-------+------+------+------+-----+------+ */
-/*                ^      ^            */
-/*                IP    nxtIP=IP+2     */
+/* Structure of a compiled word: We have a suite of code pointers. Each code pointer has to be executed in turn.
+ * The last code pointer of the list has to be "exit", which returns to the caller, or a loop.
+ * +---+------------+------+------+------+-----+------+
+ * |HDR| code_ENTER | PTR1 | PTR2 | PTR3 | ... | EXIT |
+ * +---+------------+------+------+------+-----+------+
+ *                     ^      ^           
+ *                     IP    nxtIP=IP+2    
+ * IP ONLY POINTS AT WORD ADDRESSES! Never to asm code addresses. Thats why
+   words implemented in assembly are only made of a code pointer.
+ */
 
 /*===========================================================================*/
 /* Core routines for word execution */
@@ -126,6 +129,7 @@ LAST:	.word	0	/* Pointer to the last defined word or name */
 /*---------------------------------------------------------------------------*/
 /* Execute the next word. IP is incremented, stored back, and the cell pointed
  * by IP is loaded. It contains a code address, which is jumped at.
+ * This is not a forth word.
  */
 	.text
 	.globl PUSHD /* ensure GNU as makes this symbol visible */
@@ -146,7 +150,7 @@ NEXT2:				/* We can call here if X already has the value for IP */
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
-ENTER:
+code_ENTER:
 	inx			/* X has the address of the ENTER function. */
 	inx
 	ldd	*IP
@@ -154,10 +158,10 @@ ENTER:
 	dey
 	std	0,Y		/* Push the next IP to be executed after return from this thread */
 	bra	NEXT2		/* Manage text opcode address */
-	
+
 /*---------------------------------------------------------------------------*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
-EXIT:
+RETURN:
 	ldx	0,Y		/* Get previous value for IP from top of return stack */
 	ldab	#2
 	aby			/* Increment Y by 2 to pop */
@@ -165,11 +169,18 @@ EXIT:
 
 /*===========================================================================*/
 /* Internal words */
+/* These words have no header because they cannot be compiled by the user.
+ * However, they are used to implement compiled routines.
+ */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
 /* Do litteral: Next cell in thread is a litteral value to be pushed. */
-DOLIT:
+	.section .rodata
+LITTERAL:
+	.word	code_LITTERAL
+	.text
+code_LITTERAL:
 	ldx	*IP	/* Load next word in D */
 	ldd	0,X
 	inx		/* Increment IP to look at next word */
@@ -178,14 +189,12 @@ DOLIT:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* Execute the code whose address is on the stack */
-EXECUTE:
-	pulx
-	jmp	0,X
-
-/*---------------------------------------------------------------------------*/
 /* Load next word in IP */
+	.section .rodata
 BRANCH:
+	.word	code_BRANCH
+	.text
+code_BRANCH:
 	ldx	*IP	/* Load next word in D */
 	ldd	0,X
 	inx
@@ -196,7 +205,11 @@ BRANCH:
 
 /*---------------------------------------------------------------------------*/
 /* Pull a value. If zero, load next word in IP */
+	.section .rodata
 QBRANCH:
+	.word	code_QBRANCH
+	.text
+code_QBRANCH:
 	ldx	*IP	/* Load next word in D */
 	ldd	0,X
 	inx
@@ -213,18 +226,40 @@ qbranch1: /* Pulled value has zero, do the branch */
 	bra	NEXT2
 
 /*---------------------------------------------------------------------------*/
-/* */
+/* Pull a value. Decrement and push, jump if zero */
+	.section .rodata
+DJNZ:
+	.word	code_DJNZ
+	.text
+code_DJNZ:
+	bra	NEXT
 
 /*===========================================================================*/
 /* Native words */
 /*===========================================================================*/
 
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
+/* Execute the code whose address is on the stack */
+	.section .dic
+word_EXECUTE:
+	.word 0
+	.asciz "EXECUTE"
+EXECUTE:
+	.word	code_EXECUTE
+
+	.text
+code_EXECUTE:
+	pulx
+	jmp	0,X
+
+
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_EMIT:
-	.word	0
+	.word	word_EXECUTE
 	.asciz	"EMIT"
+EMIT:
 	.word	code_EMIT
 
 	.text
@@ -236,11 +271,12 @@ code_EMIT:
 	stab	*SCDR
 	bra	NEXT
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_KEY:
 	.word	word_EMIT
 	.asciz	"KEY"
+KEY:
 	.word	code_KEY
 
 	.text
@@ -250,11 +286,12 @@ code_KEY:
 	clra
 	bra	PUSHD
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_STORE:
 	.word	word_KEY
 	.asciz	"!"
+STORE:
 	.word	code_STORE
 
 	.text
@@ -265,11 +302,12 @@ code_STORE:
 	std	0,X
 	bra	NEXT
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_LOAD:
 	.word	word_STORE
 	.asciz "@"
+LOAD:
 	.word	code_LOAD
 
 	.text
@@ -278,40 +316,49 @@ code_LOAD:
 	ldd	0,X
 	bra	PUSHD
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_DUP:
 	.word	word_LOAD
 	.asciz "DUP"
+DUP:
 	.word	code_DUP
 
 	.text
 code_DUP:
 	tsx			/* Get stack pointer in X */
 	ldd	0,X		/* Load top of stack in D */
-	bra	NEXT2		/* This will push top of stack again */
+	bra	NEXT		/* This will push top of stack again */
 
 
-/*===========================================================================*/
+/*---------------------------------------------------------------------------*/
 	.section .dic
 word_ACCEPT:
 	.word	word_DUP
 	.asciz "ACCEPT"
 ACCEPT:
-	.word	ENTER
-	.word	EXIT
+	.word	code_ENTER
+	.word	RETURN
 
 /*===========================================================================*/
+/* Other forth words implemented in forth.
+ * These words are pre-compiled lists, they are all executed by code_ENTER.
+ * The following words can only be pointers to cells containing references to
+ * other words. Direct pointers to cells containing code addresses are not
+ * possible.
+ */
+/*===========================================================================*/
+
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_QUIT:
 	.word	word_ACCEPT
 	.asciz "QUIT"
 QUIT:
-	.word	ENTER
+	.word	code_ENTER
 QUIT2:
-	.word	DOLIT, TIB
-	.word	DOLIT, TIB_LEN
+	.word	LITTERAL, TIB
+	.word	LITTERAL, TIB_LEN
 	.word	ACCEPT
 	.word	BRANCH, QUIT2
 
