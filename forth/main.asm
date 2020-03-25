@@ -25,9 +25,12 @@
    ----------------
 
    Each entry has the following structure:
-   N bytes: the word itself, null terminated.
-   1 byte:  flags (if necessary, this field will not be used initially)
    2 bytes: pointer to previous entry
+   N bytes: the word itself, null terminated.
+   1 byte:  flags (if necessary, this field will not be used initially. It seems that we need 3 flags:
+            - immediate word, has to be executed even while compiling
+            - compile only work - not sure if absolutely required
+            - hide me: do not find word if set. Used while compiling defs.
    2 bytes: code pointer (ITC).
             ENTER:   execute a list of forth opcodes stored after this pointer.
             DOCONST: push the value of the stored constant
@@ -40,7 +43,9 @@
    to an extremely large value, so it size is fixed when the interpreter is
    initialized.
    The stack grows down, it starts at the end of the RAM, and the storage
-   address decreases on PUSH and increases on POP.
+   PUSH is post-decrement, push LSB first.
+   POP  is pre-increment, pull MSB first.
+   The stack pointer always point at the next free location in the stack.
    For the moment underflow and overflows are not detected.
 
    Return stack
@@ -53,6 +58,10 @@
    span of the parameter stack, and it can grows down until the return stack
    pointer hits HERE, the next allocation address in the data space.
 
+   To push to the return stack, we store at 0,Y then dey dey (post-decrement)
+   To pop from return stack, we increment Y by 2 with ldab #2 aby then load at 0,y (pre-increment)
+   For the moment underflow and overflows are not detected.
+
    Registers
    ---------
    The forth interpreter uses registers for its internal use.
@@ -61,10 +70,6 @@
    X and D can be used for calculations.
    a data word (IP) is used as instruction pointer.
    This is inspired by eForth (https://github.com/tonypdmtr/eForth/blob/master/hc11e4th.asm)
-
-   To pop from return stack, we increment Y by 2 with ldab #2 aby then load at 0,y
-   To push to the return stack, we store at 0,Y then dey dey
-   The data stack can use the hc11 push and pulls.
 
    Interpreter
    -----------
@@ -151,8 +156,8 @@ _start:
 
 	/* Setup the runtime environment */
 
-	lds	#0x8000		/* Parameter stack at end of RAM */
-	ldy	#0x7C00		/* Return stack 1K before end of RAM */
+	lds	#(0x8000-1)	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
+	ldy	#(0x7C00-2)	/* Return stack 1K before end of RAM. We push word per word. */
 	ldx	#QUIT2		/* load pointer to startup code, skipping the native ENTER pointer! */
 	bra	NEXT2		/* Start execution */
 
@@ -168,8 +173,8 @@ _start:
 	.text
 	.globl PUSHD /* ensure GNU as makes this symbol visible */
 PUSHD:
-	psha			/* We can use this instead of next to push a result before ending a word */
-	pshb
+	pshb			/* We can use this instead of next to push a result before ending a word */
+	psha
 NEXT:
 	ldx	*IP		/* Get the instruction pointer */
 NEXT2:				/* We can call here if X already has the value for IP */
@@ -177,21 +182,22 @@ NEXT2:				/* We can call here if X already has the value for IP */
 	inx
 	stx	*IP		/* Save IP for next execution round */
 	dex			/* Redecrement, because we need the original IP */
-	dex
-	ldx	0,X		/* Deref: X contains a word pointer */
-	ldd	0,X		/* Deref: D contains a code pointer */
-	xgdx			/* Copy D in X so we can call the code, while saving the code ptr */
-	jmp	0,X		/* Call the code that must run now */
+	dex			/* Now X contains pointer to pointer to code (aka IP, pointer to forth opcode) */
+	ldx	0,X		/* Now X contains pointer to code (forth opcode == address of first cell in any word) */
+	ldd	0,X		/* Now D contains the code address to execute opcode (a code_THING value) */
+	xgdx			/* Switch, so X contains the code_THING value for this forth word 
+				   and D contains address of instruction being run */
+	jmp	0,X		/* Call the code that must run now, D containing the forth opcode being run */
 
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
 code_ENTER:
-	/* At this point D contains the address of the code_ENTER cell */
+	/* This is called with the address of instruction being run (aka forth opcode) */
 	ldx	*IP
-	dey			/* Pre-Decrement Y by 2 to push */
-	dey
 	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+	dey			/* Post-Decrement Y by 2 to push */
+	dey
 	xgdx			/* Put enter opcode address in X */
 	inx			/* Increment, now X is the address of the first word in the list */
 	inx
@@ -202,10 +208,10 @@ code_ENTER:
 RETURN:
 	.word	code_RETURN
 code_RETURN:
-	ldx	0,Y		/* Get previous value for IP from top of return stack */
 	ldab	#2
-	aby			/* Increment Y by 2 to pop */
-	bra	NEXT2		
+	aby			/* Pre-Increment Y by 2 to pop */
+	ldx	0,Y		/* Pop previous value for IP from top of return stack */
+	bra	NEXT2
 
 /*===========================================================================*/
 /* Internal words */
@@ -236,11 +242,7 @@ BRANCH:
 	.text
 code_BRANCH:
 	ldx	*IP	/* Load next word in D */
-	ldd	0,X
-	inx
-	inx
-	stx	*IP
-	xgdx
+	ldx	0,X
 	bra	NEXT2
 
 /*---------------------------------------------------------------------------*/
@@ -336,8 +338,8 @@ STORE:
 	.text
 code_STORE:
 	pulx
-	pulb
 	pula
+	pulb
 	std	0,X
 	bra	NEXT
 
