@@ -215,7 +215,7 @@ code_RETURN:
 
 /*===========================================================================*/
 /* Internal words */
-/* These words have no header because they cannot be compiled by the user.
+/* These words have no header because they cannot be executed by the user.
  * However, they are used to implement compiled routines.
  */
 /*===========================================================================*/
@@ -367,7 +367,8 @@ DUP:
 
 	.text
 code_DUP:
-	tsx			/* Get stack pointer in X */
+	tsx			/* Get stack pointer +1 in X */
+	inx			/* Make it SP+2 to point to top of stack */
 	ldd	0,X		/* Load top of stack in D */
 	bra	NEXT		/* This will push top of stack again */
 
