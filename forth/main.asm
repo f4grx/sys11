@@ -273,10 +273,10 @@ code_BRANCH:
 /*---------------------------------------------------------------------------*/
 /* Pull a value. If zero, load next word in IP */
 	.section .rodata
-QBRANCH:
-	.word	code_QBRANCH
+BRANCHZ:
+	.word	code_BRANCHZ
 	.text
-code_QBRANCH:
+code_BRANCHZ:
 	ldx	*IP	/* Load next word in D */
 	ldd	0,X
 	inx
@@ -306,7 +306,7 @@ code_DJNZ:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Execute the code whose address is on the stack */
+/* Execute the code whose address is on the stack - likely wrong in this state */
 	.section .dic
 word_EXECUTE:
 	.word 0
@@ -398,15 +398,6 @@ code_DUP:
 	bra	NEXT		/* This will push top of stack again */
 
 
-/*---------------------------------------------------------------------------*/
-	.section .dic
-word_ACCEPT:
-	.word	word_DUP
-	.asciz "ACCEPT"
-ACCEPT:
-	.word	code_ENTER
-	.word	RETURN
-
 /*===========================================================================*/
 /* Other forth words implemented in forth.
  * These words are pre-compiled lists, they are all executed by code_ENTER.
@@ -416,10 +407,35 @@ ACCEPT:
  */
 /*===========================================================================*/
 
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_ACCEPT:
+	.word	word_DUP
+	.asciz "ACCEPT"
+ACCEPT:
+	.word	code_ENTER
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* Set the system state to interpretation */
+	.section .dic
+word_INTERP:
+	.word	word_ACCEPT
+	.asciz	"["
+INTERP:
+	.word	code_ENTER
+	.word	LITTERAL
+	.word	BEHA
+	.word	LITTERAL
+	.word	EXECUTE
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_QUIT:
-	.word	word_ACCEPT
+	.word	word_INTERP
 	.asciz "QUIT"
 QUIT:
 	.word	code_ENTER
