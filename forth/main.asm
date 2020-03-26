@@ -1,41 +1,72 @@
 /* Mini forth interpreter based on eForth with simplifications
 
+   Overview
+   ========
+   This is a forth interpreter inspired by eForth, with simplifications.
+   Its goal is to be as compact as possible so it's possible to assemble itself from Forth.
+   The following simplifications have be made with respect to the usual eForth implementations:
+   Memory map simplifications: just a 1K param stack, and a RAM zone with dic and data
+     growing from the low addresses and the return stack growing from the high addresses
+   No USER pointer, only one user is supported
+   Only a single word list, no vocabularies for each user.
+   Favor F2012 words and semantics over the older standards if different.
+   
+   Builtin words are stored in RODATA. They cant be changed, but can be
+   overriden by user entries.
+   
+   Hardware Registers
+   ------------------
+
+   The forth interpreter uses registers for its internal use.
+   SP is used as parameter stack pointer.
+   Y  is used as return stack pointer.
+   X and D can be used for calculations.
+
    Data structures
    ===============
 
+   Interpreter variables
+   ---------------------
+   
+   The state of the interpreter is described in several variables, stored in the internal HC11 RAM.
+   Here is a description of what each variable does.
+   IP   - The instruction pointer. Points to the next instruction to execute.
+   HERE - pointer to the next free byte in the Data Space
+   LAST - pointer to the last definition. Initialized to the last builtin word definition.
+   BEHA - pointer containing the word routine that will manage the parsed tokens. Either INTERP or COMPILE.
+          This word routine is called with a word pointer on the parameter stack.
+          BEHA is changed to EXECUTE when executing the immediate word [
+          BEHA is changed to COMPILE when executing the immediate word ]
+          COMPILE appends the word pointer on the parameter stack to the current definition
+          EXECUTE executes the word by "calling" it.
+   BASE - Contains the value of the current number conversion base (unused now)
+   
    Dictionary and Data space
    -------------------------
 
-   The data space is used to store new word definitions and user data.
-   It grows from low addresses to upper addresses in the external memory.
-
-   Builtin words are stored in RODATA. They cant be changed, but can be
-   overriden by user entries. Builtin entries do no have parameter fields.
+   The data space is used to store new word definitions and user data structures.
+   It grows from low addresses (0100h) to upper addresses in the external memory.
 
    User definitions are allocated in the data space. The definitions are added
    one after the other, linking the new one to the previous one. The pointer to
-   the last definition is maintained in LAST. The first user word points to the last
-   entry in the builtin list. This allows overriding of any built-in word.
-
-   Data is allocated in an incremental fashion starting from the lowest
-   address. at any time, the HERE variable contains the address of the next
-   free zone.
+   the last definition is maintained in LAST. This pointer is initialized to the
+   last entry in the builtin dictionary.
 
    Dictionary entry
    ----------------
 
    Each entry has the following structure:
    2 bytes: pointer to previous entry
-   N bytes: the word itself, null terminated.
-   1 byte:  flags (if necessary, this field will not be used initially. It seems that we need 3 flags:
-            - immediate word, has to be executed even while compiling
-            - compile only work - not sure if absolutely required
-            - hide me: do not find word if set. Used while compiling defs.
-   2 bytes: code pointer (ITC).
-            ENTER:   execute a list of forth opcodes stored after this pointer.
-            DOCONST: push the value of the stored constant
-            DOVAR:   push the address of the named constant
-            other:   native code implementation
+   N bytes: the word itself, NULL terminated. Only ASCII values 32-127 are allowed.
+   1 byte:  flags. It seems that we need 2 flags:
+            - immediate: word has to be executed even while compiling.
+            - compile only: word cannot be executed (control structures?).
+   (NOTE: to save one byte per word, the flags can be set in the terminator itself
+   if the name is terminated by a byte having the most significant bit set instead of zero.)
+   The 3 previous bytes form the word header. It is only inspected when searching for words.
+   2 bytes: code pointer (ITC) - address of native code that implements this routine. Special value ENTER
+            is used to handle compiled forth definitions.
+   A forth word pointer, as used in user definitions, is a pointer to the code pointer for the word.
    
    Parameter stack
    ---------------
@@ -55,21 +86,12 @@
    space is used a lot by complex programs, it is expected that limiting its
    size might prevent large programs from executing. Its size is only limited
    by the growth of the data space. It is initialized just below the maximum
-   span of the parameter stack, and it can grows down until the return stack
-   pointer hits HERE, the next allocation address in the data space.
-
+   span of the parameter stack (7C00), and it can grows down until the return stack
+   pointer hits HERE.
+   
    To push to the return stack, we store at 0,Y then dey dey (post-decrement)
    To pop from return stack, we increment Y by 2 with ldab #2 aby then load at 0,y (pre-increment)
    For the moment underflow and overflows are not detected.
-
-   Registers
-   ---------
-   The forth interpreter uses registers for its internal use.
-   SP is used as parameter stack pointer.
-   Y  is used as return stack pointer.
-   X and D can be used for calculations.
-   a data word (IP) is used as instruction pointer.
-   This is inspired by eForth (https://github.com/tonypdmtr/eForth/blob/master/hc11e4th.asm)
 
    Interpreter
    -----------
@@ -107,15 +129,18 @@
 	/* Define variables in internal HC11 RAM */
 	.data
 IP:	.word	0		/* Instruction pointer */
+HERE:	.word	0	/* Address of next free byte in dic/data space */
+LAST:	.word	0	/* Pointer to the last defined word or name */
+BASE:	.word	0	/* Value of the base used for number parsing */
+BEHA:   .word   0       /* Pointer to word that implements the current behaviour */
 
 	/* Input text buffering */
 
-BASE:	.word	0	/* Value of the base used for number parsing */
 NTIB:	.word	0	/* Number of characters in current line */
 TIB:	.space	TIB_LEN	/* Input buffer */
 IN:	.word	0	/* Parse position in the input buffer */
-HERE:	.word	0	/* Address of next free byte in dic/data space */
-LAST:	.word	0	/* Pointer to the last defined word or name */
+
+
 
 /*===========================================================================*/
 /* Structure of a compiled word: We have a suite of code pointers. Each code pointer has to be executed in turn.
