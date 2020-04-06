@@ -2,5 +2,5 @@
 *.elf
 *.bin
 *.srec
-*.txt
+*.dis
 

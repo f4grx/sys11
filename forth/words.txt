@@ -1,0 +1,39 @@
+implemented words
+
+-------- words emitted by compiler only
+RETURN
+LITTERAL,value
+BRANCH,dest
+BRANCHZ,dest ( u -- )
+DJNZ,dest ( u -- u )
+
+-------- native IO
+EMIT ( u -- )
+KEY ( -- u )
+
+-------- native words
+EXECUTE ( a -- )
+! ( u a -- ) (store)
+C! ( c a -- ) (char store)
+@ ( a -- u ) (load)
+C@ ( a -- c ) (char load)
+DUP ( u -- u u )
+2DUP ( u v -- u v u v )
+OVER ( u v -- u v u )
+DROP ( u -- )
+CELL+ ( u -- u+2 )
+
+-------- state control
+[ (set state to interpreter)
+] (set state to compiler)
+
+-------- memory management
+HERE ( -- a )
+, ( u -- )
+C, ( u -- )
+
+
+-------- interpreter
+ACCEPT ( a u -- a u )
+QUIT ()
+

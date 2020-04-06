@@ -1,0 +1,42 @@
+strict digraph words {
+
+branchz [shape=box]
+branch [shape=box]
+execute [shape=box]
+plus [shape=box]
+xor [shape=box]
+zless [shape=box]
+dup [shape=box]
+drop [shape=box]
+swap [shape=box]
+over [shape=box]
+litteral [shape=box]
+tor [shape=box]
+rfrom [shape=box]
+cload [shape=box]
+cstore [shape=box]
+load [shape=box]
+store [shape=box]
+
+"2dup" -> over
+not -> xor
+uless -> "2dup", xor, zless, branchz, swap, drop, sub
+negate -> not
+sub -> negate, plus
+cellp -> litteral, plus
+charp -> litteral, plus
+within -> over, sub, tor, rfrom, uless
+bl -> litteral
+"[" -> litteral, execute, behap, store
+"]" -> litteral, compile, behap, store
+
+comma -> here, dup, cellp, litteral, herep, store
+ccomma -> here, dup, charp, litteral, herep, cstore
+here -> load, herep
+
+accept -> over, plus, "2dup", xor, branchz, tap, branch, ttap, drop, sub
+
+quit -> accept
+
+}
+
