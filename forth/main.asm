@@ -250,12 +250,12 @@ code_RETURN:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Do litteral: Next cell in thread is a litteral value to be pushed. */
+/* Do litteral: Next cell in thread is an immediate litteral value to be pushed. */
 	.section .rodata
-LITTERAL:
-	.word	code_LITTERAL
+IMM:
+	.word	code_IMM
 	.text
-code_LITTERAL:
+code_IMM:
 	ldx	*IP	/* Load next word in D */
 	ldd	0,X
 	inx		/* Increment IP to look at next word */
@@ -310,7 +310,7 @@ code_DJNZ:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Execute the code whose address is on the stack - likely wrong in this state */
+/* Execute the code whose address is on the stack */
 	.section .dic
 word_EXECUTE:
 	.word	0
@@ -437,7 +437,7 @@ DUP:
 code_DUP:
 	tsx			/* Get stack pointer +1 in X */
 	ldd	1,X		/* Load top of stack in D */
-	bra	NEXT		/* This will push top of stack again */
+	bra	PUSHD		/* This will push top of stack again */
 
 /*---------------------------------------------------------------------------*/
 /* ( u1 u2 -- u1 u2 u1 ) */
@@ -489,6 +489,8 @@ code_DROP:
 
 /*---------------------------------------------------------------------------*/
 /* ( u v -- u+v ) */
+/* Eforth defines UM+ ( u v -- u+v cy ) and then : + UM+ DROP ; */
+/* We do a native version for speed */
 	.section .dic
 word_PLUS:
 	.word	word_DROP
@@ -509,7 +511,7 @@ code_PLUS:
 	.section .dic
 word_XOR:
 	.word	word_PLUS
-	.asciz	"+"
+	.asciz	"XOR"
 XOR:
 	.word	code_XOR
 
@@ -523,10 +525,46 @@ code_XOR:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
+/* ( u v -- u&v ) */
+	.section .dic
+word_AND:
+	.word	word_XOR
+	.asciz	"AND"
+AND:
+	.word	code_AND
+
+	.text
+code_AND:
+	pula
+	pulb
+	tsx
+	anda	1,X
+	andb	2,X
+	bra	PUSHD
+
+/*---------------------------------------------------------------------------*/
+/* ( u v -- u|v ) */
+	.section .dic
+word_OR:
+	.word	word_AND
+	.asciz	"OR"
+OR:
+	.word	code_OR
+
+	.text
+code_OR:
+	pula
+	pulb
+	tsx
+	oraa	1,X
+	orab	2,X
+	bra	PUSHD
+
+/*---------------------------------------------------------------------------*/
 /* ( u -- u<0 ) push true if pull negative */
 	.section .dic
 word_ZLESS:
-	.word	word_XOR
+	.word	word_OR
 	.asciz	"0<"
 ZLESS:
 	.word	code_ZLESS
@@ -605,7 +643,7 @@ DDUP:
 	.word	RETURN
 
 /*===========================================================================*/
-/* Math */
+/* Math and logical */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
@@ -615,45 +653,25 @@ word_NOT:
 	.asciz	"NOT"
 NOT:
 	.word	code_ENTER
-	.word	LITTERAL, 0xFFFF
+	.word	IMM, 0xFFFF
 	.word	XOR
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u u -- t ) unsigned compare of top two items. */
-
-	.section .dic
-word_ULESS:
-	.word	word_NOT
-	.asciz	"U<"
-ULESS:
-	.word	code_ENTER
-	.word	DDUP
-	.word	XOR
-	.word	ZLESS
-	.word	BRANCHZ, ULESS1
-	.word	SWAP
-	.word	DROP
-	.word	ZLESS
-	.word	RETURN
-ULESS1:
-	.word	SUB
-	.word	ZLESS
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
+/* ( u -- (-u) ) NEGATE: Twos complement */
 	.section .dic
 word_NEGATE:
-	.word	word_ULESS
+	.word	word_NOT
 	.asciz	"NEGATE"
 NEGATE:
 	.word	code_ENTER
 	.word	NOT
-	.word	LITTERAL, 1
+	.word	IMM, 1
 	.word	PLUS
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( a b -- a-b ) */
 	.section .dic
 word_SUB:
 	.word word_NEGATE
@@ -672,7 +690,7 @@ word_CELLP:
 	.asciz "CELL+"
 CELLP:
 	.word	code_ENTER
-	.word	LITTERAL,2
+	.word	IMM,2
 	.word	PLUS
 	.word	RETURN
 
@@ -684,70 +702,46 @@ word_CHARP:
 	.asciz "CHAR+"
 CHARP:
 	.word	code_ENTER
-	.word	LITTERAL,1
+	.word	IMM,1
 	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( u v -- u<v ) unsigned compare of top two items. */
+
+	.section .dic
+word_ULESS:
+	.word	word_CHARP
+	.asciz	"U<"
+ULESS:
+	.word	code_ENTER
+	.word	DDUP		/* (u) (v) (u)     (v) */
+	.word	XOR		/* (u) (v) (u^v)      */
+	.word	ZLESS		/* (u) (v) ((u^v)<0) */
+	.word	BRANCHZ, ULESS1
+	.word	SWAP		/* (v) (u) */
+	.word	DROP		/* (v)    */
+	.word	ZLESS		/* (v<0) */
+	.word	RETURN
+ULESS1:
+	.word	SUB		/* (u-v) */
+	.word	ZLESS		/* ((u-v)<0) */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* ( u ul uh -- ul <= u < uh ) */
 	.section .dic
 word_WITHIN:
-	.word	word_CHARP
+	.word	word_ULESS
 	.asciz	"WITHIN"
 WITHIN:
 	.word	code_ENTER
-	.word	OVER
-	.word	SUB
-	.word	TOR
-	.word	SUB
-	.word	RFROM
-	.word	ULESS
-	.word	RETURN
-
-/*===========================================================================*/
-/* Strings and chars */
-/*===========================================================================*/
-/* ( -- 32 ) */
-
-	.section .dic
-word_BL:
-	.word	word_CELLP
-	.asciz	"BL"
-BL:
-	.word	code_ENTER
-	.word	LITTERAL, 32
-	.word	RETURN
-
-/*===========================================================================*/
-/* State control */
-/*===========================================================================*/
-
-/*---------------------------------------------------------------------------*/
-/* Set the system state to interpretation */
-	.section .dic
-word_INTERP:
-	.word	word_BL
-	.asciz	"["
-INTERP:
-	.word	code_ENTER
-	.word	LITTERAL, EXECUTE
-	.word	LITTERAL, BEHAP
-	.word	STORE
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* Set the system state to compilation */
-	.section .dic
-word_STARTCOMP:
-	.word	word_INTERP
-	.asciz	"]"
-STARTCOMP:
-	.word	code_ENTER
-	.word	LITTERAL
-	.word	COMPILE
-	.word	LITTERAL
-	.word	BEHAP
-	.word	STORE
+	.word	OVER		/*u ul uh ul*/
+	.word	SUB		/*u ul (uh-ul) */
+	.word	TOR		/*u ul R: (uh-ul) */
+	.word	SUB		/*(u-ul) R: (uh-ul) */
+	.word	RFROM		/* (u-ul) (uh-ul) */
+	.word	ULESS		/* ((u-ul) < (uh-ul)) */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -761,8 +755,7 @@ word_HERE:
 	.asciz	"HERE"
 HERE:
 	.word	code_ENTER
-	.word	LITTERAL
-	.word	HEREP		/* (HEREP=&HERE) */
+	.word	IMM, HEREP		/* (HEREP=&HERE) */
 	.word	LOAD		/* (HERE) */ 
 	.word	RETURN
 
@@ -777,7 +770,7 @@ COMMA:
 	.word	HERE		/* (VALUE) (HERE) */
 	.word	DUP		/* (VALUE) (HERE) (HERE) */
 	.word	CELLP		/* (VALUE) (HERE) (HERE+2) */
-	.word	LITTERAL, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
 	.word	STORE		/* (VALUE) (HERE) */
 	.word	STORE		/* Empty */
 	.word	RETURN
@@ -793,17 +786,169 @@ CCOMMA:
 	.word	HERE		/* (VALUE) (HERE) */
 	.word	DUP		/* (VALUE) (HERE) (HERE) */
 	.word	CHARP		/* (VALUE) (HERE) (HERE+1) */
-	.word	LITTERAL
-	.word	HEREP		/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
 	.word	STORE		/* (VALUE) (HERE) */
 	.word	CSTORE		/* Empty */
+	.word	RETURN
+
+/*===========================================================================*/
+/* Terminal */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* ( buf bufend ptr c -- buf bufend (ptr+1) ) accumulate character in buffer - no bounds checking */
+
+	.section .dic
+word_TAP:
+	.word	word_CCOMMA
+	.asciz	"TAP"
+TAP:
+	.word	code_ENTER
+	.word	DUP	/* buf bufend ptr c c */
+	.word	EMIT	/* buf bufend ptr c , shoud be vectored to disable echo */
+	.word	OVER	/* buf bufend ptr c ptr */
+	.word	CSTORE	/* buf bufend ptr */
+	.word	IMM,1	/* buf bufend ptr 1 */
+	.word	PLUS	/* buf bufend (ptr+1) */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( -- 32 ) */
+	.section .dic
+word_BL:
+	.word	word_TAP
+	.asciz	"BL"
+BL:
+	.word	code_ENTER
+	.word	IMM, 32
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
+/* ( buf bufend ptr -- buf bufend ptr-1)  if ptr  > buf */
+/* Do a backspace: if not a bufstart, remove char from buf, then space, back, space */
+	.section .dic
+word_BKSP:
+	.word	word_BL
+	.asciz	"BKSP"
+BKSP:
+	.word	code_ENTER
+	/* check beginning of buffer */
+	.word	TOR		/* buf bufend R: ptr */
+	.word	OVER		/* buf bufend buf R: ptr */
+	.word	RFROM		/* buf bufend buf ptr */
+	.word	SWAP		/* buf bufend ptr buf */
+	.word	OVER		/* buf bufend ptr buf ptr */
+	.word	XOR		/* buf bufend ptr (buf == ptr) */
+	.word	BRANCHZ,bksp1	/* buf bufend ptr */
+
+	/* Remove char from buf */
+	.word	IMM, 1		/* buf bufend ptr 1 */
+	.word	SUB		/* buf bufend (ptr-1) */
+	
+	/* Send chars to erase output */
+	.word	IMM,8,EMIT
+	.word	BL,EMIT		/* should replace emit by vectorable echo */
+	.word	IMM,8,EMIT
+bksp1:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (buf bufend ptr c -- buf bufend ptr) */
+	.section .dic
+word_TTAP: /* should be vectorable */
+	.word	word_BKSP
+	.asciz	"TTAP"
+TTAP:
+	.word	code_ENTER
+	.word	DUP		/*buf bufend ptr c c*/
+	.word	IMM,13		/*buf bufend ptr c c 13*/
+	.word	XOR		/*buf bufend ptr c (c==13)*/
+	.word	BRANCHZ, ktap2	/*buf bufend ptr c | manage end of buf*/
+	.word	IMM, 8		/*buf bufend ptr c 8*/
+	.word	XOR		/*buf bufend ptr (c==8)*/
+	.word	BRANCHZ, ktap1	/*buf bufend ptr | manage backspace*/
+	.word	BL		/*buf bufend ptr 32 | replace other non-printable by spaces */
+	.word	TAP		/*buf bufend ptr*/
+	.word	RETURN
+ktap1:	.word	BKSP		/*buf bufend ptr*/
+	.word	RETURN
+ktap2:	.word	DROP		/*buf bufend ptr*/
+	.word	SWAP		/*buf ptr bufend*/
+	.word	DROP		/*buf ptr */
+	.word	DUP		/*buf ptr ptr*/
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
+/* ( buf len -- buf count) Read up to TIB_LEN or EOL into the provided buffer.
+   Return buf and char count */
+	.section .dic
+word_ACCEPT:
+	.word	word_BL
+	.asciz "ACCEPT"
+ACCEPT:
+	.word	code_ENTER
+	.word	OVER		/*buf len buf*/
+	.word	PLUS		/*buf bufend*/
+	.word	OVER		/*buf bufend bufcur , setup start, end, cur*/
+ACCEPT1:
+	.word	DDUP		/*buf bufend bufcur bufend bufcur*/
+	.word	XOR		/*buf bufend bufcur (bufend==bufcur)*/
+	.word	BRANCHZ,ACCEPT4	/*buf bufend bufcur              if buf reached bufend, finish word*/
+	.word	KEY		/*buf bufend bufcur key */
+	.word	DUP		/*buf bufend bufcur key key */
+	.word	BL,		/*buf bufend bufcur key key 32*/
+	.word	IMM,127		/*buf bufend bufcur key key 32 127*/
+	.word	WITHIN		/*buf bufend bufcur key (key is printable?)*/
+	.word	BRANCHZ,ACCEPT2	/*buf bufend bufcur key , if not printable do ttap and loop again */
+	.word	TAP		/*buf bufend bufcur , print and echo printable key*/
+	.word	BRANCH,ACCEPT1	/*buf bufend bufcur , again */
+ACCEPT2:
+	.word	TTAP		/*buf bufend bufcur , manage non printable key */
+	.word	BRANCH,ACCEPT1	/*buf bufend bufcur , again */
+ACCEPT4:
+	.word	DROP		/*buf bufend - bufend has been replaced by bufcur in TTAP*/
+	.word	OVER		/*buf bufend buf*/
+	.word	SUB		/*buf len */
+	.word	RETURN
+
+
+/*===========================================================================*/
+/* Compiler */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* Set the system state to interpretation */
+	.section .dic
+word_INTERP:
+	.word	word_ACCEPT
+	.asciz	"["
+INTERP:
+	.word	code_ENTER
+	.word	IMM, EXECUTE
+	.word	IMM, BEHAP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* Set the system state to compilation */
+	.section .dic
+word_STARTCOMP:
+	.word	word_INTERP
+	.asciz	"]"
+STARTCOMP:
+	.word	code_ENTER
+	.word	IMM, COMPILE
+	.word	IMM, BEHAP
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* (u -- ) store u, actually similar to COMMA */
 	.section .dic
 word_COMPILE:
-	.word	word_CCOMMA
+	.word	word_STARTCOMP
 	.asciz	"COMPILE,"
 COMPILE:
 	.word	code_ENTER
@@ -811,48 +956,16 @@ COMPILE:
 	.word	RETURN
 	
 /*---------------------------------------------------------------------------*/
-/* ( a u -- a u) Read up to TIB_LEN or EOL into the TIB.
-   Return buf and char count */
-	.section .dic
-word_ACCEPT:
-	.word	word_COMPILE
-	.asciz "ACCEPT"
-ACCEPT:
-	.word	code_ENTER
-	.word	OVER
-	.word	PLUS
-	.word	OVER
-ACCEPT1:
-	.word	DDUP
-	.word	XOR
-	.word	BRANCHZ,ACCEPT4
-	.word	KEY
-	.word	DUP
-	.word	BL,LITTERAL,127,WITHIN
-	.word	BRANCHZ,ACCEPT2
-	.word	TAP
-	.word	BRANCH,ACCEPT3
-ACCEPT2:
-	.word	TTAP
-ACCEPT3:
-	.word	BRANCH,ACCEPT1
-ACCEPT4:
-	.word	DROP
-	.word	OVER
-	.word	SUB
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_QUIT:
-	.word	word_ACCEPT
+	.word	word_COMPILE
 	.asciz "QUIT"
 QUIT:
 	.word	code_ENTER
 QUIT2:
-	.word	LITTERAL, TIB
-	.word	LITTERAL, NTIB
+	.word	IMM, TIB
+	.word	IMM, NTIB
 	.word	LOAD
 	.word	ACCEPT
 	.word	BRANCH, QUIT2
