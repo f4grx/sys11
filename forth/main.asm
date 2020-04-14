@@ -270,7 +270,7 @@ BRANCH:
 	.word	code_BRANCH
 	.text
 code_BRANCH:
-	ldx	*IP	/* Load next word in D */
+	ldx	*IP	/* Load next word in X */
 	ldx	0,X
 	bra	NEXT2
 
@@ -282,28 +282,39 @@ BRANCHZ:
 	.text
 code_BRANCHZ:
 	ldx	*IP	/* Load next word in D */
-	ldd	0,X
+	ldd	0,X	/* D contains branch destination */
 	inx
 	inx
-	stx	*IP
+	stx	*IP	/* Make IP look at next word after branch address */
 
 	pulx		/* Get flag */
 	cpx	#0x0000 /* TODO make it more efficient */
 	beq	qbranch1
 	bra	NEXT	/* Not zero */
 
-qbranch1: /* Pulled value has zero, do the branch */
-	xgdx /* get the next word in X, then execute it */
+qbranch1: /* Pulled value was zero, do the branch */
+	xgdx /* store branch destination (D) in X, then execute at this point */
 	bra	NEXT2
 
 /*---------------------------------------------------------------------------*/
-/* Pull a value. Decrement and push, jump if zero */
+/* Pull a value from R stack. Decrement and push, jump if zero */
 	.section .rodata
-DJNZ:
-	.word	code_DJNZ
+JNZD:
+	.word	code_JNZD
 	.text
-code_DJNZ:
-	bra	NEXT
+code_JNZD:
+	ldd	2,y		/* get counter on return stack */
+	beq	.Lbranch	/* branch if loop is done (index is zero) */
+	subd	#1		/* no, bump the counter */
+	std	2,y		/* and replace on stack */
+	bra	code_BRANCH	/* branch to target using existing code */
+.Lbranch:
+	iny
+	iny			/* done, burn counter from stack */
+	ldx	*IP		/* get the IP */
+	inx
+	inx			/* and get addr past branch target */
+	bra	NEXT2		/* and go do next word */
 
 /*===========================================================================*/
 /* Native words */
@@ -321,8 +332,7 @@ EXECUTE:
 	.text
 code_EXECUTE:
 	pulx		/* Retrieve a word address from stack */
-	ldx	0,X	/* Get the code pointer stored at this address */
-	jmp	0,X	/* Launch it */
+	bra	NEXT2	/* Launch it */
 
 
 /*---------------------------------------------------------------------------*/
@@ -805,7 +815,7 @@ word_TAP:
 TAP:
 	.word	code_ENTER
 	.word	DUP	/* buf bufend ptr c c */
-	.word	EMIT	/* buf bufend ptr c , shoud be vectored to disable echo */
+	.word	EMIT	/* buf bufend ptr c | shoud be vectored to allow disable echo */
 	.word	OVER	/* buf bufend ptr c ptr */
 	.word	CSTORE	/* buf bufend ptr */
 	.word	IMM,1	/* buf bufend ptr 1 */
@@ -824,12 +834,36 @@ BL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* Emit a carriage return */
+	.section .dic
+word_SPACE:
+	.word	word_BL
+	.asciz	"SPACE"
+SPACE:
+	.word	code_ENTER
+	.word	BL
+	.word	EMIT
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* Emit a carriage return */
+	.section .dic
+word_CR:
+	.word	word_SPACE
+	.asciz	"CR"
+CR:
+	.word	code_ENTER
+	.word	IMM, 13
+	.word	EMIT
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
 /* ( buf bufend ptr -- buf bufend ptr-1)  if ptr  > buf */
-/* Do a backspace: if not a bufstart, remove char from buf, then space, back, space */
+/* Do a backspace: if not a bufstart, remove char from buf, then back, space, back */
 	.section .dic
 word_BKSP:
-	.word	word_BL
+	.word	word_CR
 	.asciz	"BKSP"
 BKSP:
 	.word	code_ENTER
@@ -902,7 +936,7 @@ ACCEPT1:
 	.word	IMM,127		/*buf bufend bufcur key key 32 127*/
 	.word	WITHIN		/*buf bufend bufcur key (key is printable?)*/
 	.word	BRANCHZ,ACCEPT2	/*buf bufend bufcur key , if not printable do ttap and loop again */
-	.word	TAP		/*buf bufend bufcur , print and echo printable key*/
+	.word	TAP		/*buf bufend bufcur , print and save printable key*/
 	.word	BRANCH,ACCEPT1	/*buf bufend bufcur , again */
 ACCEPT2:
 	.word	TTAP		/*buf bufend bufcur , manage non printable key */
@@ -913,6 +947,25 @@ ACCEPT4:
 	.word	SUB		/*buf len */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* ( buf len --) Emit len chars starting at buf. */
+	.section .dic
+word_TYPE:
+	.word	word_ACCEPT
+	.asciz "TYPE"
+TYPE:
+	.word	code_ENTER
+	.word	TOR		/* buf | R: len */
+	.word	BRANCH,type2
+type1:
+	.word	DUP		/* buf buf | R: len */
+	.word	CLOAD		/* buf char | R: len */
+	.word	EMIT		/* buf */
+	.word	IMM,1		/* buf 1 */
+	.word	PLUS		/* buf+1 */
+type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
+	.word	DROP		/* remove buf from stack */
+	.word	RETURN
 
 /*===========================================================================*/
 /* Compiler */
@@ -922,7 +975,7 @@ ACCEPT4:
 /* Set the system state to interpretation */
 	.section .dic
 word_INTERP:
-	.word	word_ACCEPT
+	.word	word_TYPE
 	.asciz	"["
 INTERP:
 	.word	code_ENTER
@@ -964,10 +1017,15 @@ word_QUIT:
 QUIT:
 	.word	code_ENTER
 QUIT2:
+	/* Load the terminal input buffer */
 	.word	IMM, TIB
 	.word	IMM, NTIB
 	.word	LOAD
 	.word	ACCEPT
+	/* New line, then echo */
+	.word	CR
+	.word	TYPE
+
 	.word	BRANCH, QUIT2
 	.word	RETURN /* Unreached */
 
