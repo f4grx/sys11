@@ -1053,7 +1053,6 @@ word_QUIT:
 	.asciz "QUIT"
 QUIT:
 	.word	code_ENTER
-QUIT2:
 	/* Show a startup banner */
 	.word	CR
 	.word	IMMSTR
@@ -1061,6 +1060,7 @@ QUIT2:
 	.ascii	"hc11 forth"
 	.word	TYPE
 
+QUIT2:
 	/* Load the terminal input buffer */
 	.word	IMM, TIB
 	.word	IMM, NTIB

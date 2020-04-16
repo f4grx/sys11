@@ -117,7 +117,7 @@ print("ENTER=%04X EXIT=%04X IMM=%04X IMMSTR=%04X" % (adrenter,adrexit,adrimm,adr
 print("start=%04X end=%04X" % (dicstart,dicend))
 
 base = rodata.addr
-off  = dicstart - rodata.addr
+off  = dicstart - base
 cnt = rodata.content
 length = dicend - dicstart
 print("rodata size: ", len(cnt))
@@ -132,7 +132,7 @@ ptr  = off
 while ptr < off+length:
     print()
     wordstart = ptr+base
-    print("[%04X] " % (ptr+base), end='')
+    print("[%04X] " % (wordstart), end='')
     lnk = struct.Struct(">H").unpack_from(cnt, ptr)[0]
     ptr += 2
     print("prev=%04X" % lnk, findsymname(lnk) )
@@ -157,12 +157,13 @@ while ptr < off+length:
     #we have a wordlist. display words
     word = 0
     while (ptr+base) < dicend:
-        print("[%04X] " % (ptr+base), end='')
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         if word == wordstart:
             break
-        ptr += 2
+        print("[%04X] " % (ptr+base), end='')
         print("    %04X" % word, findsymname(word))
+        ptr += 2
+
         if word == adrimm:
             print("[%04X] " % (ptr+base), end='')
             imm = struct.Struct(">H").unpack_from(cnt, ptr)[0]
