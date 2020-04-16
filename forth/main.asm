@@ -364,7 +364,7 @@ CSTORE:
 	.text
 code_CSTORE:
 	pulx	/* TOS contains address */
-	pula	/* PREV contains data, A = MSB */
+	pula	/* PREV contains data, A = MSB, discarded */
 	pulb	/* B = LSB */
 	stab	0,X
 	bra	NEXT
@@ -644,7 +644,7 @@ code_KEY:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_KEY
+	.word	word_IMMSTR
 	.asciz "2DUP"
 DDUP:
 	.word	code_ENTER
@@ -755,13 +755,48 @@ WITHIN:
 	.word	RETURN
 
 /*===========================================================================*/
+/* Strings */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* COUNT ( cstradr -- bufadr len ) Return the buf addr and len of a pointed counted string */
+	.section .dic
+word_COUNT:
+	.word	word_WITHIN
+	.asciz	"COUNT"
+COUNT:
+	.word	code_ENTER
+	.word	DUP		/* cstradr cstradr */
+	.word	IMM,1		/* cstradr cstradr 1*/
+	.word	PLUS		/* cstradr bufadr */
+	.word	SWAP		/* bufadr cstradr */
+	.word	CLOAD		/* bufadr len */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
+	.section .dic
+word_IMMSTR:
+	.word	word_COUNT
+	.asciz "IMMSTR"
+IMMSTR:
+	.word	code_ENTER
+	.word	RFROM		/* adr of next word -> contains length */
+	.word	DUP		/* stradr stradr*/
+	.word	COUNT		/* stradr bufadr len */
+	.word	PLUS		/* stradr endadr */
+	.word	TOR		/* stradr R: nextwordadr */
+	.word	RETURN
+
+
+/*===========================================================================*/
 /* Memory management */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
 /* Push the address of the next free byte ( -- a) */
 word_HERE:
-	.word	word_STARTCOMP
+	.word	word_IMMSTR
 	.asciz	"HERE"
 HERE:
 	.word	code_ENTER
@@ -854,6 +889,8 @@ word_CR:
 CR:
 	.word	code_ENTER
 	.word	IMM, 13
+	.word	EMIT
+	.word	IMM, 10
 	.word	EMIT
 	.word	RETURN
 
@@ -1007,7 +1044,7 @@ COMPILE:
 	.word	code_ENTER
 	.word	COMMA
 	.word	RETURN
-	
+
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
@@ -1017,6 +1054,13 @@ word_QUIT:
 QUIT:
 	.word	code_ENTER
 QUIT2:
+	/* Show a startup banner */
+	.word	CR
+	.word	IMMSTR
+	.byte	10
+	.ascii	"hc11 forth"
+	.word	TYPE
+
 	/* Load the terminal input buffer */
 	.word	IMM, TIB
 	.word	IMM, NTIB

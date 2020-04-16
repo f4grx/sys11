@@ -110,8 +110,10 @@ dicstart = findsymaddr(b"__DEBUG__DICSTART__")
 dicend = findsymaddr(b"__DEBUG__DICEND__")
 adrenter = findsymaddr(b"code_ENTER")
 adrexit  = findsymaddr(b"RETURN")
+adrimm   = findsymaddr(b"IMM")
+adrimmstr= findsymaddr(b"IMMSTR")
 
-print("ENTER=%04X EXIT=%04X" % (adrenter,adrexit))
+print("ENTER=%04X EXIT=%04X IMM=%04X IMMSTR=%04X" % (adrenter,adrexit,adrimm,adrimmstr))
 print("start=%04X end=%04X" % (dicstart,dicend))
 
 base = rodata.addr
@@ -159,4 +161,22 @@ while ptr < off+length:
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         ptr += 2
         print("    %04X" % word, findsymname(word) )
+        if word == adrimm:
+            print("[%04X] " % (ptr+base), end='')
+            imm = struct.Struct(">H").unpack_from(cnt, ptr)[0]
+            ptr += 2
+            if imm >= dicstart and imm < dicend:
+                print("    %04X" % imm, findsymname(imm) )
+            else:
+                print("    %04X" % imm )
+        elif word == adrimmstr:
+            print("[%04X] " % (ptr+base), end='')
+            #immstr = struct.Struct(">P").unpack_from(cnt, ptr)[0]
+            strlen = cnt[ptr]
+            ptr += 1
+            immstr = ""
+            for i in range(strlen):
+                immstr = immstr + chr(cnt[ptr])
+                ptr += 1
+            print("    (len=",strlen,") '",immstr,"'", sep='' )
 
