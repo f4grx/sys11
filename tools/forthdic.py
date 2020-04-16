@@ -131,7 +131,7 @@ print()
 ptr  = off
 while ptr < off+length:
     print()
-
+    wordstart = ptr+base
     print("[%04X] " % (ptr+base), end='')
     lnk = struct.Struct(">H").unpack_from(cnt, ptr)[0]
     ptr += 2
@@ -156,11 +156,13 @@ while ptr < off+length:
 
     #we have a wordlist. display words
     word = 0
-    while word != adrexit and ptr < dicend:
+    while (ptr+base) < dicend:
         print("[%04X] " % (ptr+base), end='')
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
+        if word == wordstart:
+            break
         ptr += 2
-        print("    %04X" % word, findsymname(word) )
+        print("    %04X" % word, findsymname(word))
         if word == adrimm:
             print("[%04X] " % (ptr+base), end='')
             imm = struct.Struct(">H").unpack_from(cnt, ptr)[0]

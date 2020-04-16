@@ -956,7 +956,7 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
    Return buf and char count */
 	.section .dic
 word_ACCEPT:
-	.word	word_BL
+	.word	word_TTAP
 	.asciz "ACCEPT"
 ACCEPT:
 	.word	code_ENTER
