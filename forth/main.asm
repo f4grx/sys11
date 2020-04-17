@@ -533,6 +533,7 @@ code_XOR:
 	tsx
 	eora	0,X
 	eorb	1,X
+	pulx
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -551,6 +552,7 @@ code_AND:
 	tsx
 	anda	0,X
 	andb	1,X
+	pulx
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -569,6 +571,7 @@ code_OR:
 	tsx
 	oraa	0,X
 	orab	1,X
+	pulx
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -896,12 +899,22 @@ CR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+	.section .dic
+word_BS:
+	.word	word_CR
+	.asciz	"BS"
+BS:
+	.word	code_ENTER
+	.word	IMM,8
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
 /* ( buf bufend ptr -- buf bufend ptr-1)  if ptr  > buf */
 /* Do a backspace: if not a bufstart, remove char from buf, then back, space, back */
 	.section .dic
 word_BKSP:
-	.word	word_CR
+	.word	word_BS
 	.asciz	"BKSP"
 BKSP:
 	.word	code_ENTER
@@ -919,9 +932,9 @@ BKSP:
 	.word	SUB		/* buf bufend (ptr-1) */
 	
 	/* Send chars to erase output */
-	.word	IMM,8,EMIT
+	.word	BS,EMIT
 	.word	BL,EMIT		/* should replace emit by vectorable echo */
-	.word	IMM,8,EMIT
+	.word	BS,EMIT
 bksp1:
 	.word	RETURN
 
@@ -937,7 +950,7 @@ TTAP:
 	.word	IMM,13		/*buf bufend ptr c c 13*/
 	.word	XOR		/*buf bufend ptr c (c==13)*/
 	.word	BRANCHZ, ktap2	/*buf bufend ptr c | manage end of buf*/
-	.word	IMM, 8		/*buf bufend ptr c 8*/
+	.word	BS		/*buf bufend ptr c 8*/
 	.word	XOR		/*buf bufend ptr (c==8)*/
 	.word	BRANCHZ, ktap1	/*buf bufend ptr | manage backspace*/
 	.word	BL		/*buf bufend ptr 32 | replace other non-printable by spaces */
@@ -1073,6 +1086,7 @@ QUIT2:
 	/* New line, then echo */
 	.word	CR
 	.word	TYPE
+	.word	CR
 
 	.word	BRANCH, QUIT2
 	.word	RETURN /* Unreached */
