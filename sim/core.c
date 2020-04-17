@@ -2671,7 +2671,7 @@ void hc11_core_clock(struct hc11_core *core)
         case STATE_PULL_L:
           core->regs.sp = core->regs.sp + 1;
           core->busadr = core->regs.sp;
-          core->busdat = core->busdat | hc11_core_readb(core, core->busadr);
+          core->busdat = (core->busdat & 0xFF00) | hc11_core_readb(core, core->busadr);
           switch(core->pulsel)
             {
               case PULL_CCR: core->regs.ccr = core->busdat & 0xFF; break;

@@ -187,7 +187,7 @@ _start:
 
 	lds	#(0x8000-1)	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#(0x7C00-2)	/* Return stack 1K before end of RAM. We push word per word. */
-	ldx	#QUIT2		/* load pointer to startup code, skipping the native ENTER pointer! */
+	ldx	#QUIT1		/* load pointer to startup code, skipping the native ENTER pointer! */
 	bra	NEXT2		/* Start execution */
 
 /*===========================================================================*/
@@ -222,7 +222,7 @@ NEXT2:				/* We can call here if X already has the value for IP */
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
 code_ENTER:
-	/* This is called with the address of instruction being run (aka forth opcode) */
+	/* This is called with the address of instruction being run (aka forth opcode) in D*/
 	ldx	*IP
 	stx	0,Y		/* Push the next IP to be executed after return from this thread */
 	dey			/* Post-Decrement Y by 2 to push */
@@ -969,7 +969,7 @@ ACCEPT1:
 	.word	BRANCHZ,ACCEPT4	/*buf bufend bufcur              if buf reached bufend, finish word*/
 	.word	KEY		/*buf bufend bufcur key */
 	.word	DUP		/*buf bufend bufcur key key */
-	.word	BL,		/*buf bufend bufcur key key 32*/
+	.word	BL		/*buf bufend bufcur key key 32*/
 	.word	IMM,127		/*buf bufend bufcur key key 32 127*/
 	.word	WITHIN		/*buf bufend bufcur key (key is printable?)*/
 	.word	BRANCHZ,ACCEPT2	/*buf bufend bufcur key , if not printable do ttap and loop again */
@@ -1053,6 +1053,7 @@ word_QUIT:
 	.asciz "QUIT"
 QUIT:
 	.word	code_ENTER
+QUIT1:
 	/* Show a startup banner */
 	.word	CR
 	.word	IMMSTR
