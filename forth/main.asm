@@ -446,7 +446,7 @@ DUP:
 	.text
 code_DUP:
 	tsx			/* Get stack pointer +1 in X */
-	ldd	1,X		/* Load top of stack in D */
+	ldd	0,X		/* Load top of stack in D */
 	bra	PUSHD		/* This will push top of stack again */
 
 /*---------------------------------------------------------------------------*/
@@ -461,7 +461,7 @@ OVER:
 	.text
 code_OVER:
 	tsx			/* Get stack pointer +1 in X */
-	ldd	3,X		/* Load value before top of stack */
+	ldd	2,X		/* Load value before top of stack */
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -513,7 +513,7 @@ code_PLUS:
 	pula
 	pulb
 	tsx
-	addd	1,X
+	addd	0,X
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -530,8 +530,8 @@ code_XOR:
 	pula
 	pulb
 	tsx
-	eora	1,X
-	eorb	2,X
+	eora	0,X
+	eorb	1,X
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -548,8 +548,8 @@ code_AND:
 	pula
 	pulb
 	tsx
-	anda	1,X
-	andb	2,X
+	anda	0,X
+	andb	1,X
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -566,8 +566,8 @@ code_OR:
 	pula
 	pulb
 	tsx
-	oraa	1,X
-	orab	2,X
+	oraa	0,X
+	orab	1,X
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -781,7 +781,7 @@ word_IMMSTR:
 	.asciz "IMMSTR"
 IMMSTR:
 	.word	code_ENTER
-	.word	RFROM		/* adr of next word -> contains length */
+	.word	RFROM		/* adr of next word -> points to length of inline counted string */
 	.word	DUP		/* stradr stradr*/
 	.word	COUNT		/* stradr bufadr len */
 	.word	PLUS		/* stradr endadr */
@@ -1059,6 +1059,7 @@ QUIT1:
 	.word	IMMSTR
 	.byte	10
 	.ascii	"hc11 forth"
+	.word	COUNT
 	.word	TYPE
 
 QUIT2:
