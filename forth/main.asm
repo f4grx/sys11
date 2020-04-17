@@ -514,6 +514,7 @@ code_PLUS:
 	pulb
 	tsx
 	addd	0,X
+	pulx
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -782,10 +783,10 @@ word_IMMSTR:
 IMMSTR:
 	.word	code_ENTER
 	.word	RFROM		/* adr of next word -> points to length of inline counted string */
-	.word	DUP		/* stradr stradr*/
-	.word	COUNT		/* stradr bufadr len */
-	.word	PLUS		/* stradr endadr */
-	.word	TOR		/* stradr R: nextwordadr */
+	.word	DUP		/* cstradr cstradr*/
+	.word	COUNT		/* cstradr bufadr len */
+	.word	PLUS		/* cstradr endadr */
+	.word	TOR		/* cstradr R: nextwordadr */
 	.word	RETURN
 
 
@@ -1061,6 +1062,7 @@ QUIT1:
 	.ascii	"hc11 forth"
 	.word	COUNT
 	.word	TYPE
+	.word	CR
 
 QUIT2:
 	/* Load the terminal input buffer */
