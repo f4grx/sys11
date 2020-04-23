@@ -1313,11 +1313,22 @@ PROMPT:
 	.word	CR
 	.word	RETURN
 
+	.section .dic
+word_LOADEXEC:
+	.word	word_PROMPT
+	.asciz	"doexec"
+LOADEXEC:
+	.word	code_ENTER
+	.word	LOAD
+	/* TODO: check if zero and do nothing in that case */
+	.word	EXECUTE
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ( -- ) evaluate all words in input buffer */
 	.section .dic
 word_EVAL:
-	.word	word_PROMPT
+	.word	word_LOADEXEC
 	.asciz	"eval"
 EVAL:
 	.word	code_ENTER
@@ -1327,8 +1338,7 @@ eval1:
 	.word	CLOAD		/*input stream empty?*/
 	.word	BRANCHZ, eval2	/* Could not parse: finish execution of buffer */
 	.word	IMM,BEHAP	/**/
-	.word	LOAD		/**/
-	.word	EXECUTE		/*TODO implement ATEXE and do-nothing if ptr is zero */
+	.word	LOADEXEC	/*TODO implement ATEXE and do-nothing if ptr is zero */
 	/*.word	QSTAC*/		/*TODO Check stack */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
