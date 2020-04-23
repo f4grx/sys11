@@ -137,9 +137,10 @@ BEHAP:  .word   0       /* Pointer to word that implements the current behaviour
 
 	/* Input text buffering */
 
+pTEMP:	.word	0	/* Temp variable used in LPARSE */
+INN:	.word	0	/* Parse position in the input buffer */
 NTIB:	.word	0	/* Number of characters in current line */
 TIB:	.space	TIB_LEN	/* Input buffer */
-IN:	.word	0	/* Parse position in the input buffer */
 
 
 
@@ -176,9 +177,6 @@ _start:
 	/* Init default values */
 	ldx	#10
 	stx	*BASE
-
-	ldx	#TIB_LEN
-	stx	*NTIB
 
 	ldx	#word_QUIT
 	stx	*LASTP
@@ -332,6 +330,8 @@ EXECUTE:
 	.text
 code_EXECUTE:
 	pulx		/* Retrieve a word address from stack */
+	inx
+	inx		/* Skip the code pointer , since we're already executing a word list */
 	bra	NEXT2	/* Launch it */
 
 
@@ -656,6 +656,18 @@ DDUP:
 	.word	OVER
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* ( x x -- ) */
+	.section .dic
+word_DDROP:
+	.word	word_DDUP
+	.asciz	"2DROP"
+DDROP:
+	.word	code_ENTER
+	.word	DROP
+	.word	DROP
+	.word	RETURN
+
 /*===========================================================================*/
 /* Math and logical */
 /*===========================================================================*/
@@ -663,7 +675,7 @@ DDUP:
 /*---------------------------------------------------------------------------*/
 	.section .dic
 word_NOT:
-	.word	word_DDUP
+	.word	word_DDROP
 	.asciz	"NOT"
 NOT:
 	.word	code_ENTER
@@ -758,6 +770,21 @@ WITHIN:
 	.word	ULESS		/* ((u-ul) < (uh-ul)) */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* ( w w -- t ) equality flag */
+word_EQUAL:
+	.word	word_WITHIN
+	.asciz	"EQUAL"
+EQUAL:
+	.word	code_ENTER
+	.word	XOR
+	.word	BRANCHZ,equ1
+	.word	IMM,0
+	.word	RETURN
+equ1:
+	.word	IMM,0xFFFF
+	.word	RETURN
+
 /*===========================================================================*/
 /* Strings */
 /*===========================================================================*/
@@ -766,7 +793,7 @@ WITHIN:
 /* COUNT ( cstradr -- bufadr len ) Return the buf addr and len of a pointed counted string */
 	.section .dic
 word_COUNT:
-	.word	word_WITHIN
+	.word	word_EQUAL
 	.asciz	"COUNT"
 COUNT:
 	.word	code_ENTER
@@ -778,10 +805,57 @@ COUNT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/*(src dest count --) */
+	.section .dic
+word_CMOVE:
+	.word	word_COUNT
+	.asciz	"CMOVE"
+CMOVE:
+	.word	code_ENTER
+	.word	TOR		/*src dest | R:count*/
+	.word	BRANCH,cmov2	/**/
+cmov1:
+	.word	TOR		/*src | R:count dest*/
+	.word	DUP		/*src src | R: count dest*/
+	.word	CLOAD		/*src data | R: count dest*/
+	.word	RFROM,DUP,TOR	/*RAT , src data dest | R: count dest*/
+	.word	CSTORE		/*src | R: count dest*/
+	.word	IMM,1		/*src 1 | R: count dest*/
+	.word	PLUS		/*src+1 | R: count dest*/
+	.word	RFROM		/*src+1 dest | R: count */
+	.word	IMM,1		/*src+1 dest 1 | R: count*/
+	.word	PLUS		/*src+1->src dest+1->dest | R: count*/
+cmov2:
+	.word	JNZD, cmov1	/*src dest | if count>0, count--, goto cmov1 */
+	.word	DDROP		/*-- R: -- */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (buf len dest -- dest) Create a counted string in dest from len chars at buf */
+	.section .dic
+word_PACKS:
+	.word	word_CMOVE
+	.asciz	"PACK$"
+PACKS:
+	.word	code_ENTER
+	/*Save count */
+	.word	DUP		/*buf len dest dest */
+	.word	TOR		/*buf len dest | R: dest*/
+	.word	DDUP		/*buf len dest len dest | R: dest*/
+	.word	CSTORE		/*buf len dest | R: dest*/
+	/*Copy string after count */
+	.word	IMM,1		/*buf len dest 1 | R:dest*/
+	.word	PLUS		/*buf len (dest+1) | R:dest*/
+	.word	SWAP		/*buf (dest+1) len | R:dest*/
+	.word	CMOVE		/*R:dest*/
+	.word	RFROM		/*dest*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
 word_IMMSTR:
-	.word	word_COUNT
+	.word	word_PACKS
 	.asciz "IMMSTR"
 IMMSTR:
 	.word	code_ENTER
@@ -840,32 +914,41 @@ CCOMMA:
 	.word	CSTORE		/* Empty */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* (val adr -- ) add val to the contents of adr */
+	.section .dic
+word_PLUS_STORE:
+	.word	word_CCOMMA
+	.asciz	"+!"
+PLUS_STORE:
+	.word	code_ENTER
+	.word	SWAP		/* adr val */
+	.word	OVER		/* adr val adr */
+	.word	LOAD		/* adr val *adr */
+	.word	PLUS		/* adr val+*adr */
+	.word	SWAP		/* val+*adr adr */
+	.word	STORE		/*empty*/
+	.word	RETURN
+
 /*===========================================================================*/
 /* Terminal */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* ( buf bufend ptr c -- buf bufend (ptr+1) ) accumulate character in buffer - no bounds checking */
-
 	.section .dic
-word_TAP:
-	.word	word_CCOMMA
-	.asciz	"TAP"
-TAP:
+word_BS:
+	.word	word_PLUS_STORE
+	.asciz	"BS"
+BS:
 	.word	code_ENTER
-	.word	DUP	/* buf bufend ptr c c */
-	.word	EMIT	/* buf bufend ptr c | shoud be vectored to allow disable echo */
-	.word	OVER	/* buf bufend ptr c ptr */
-	.word	CSTORE	/* buf bufend ptr */
-	.word	IMM,1	/* buf bufend ptr 1 */
-	.word	PLUS	/* buf bufend (ptr+1) */
+	.word	IMM,8
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* ( -- 32 ) */
 	.section .dic
 word_BL:
-	.word	word_TAP
+	.word	word_BS
 	.asciz	"BL"
 BL:
 	.word	code_ENTER
@@ -873,7 +956,7 @@ BL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Emit a carriage return */
+/* Emit a blank char */
 	.section .dic
 word_SPACE:
 	.word	word_BL
@@ -899,22 +982,12 @@ CR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-	.section .dic
-word_BS:
-	.word	word_CR
-	.asciz	"BS"
-BS:
-	.word	code_ENTER
-	.word	IMM,8
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
 /* ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
 /* ( buf bufend ptr -- buf bufend ptr-1)  if ptr  > buf */
 /* Do a backspace: if not a bufstart, remove char from buf, then back, space, back */
 	.section .dic
 word_BKSP:
-	.word	word_BS
+	.word	word_CR
 	.asciz	"BKSP"
 BKSP:
 	.word	code_ENTER
@@ -939,10 +1012,27 @@ bksp1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( buf bufend ptr c -- buf bufend (ptr+1) ) accumulate character in buffer - no bounds checking */
+
+	.section .dic
+word_TAP:
+	.word	word_BKSP
+	.asciz	"TAP"
+TAP:
+	.word	code_ENTER
+	.word	DUP	/* buf bufend ptr c c */
+	.word	EMIT	/* buf bufend ptr c | shoud be vectored to allow disable echo */
+	.word	OVER	/* buf bufend ptr c ptr */
+	.word	CSTORE	/* buf bufend ptr */
+	.word	IMM,1	/* buf bufend ptr 1 */
+	.word	PLUS	/* buf bufend (ptr+1) */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* (buf bufend ptr c -- buf bufend ptr) */
 	.section .dic
 word_TTAP: /* should be vectorable */
-	.word	word_BKSP
+	.word	word_TAP
 	.asciz	"TTAP"
 TTAP:
 	.word	code_ENTER
@@ -966,7 +1056,7 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
 
 
 /*---------------------------------------------------------------------------*/
-/* ( buf len -- buf count) Read up to TIB_LEN or EOL into the provided buffer.
+/* ( buf len -- buf count) Read up to len or EOL into buf.
    Return buf and char count */
 	.section .dic
 word_ACCEPT:
@@ -1019,51 +1109,266 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 	.word	RETURN
 
 /*===========================================================================*/
-/* Compiler */
+/* Parsing */
 /*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* (buf buflen delim -- buf len deltabuf) skip spaces, find word that ends at delim*/
+	.section .dic
+word_LPARSE:
+	.word	word_TYPE
+	.asciz "parse"
+LPARSE:
+	.word	code_ENTER	/**/
+	.word	IMM,pTEMP	/*buf buflen delim &TEMP */
+	.word	STORE		/*buf buflen */
+
+	.word	OVER		/*buf buflen bufinit */
+	.word	TOR		/*buf buflen | R: bufinit */
+	.word	DUP		/*buf buflen buflen | R: bufinit */
+	.word	BRANCHZ,pars8	/*buf buflen | R:bufinit if(buflen==0) goto pars8 */
+
+	/* Buflen not zero */
+	.word	IMM,1		/*buf len 1 | R:bufinit*/
+	.word	SUB		/*buf len-1 | R:bufinit*/
+	.word	IMM,pTEMP	/*buf len-1 &TEMP | R:bufinit*/
+	.word	LOAD		/*buf len-1 delim | R:bufinit*/
+	.word	BL		/*buf len-1 delim blank | R:bufinit*/
+	.word	EQUAL		/*buf len-1 (delim==blank) | R:bufinit could it be simple xor?*/
+	.word	BRANCHZ, pars3  /*buf len-1 jump to pars3 if delim is blank, else (delim not blank): continue */
+	.word	TOR		/*buf | R: bufinit len-1*/
+pars1:
+	/* skip leading blanks only */
+	.word	BL		/*buf blank | R: bufinit len-1 */
+	.word	OVER		/*buf blank buf | R: bufinit len-1*/
+	.word	CLOAD		/*buf blank curchar | R: bufinit len-1 */
+	.word	SUB		/*buf curchar-bl | R: bufinit len-1 */
+	.word	ZLESS		/*buf (curchar<blank) | R: bufinit len-1*/
+	.word	NOT		/*buf (curchar>=blank) | R: bufinit len-1*/
+	.word	BRANCHZ,pars2   /*buf | R: bufinit len-1 */
+
+	/*curchar is below blank ->not printable, try next */
+	.word	IMM, 1		/*buf 1 | R: bufinit len-1 */
+	.word	PLUS		/*buf+1->buf | R: bufinit len-1*/
+	.word	JNZD,pars1	/*buf | R: bufinit len-2 and goto pars1 or buf | R: bufinit continue if len-1 is null*/
+	/*all chars parsed */
+	.word	RFROM		/*buf len-1 */
+	.word	DROP		/*buf */
+	.word	IMM, 0		/*buf 0*/
+	.word	DUP		/*buf 0 0*/
+	.word	RETURN		/* all delim */
+
+pars2:	/*Curchar >=delim */
+	.word	RFROM		/*buf len-1*/
+
+pars3:	/*Initial situation, delim is blank*/
+	.word	OVER		/*buf len-1 buf*/
+	.word	SWAP		/*buf buf len-1*/
+	.word	TOR		/*buf buf | R:len-1*/
+
+pars4:	/* scan for delimiter, beginning of a for loop */
+	.word	IMM,pTEMP	/*buf buf &TEMP */
+	.word	LOAD		/*buf buf delim */
+	.word	OVER		/*buf buf delim buf */
+	.word	CLOAD		/*buf buf delim curchar */
+	.word	SUB		/*buf buf (delim-curchar) */
+
+	.word	IMM,pTEMP	/*buf buf (delim-curchar) &TEMP */
+	.word	LOAD		/*buf buf (delim-curchar) delim */
+	.word	BL		/*buf buf (delim-curchar) delim blank */
+	.word	EQUAL		/*buf buf (delim-curchar) (delim==blank) */
+	.word	BRANCHZ,pars5	/*buf buf (delim-curchar) if(delim==blank) goto pars5 */
+	.word	ZLESS		/*buf buf (delim<curchar)*/
+
+pars5:	/* delim is blank */
+	.word	BRANCHZ,pars6	/*buf buf if(delim<curchar) then goto par6 */
+	.word	IMM,1		/*buf buf 1*/
+	.word	PLUS		/*buf (buf+1)*/
+	.word	JNZD,pars4	/*buf (buf+1) and loop to pars4 if (len-1)>0*/
+	.word	DUP		/*buf (buf+1) (buf+1)*/
+	.word	TOR		/*buf (buf+1) | R:(buf+1)*/
+	.word	BRANCH,pars7	
+
+pars6:	/*delim<curchar*/
+	.word	RFROM
+	.word	DROP
+	.word	DUP
+	.word	IMM,1
+	.word	PLUS
+	.word	TOR
+
+pars7:
+	.word	OVER
+	.word	SUB
+	.word	RFROM
+	.word	RFROM
+	.word	SUB
+	.word	RETURN
+
+pars8:	/* Empty buffer case */	/*buf 0 | R:bufinit */
+	.word	OVER		/*buf 0 buf | R:bufinit*/
+	.word	RFROM		/*buf 0 buf bufinit*/
+	.word	SUB		/*buf 0 0*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (delim -- buf len) parse TIB at current pos and return delim spaced word */
+	.section .dic
+word_PARSE:
+	.word	word_LPARSE
+	.asciz "PARSE"
+PARSE:
+	.word	code_ENTER
+	/* Compute current input buffer pointer */
+	.word	TOR		/* -- | R: delim*/
+	.word	IMM, TIB	/* tib */
+	.word	IMM, INN	/* tib &done_count */
+	.word	LOAD		/* tib done_count */
+	.word	PLUS		/* buf */
+	/* Compute remaining count */
+	.word	IMM,NTIB	/* buf &ntib */
+	.word	LOAD		/* buf ntib */
+	.word	IMM, INN	/* buf ntib &done_count */
+	.word	LOAD		/* buf ntib done_count */
+	.word	SUB		/* buf remaining_count */
+	.word	RFROM		/* buf remaining_count delim */
+	/* Call low level word */
+	.word	LPARSE		/* buf wordlen delta */
+	.word	IMM, INN	/* buf wordlen delta &done_count */
+	.word	PLUS_STORE	/* buf wordlen */
+	.word	RETURN
+
+/*===========================================================================*/
+/* Interpreter */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* ( a -- ) */
+	.section .dic
+word_INTERPRET:
+	.word	word_PARSE
+	.asciz	"INTERPRET"
+INTERPRET:
+	.word	code_ENTER
+	.word	COUNT, TYPE, CR	/* debug parsed words by displaying them for now */
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* Set the system state to interpretation */
 	.section .dic
 word_INTERP:
-	.word	word_TYPE
+	.word	word_INTERPRET
 	.asciz	"["
 INTERP:
 	.word	code_ENTER
-	.word	IMM, EXECUTE
+	.word	IMM, INTERPRET
 	.word	IMM, BEHAP
 	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Set the system state to compilation */
+/* WORD and TOKEN. Create a counted string at HERE, which
+   is used as temp memory. HERE pointer is not modified so each parsed word
+   is stored at the same address. If an executed or compiled word manipulates HERE,
+   then it is no problem: the user data will overwrite the word that was parsed and
+   the next word will be stored a bit farter. It does not matter since this buffer
+   is only used to FIND the code pointer for this word, usually.*/
+/*(delim -- cs)*/
 	.section .dic
-word_STARTCOMP:
+word_WORD:
 	.word	word_INTERP
-	.asciz	"]"
-STARTCOMP:
+	.asciz	"WORD"
+WORD:
 	.word	code_ENTER
-	.word	IMM, COMPILE
-	.word	IMM, BEHAP
-	.word	STORE
+	.word	PARSE		/*buf len*/
+	.word	HERE		/*buf len dest*/
+	.word	PACKS		/*--*/
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (u -- ) store u, actually similar to COMMA */
+/* ( -- cs) */
 	.section .dic
-word_COMPILE:
-	.word	word_STARTCOMP
-	.asciz	"COMPILE,"
-COMPILE:
+word_TOKEN:
+	.word	word_WORD
+	.asciz	"TOKEN"
+TOKEN:
 	.word	code_ENTER
-	.word	COMMA
+	.word	BL
+	.word	WORD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* PROMPT */
+	.section .dic
+word_PROMPT:
+	.word	word_TOKEN
+	.asciz	"PROMPT"
+PROMPT:
+	.word	code_ENTER
+	.word	IMMSTR
+	.byte	5
+	.ascii	" .ok."
+	.word	COUNT
+	.word	TYPE
+	.word	CR
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( -- ) evaluate all words in input buffer */
+	.section .dic
+word_EVAL:
+	.word	word_PROMPT
+	.asciz	"eval"
+EVAL:
+	.word	code_ENTER
+eval1:
+	.word	TOKEN		/* cstr */
+	.word	DUP		/**/
+	.word	CLOAD		/*input stream empty?*/
+	.word	BRANCHZ, eval2	/* Could not parse: finish execution of buffer */
+	.word	IMM,BEHAP	/**/
+	.word	LOAD		/**/
+	.word	EXECUTE		/*TODO implement ATEXE and do-nothing if ptr is zero */
+	/*.word	QSTAC*/		/*TODO Check stack */
+	.word	BRANCH, eval1	/* Do next token */
+eval2:
+	.word	DROP		/**/
+	.word	PROMPT		/**/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* accept input stream to terminal input buffer. */
+	.section .dic
+word_QUERY:
+	.word	word_EVAL
+	.asciz	"QUERY"
+QUERY:
+	.word	code_ENTER
+	.word	IMM, TIB
+	.word	IMM, TIB_LEN
+	.word	ACCEPT
+
+	/* begin debug */
+	.word	CR
+	.word	DDUP
+	.word	TYPE
+	.word	CR
+	/*end debug */
+
+	.word	IMM, NTIB
+	.word	STORE
+	.word	DROP
+	/* Reset input buffer pointer to start of buffer */
+	.word	IMM,0
+	.word	IMM,INN
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_QUIT:
-	.word	word_COMPILE
+	.word	word_QUERY
 	.asciz "QUIT"
 QUIT:
 	.word	code_ENTER
@@ -1077,16 +1382,13 @@ QUIT1:
 	.word	TYPE
 	.word	CR
 
+	/* Setup environment */
+	.word	INTERP	/* Setup to interpret words */
+
 QUIT2:
 	/* Load the terminal input buffer */
-	.word	IMM, TIB
-	.word	IMM, NTIB
-	.word	LOAD
-	.word	ACCEPT
-	/* New line, then echo */
-	.word	CR
-	.word	TYPE
-	.word	CR
+	.word	QUERY
+	.word	EVAL
 
 	.word	BRANCH, QUIT2
 	.word	RETURN /* Unreached */

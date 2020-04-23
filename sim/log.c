@@ -12,13 +12,18 @@ void log_init(void)
     int i;
     for(i=0;i<65536;i++)
       {
-        enables[i] = true;
+        enables[i] = false;
       }
   }
 
 void log_enable(uint8_t system, uint8_t subsystem)
   {
-    enables[system<<8+subsystem] = true;
+    //enables[system<<8+subsystem] = true;
+    int i;
+    for(i=0;i<65536;i++)
+      {
+        enables[i] = true;
+      }
   }
 
 void log_msg(uint8_t system, uint8_t subsystem, const char *fmt, ...)

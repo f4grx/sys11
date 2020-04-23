@@ -17,9 +17,10 @@
 
 static struct option long_options[] =
   {
+    {"debug"   , no_argument      , 0, 'd' },
     {"bin"     , required_argument, 0, 'b' },
     {"s19"     , required_argument, 0, 's' },
-    {"writable", no_argument   , 0, 'w' },
+    {"writable", no_argument      , 0, 'w' },
     {0         , 0                , 0,  0  }
   };
 
@@ -70,8 +71,9 @@ err:
 
 void help(void)
   {
-    printf("sim [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
+    printf("sim -d [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
            "\n"
+           "  -d --debug           Display verbose debug\n"
            "  -s --s19 <file>      Load S-record file\n"
            "  -b --bin <adr,file>  Load binary file at address\n"
            "  -w --writable        Map 8K of RAM in monitor address space\n"
@@ -94,6 +96,7 @@ int main(int argc, char **argv)
     struct sigaction sa_mine;
     int val;
     int prev;
+    uint64_t cycles;
 
     log_init();
 
@@ -117,6 +120,10 @@ int main(int argc, char **argv)
           }
         switch (c)
           {
+            case 'd':
+              log_enable(0,0);
+              break;
+
             case 'b':
               {
                 char *ptr;
