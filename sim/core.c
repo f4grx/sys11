@@ -2196,7 +2196,7 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_ABXY_INH:
                 core->regs.y = core->regs.y + (core->regs.d & 0xFF);
                 /* No flags changed */
-                printf("ABY_INH\n");
+                log_msg(SYS_CORE, CORE_INST, "ABY_INH\n");
                 break;
 
               case OP_XGDXY_INH:
