@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:w", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:wd", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -227,8 +227,8 @@ int main(int argc, char **argv)
         else if(core.status == STATUS_STOPPED)
           {
 //            printf("(s)");
+              usleep(1000);
           }
-        usleep(1000);
       }
     sem_getvalue(&end, &val);
     if(!val)
