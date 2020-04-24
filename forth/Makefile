@@ -9,7 +9,11 @@ include ../make/programs.mk
 
 .PHONY: boot
 boot:
-	../tools/upload.py --reset=rts --fast --stage2 forth.bin --term
+	../tools/upload.py \
+		--reset=rts \
+		--fast \
+		--srec forth.srec \
+		--term=9600
 
 .PHONY: sim
 sim:
