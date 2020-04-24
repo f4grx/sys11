@@ -323,7 +323,8 @@ code_JNZD:
 	.section .dic
 word_EXECUTE:
 	.word	0
-	.asciz "EXECUTE"
+	.byte	7
+	.ascii	"EXECUTE"
 EXECUTE:
 	.word	code_EXECUTE
 
@@ -340,7 +341,8 @@ code_EXECUTE:
 	.section .dic
 word_STORE:
 	.word	word_EXECUTE
-	.asciz	"!"
+	.byte	1
+	.ascii	"!"
 STORE:
 	.word	code_STORE
 
@@ -357,7 +359,8 @@ code_STORE:
 	.section .dic
 word_CSTORE:
 	.word	word_EXECUTE
-	.asciz	"C!"
+	.byte	2
+	.ascii	"C!"
 CSTORE:
 	.word	code_CSTORE
 
@@ -374,7 +377,8 @@ code_CSTORE:
 	.section .dic
 word_LOAD:
 	.word	word_CSTORE
-	.asciz "@"
+	.byte	1
+	.ascii	"@"
 LOAD:
 	.word	code_LOAD
 
@@ -389,7 +393,8 @@ code_LOAD:
 	.section .dic
 word_CLOAD:
 	.word	word_CLOAD
-	.asciz "C@"
+	.byte	2
+	.ascii	"C@"
 CLOAD:
 	.word	code_CLOAD
 
@@ -405,7 +410,8 @@ code_CLOAD:
 	.section .dic
 word_RFROM:
 	.word word_CLOAD
-	.asciz "R>"
+	.byte	2
+	.ascii	"R>"
 RFROM:
 	.word code_RFROM
 
@@ -421,7 +427,8 @@ code_RFROM:
 	.section .dic
 word_TOR:
 	.word	word_RFROM
-	.asciz	">R"
+	.byte	2
+	.ascii	">R"
 TOR:
 	.word	code_TOR
 
@@ -439,7 +446,8 @@ code_TOR:
 	.section .dic
 word_DUP:
 	.word	word_TOR
-	.asciz "DUP"
+	.byte	3
+	.ascii	"DUP"
 DUP:
 	.word	code_DUP
 
@@ -454,7 +462,8 @@ code_DUP:
 	.section .dic
 word_OVER:
 	.word	word_DUP
-	.asciz "OVER"
+	.byte	4
+	.ascii	"OVER"
 OVER:
 	.word	code_OVER
 
@@ -469,7 +478,8 @@ code_OVER:
 	.section .dic
 word_SWAP:
 	.word	word_OVER
-	.asciz "SWAP"
+	.byte	4
+	.ascii	"SWAP"
 SWAP:
 	.word	code_SWAP
 
@@ -486,7 +496,8 @@ code_SWAP:
 	.section .dic
 word_DROP:
 	.word	word_SWAP
-	.asciz "DROP"
+	.byte	4
+	.ascii	"DROP"
 DROP:
 	.word	code_DROP
 
@@ -504,7 +515,8 @@ code_DROP:
 	.section .dic
 word_PLUS:
 	.word	word_DROP
-	.asciz	"+"
+	.byte	1
+	.ascii	"+"
 PLUS:
 	.word	code_PLUS
 
@@ -522,7 +534,8 @@ code_PLUS:
 	.section .dic
 word_XOR:
 	.word	word_PLUS
-	.asciz	"XOR"
+	.byte	3
+	.ascii	"XOR"
 XOR:
 	.word	code_XOR
 
@@ -541,7 +554,8 @@ code_XOR:
 	.section .dic
 word_AND:
 	.word	word_XOR
-	.asciz	"AND"
+	.byte	3
+	.ascii	"AND"
 AND:
 	.word	code_AND
 
@@ -560,7 +574,8 @@ code_AND:
 	.section .dic
 word_OR:
 	.word	word_AND
-	.asciz	"OR"
+	.byte	2
+	.ascii	"OR"
 OR:
 	.word	code_OR
 
@@ -579,7 +594,8 @@ code_OR:
 	.section .dic
 word_ZLESS:
 	.word	word_OR
-	.asciz	"0<"
+	.byte	2
+	.ascii	"0<"
 ZLESS:
 	.word	code_ZLESS
 
@@ -603,7 +619,8 @@ code_ZLESS:
 	.section .dic
 word_EMIT:
 	.word	word_XOR
-	.asciz	"EMIT"
+	.byte	4
+	.ascii	"EMIT"
 EMIT:
 	.word	code_EMIT
 
@@ -620,7 +637,8 @@ code_EMIT:
 	.section .dic
 word_KEY:
 	.word	word_EMIT
-	.asciz	"KEY"
+	.byte	3
+	.ascii	"KEY"
 KEY:
 	.word	code_KEY
 
@@ -647,9 +665,7 @@ code_KEY:
 /*---------------------------------------------------------------------------*/
 /*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
 	.section .dic
-word_LOADEXEC:
-	.word	word_KEY
-	.asciz	"doexec"
+/*compile only, no name*/
 LOADEXEC:
 	.word	code_ENTER	/* ptr */
 	.word	LOAD		/* word */
@@ -665,8 +681,9 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_LOADEXEC
-	.asciz "2DUP"
+	.word	word_KEY
+	.byte	4
+	.ascii "2DUP"
 DDUP:
 	.word	code_ENTER
 	.word	OVER
@@ -678,7 +695,8 @@ DDUP:
 	.section .dic
 word_DDROP:
 	.word	word_DDUP
-	.asciz	"2DROP"
+	.byte	4
+	.ascii	"2DROP"
 DDROP:
 	.word	code_ENTER
 	.word	DROP
@@ -693,7 +711,8 @@ DDROP:
 	.section .dic
 word_NOT:
 	.word	word_DDROP
-	.asciz	"NOT"
+	.byte	3
+	.ascii	"NOT"
 NOT:
 	.word	code_ENTER
 	.word	IMM, 0xFFFF
@@ -705,7 +724,8 @@ NOT:
 	.section .dic
 word_NEGATE:
 	.word	word_NOT
-	.asciz	"NEGATE"
+	.byte	6
+	.ascii	"NEGATE"
 NEGATE:
 	.word	code_ENTER
 	.word	NOT
@@ -718,7 +738,8 @@ NEGATE:
 	.section .dic
 word_SUB:
 	.word word_NEGATE
-	.asciz	"-"
+	.byte	1
+	.ascii	"-"
 SUB:
 	.word	code_ENTER
 	.word	NEGATE
@@ -730,7 +751,8 @@ SUB:
 	.section .dic
 word_CELLP:
 	.word	word_SUB
-	.asciz "CELL+"
+	.byte	5
+	.ascii "CELL+"
 CELLP:
 	.word	code_ENTER
 	.word	IMM,2
@@ -742,7 +764,8 @@ CELLP:
 	.section .dic
 word_CHARP:
 	.word	word_CELLP
-	.asciz "CHAR+"
+	.byte	5
+	.ascii "CHAR+"
 CHARP:
 	.word	code_ENTER
 	.word	IMM,1
@@ -755,7 +778,8 @@ CHARP:
 	.section .dic
 word_ULESS:
 	.word	word_CHARP
-	.asciz	"U<"
+	.byte	2
+	.ascii	"U<"
 ULESS:
 	.word	code_ENTER
 	.word	DDUP		/* (u) (v) (u)     (v) */
@@ -776,7 +800,8 @@ ULESS1:
 	.section .dic
 word_WITHIN:
 	.word	word_ULESS
-	.asciz	"WITHIN"
+	.byte	6
+	.ascii	"WITHIN"
 WITHIN:
 	.word	code_ENTER
 	.word	OVER		/*u ul uh ul*/
@@ -791,7 +816,8 @@ WITHIN:
 /* ( w w -- t ) equality flag */
 word_EQUAL:
 	.word	word_WITHIN
-	.asciz	"EQUAL"
+	.byte	5
+	.ascii	"EQUAL"
 EQUAL:
 	.word	code_ENTER
 	.word	XOR
@@ -811,7 +837,8 @@ equ1:
 	.section .dic
 word_COUNT:
 	.word	word_EQUAL
-	.asciz	"COUNT"
+	.byte	5
+	.ascii	"COUNT"
 COUNT:
 	.word	code_ENTER
 	.word	DUP		/* cstradr cstradr */
@@ -826,7 +853,8 @@ COUNT:
 	.section .dic
 word_CMOVE:
 	.word	word_COUNT
-	.asciz	"CMOVE"
+	.byte	5
+	.ascii	"CMOVE"
 CMOVE:
 	.word	code_ENTER
 	.word	TOR		/*src dest | R:count*/
@@ -852,7 +880,8 @@ cmov2:
 	.section .dic
 word_PACKS:
 	.word	word_CMOVE
-	.asciz	"PACK$"
+	.byte	5
+	.ascii	"PACK$"
 PACKS:
 	.word	code_ENTER
 	/*Save count */
@@ -871,9 +900,7 @@ PACKS:
 /*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
-word_IMMSTR:
-	.word	word_PACKS
-	.asciz "IMMSTR"
+/* compile-only*/
 IMMSTR:
 	.word	code_ENTER
 	.word	RFROM		/* adr of next word -> points to length of inline counted string */
@@ -891,8 +918,9 @@ IMMSTR:
 /*---------------------------------------------------------------------------*/
 /* Push the address of the next free byte ( -- a) */
 word_HERE:
-	.word	word_IMMSTR
-	.asciz	"HERE"
+	.word	word_PACKS
+	.byte	4
+	.ascii	"HERE"
 HERE:
 	.word	code_ENTER
 	.word	IMM, HEREP		/* (HEREP=&HERE) */
@@ -904,7 +932,8 @@ HERE:
 	.section .dic
 word_COMMA:
 	.word	word_HERE
-	.asciz	","
+	.byte	1
+	.ascii	","
 COMMA:
 	.word	code_ENTER
 	.word	HERE		/* (VALUE) (HERE) */
@@ -920,7 +949,8 @@ COMMA:
 	.section .dic
 word_CCOMMA:
 	.word	word_COMMA
-	.asciz	"C,"
+	.byte	2
+	.ascii	"C,"
 CCOMMA:
 	.word	code_ENTER
 	.word	HERE		/* (VALUE) (HERE) */
@@ -936,7 +966,8 @@ CCOMMA:
 	.section .dic
 word_PLUS_STORE:
 	.word	word_CCOMMA
-	.asciz	"+!"
+	.byte	2
+	.ascii	"+!"
 PLUS_STORE:
 	.word	code_ENTER
 	.word	SWAP		/* adr val */
@@ -955,7 +986,8 @@ PLUS_STORE:
 	.section .dic
 word_BS:
 	.word	word_PLUS_STORE
-	.asciz	"BS"
+	.byte	2
+	.ascii	"BS"
 BS:
 	.word	code_ENTER
 	.word	IMM,8
@@ -966,7 +998,8 @@ BS:
 	.section .dic
 word_BL:
 	.word	word_BS
-	.asciz	"BL"
+	.byte	2
+	.ascii	"BL"
 BL:
 	.word	code_ENTER
 	.word	IMM, 32
@@ -977,7 +1010,8 @@ BL:
 	.section .dic
 word_SPACE:
 	.word	word_BL
-	.asciz	"SPACE"
+	.byte	5
+	.ascii	"SPACE"
 SPACE:
 	.word	code_ENTER
 	.word	BL
@@ -989,7 +1023,8 @@ SPACE:
 	.section .dic
 word_CR:
 	.word	word_SPACE
-	.asciz	"CR"
+	.byte	2
+	.ascii	"CR"
 CR:
 	.word	code_ENTER
 	.word	IMM, 13
@@ -1005,7 +1040,8 @@ CR:
 	.section .dic
 word_BKSP:
 	.word	word_CR
-	.asciz	"BKSP"
+	.byte	4
+	.ascii	"BKSP"
 BKSP:
 	.word	code_ENTER
 	/* check beginning of buffer */
@@ -1034,7 +1070,8 @@ bksp1:
 	.section .dic
 word_TAP:
 	.word	word_BKSP
-	.asciz	"TAP"
+	.byte	3
+	.ascii	"TAP"
 TAP:
 	.word	code_ENTER
 	.word	DUP	/* buf bufend ptr c c */
@@ -1050,7 +1087,8 @@ TAP:
 	.section .dic
 word_TTAP: /* should be vectorable */
 	.word	word_TAP
-	.asciz	"TTAP"
+	.byte	4
+	.ascii	"TTAP"
 TTAP:
 	.word	code_ENTER
 	.word	DUP		/*buf bufend ptr c c*/
@@ -1078,7 +1116,8 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
 	.section .dic
 word_ACCEPT:
 	.word	word_TTAP
-	.asciz "ACCEPT"
+	.byte	6
+	.ascii "ACCEPT"
 ACCEPT:
 	.word	code_ENTER
 	.word	OVER		/*buf len buf*/
@@ -1110,7 +1149,8 @@ ACCEPT4:
 	.section .dic
 word_TYPE:
 	.word	word_ACCEPT
-	.asciz "TYPE"
+	.byte	4
+	.ascii "TYPE"
 TYPE:
 	.word	code_ENTER
 	.word	TOR		/* buf | R: len */
@@ -1134,7 +1174,8 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 	.section .dic
 word_LPARSE:
 	.word	word_TYPE
-	.asciz "parse"
+	.byte	5
+	.ascii "parse"
 LPARSE:
 	.word	code_ENTER	/**/
 	.word	IMM,pTEMP	/*buf buflen delim &TEMP */
@@ -1233,7 +1274,8 @@ pars8:	/* Empty buffer case */	/*buf 0 | R:bufinit */
 	.section .dic
 word_PARSE:
 	.word	word_LPARSE
-	.asciz "PARSE"
+	.byte	5
+	.ascii "PARSE"
 PARSE:
 	.word	code_ENTER
 	/* Compute current input buffer pointer */
@@ -1260,14 +1302,17 @@ PARSE:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* find ( a va -- ca na | a f ) */
-/* Search a name in a vocabulary. For the moment there is only one, but we keep word for later expansion */
+/* find ( cstr voc -- cadr nadr | cstr f ) */
+/* Search a name in a vocabulary (pointer to last name of a chain).
+   For the moment there is only one, but we keep word for later expansion */
 	.section .dic
 word_FIND:
 	.word	word_PARSE
-	.asciz	"FIND"
+	.byte	4
+	.ascii	"FIND"
 FIND:
 	.word	code_ENTER
+	.word	2DROP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1277,7 +1322,8 @@ FIND:
 	.section .dic
 word_ISNAME:
 	.word	word_PARSE
-	.asciz	"NAME?"
+	.byte	5
+	.ascii	"NAME?"
 ISNAME:
 	.word	code_ENTER
 	.word	IMM,LASTP	/*cstr pointer containing the address of the last word*/
@@ -1294,7 +1340,8 @@ ISNAME:
 	.section .dic
 word_INTERPRET:
 	.word	word_PARSE
-	.asciz	"INTERPRET"
+	.byte	9
+	.ascii	"INTERPRET"
 INTERPRET:
 	.word	code_ENTER
 	.word	ISNAME
@@ -1309,7 +1356,8 @@ donum:	/* No word was found, attempt to parse as number, then push */
 	.section .dic
 word_INTERP:
 	.word	word_INTERPRET
-	.asciz	"["
+	.byte	1
+	.ascii	"["
 INTERP:
 	.word	code_ENTER
 	.word	IMM, INTERPRET
@@ -1328,7 +1376,8 @@ INTERP:
 	.section .dic
 word_WORD:
 	.word	word_INTERP
-	.asciz	"WORD"
+	.byte	4
+	.ascii	"WORD"
 WORD:
 	.word	code_ENTER
 	.word	PARSE		/*buf len*/
@@ -1341,7 +1390,8 @@ WORD:
 	.section .dic
 word_TOKEN:
 	.word	word_WORD
-	.asciz	"TOKEN"
+	.byte	5
+	.ascii	"TOKEN"
 TOKEN:
 	.word	code_ENTER
 	.word	BL
@@ -1353,7 +1403,8 @@ TOKEN:
 	.section .dic
 word_PROMPT:
 	.word	word_TOKEN
-	.asciz	"PROMPT"
+	.byte	6
+	.ascii	"PROMPT"
 PROMPT:
 	.word	code_ENTER
 	.word	IMMSTR
@@ -1369,7 +1420,8 @@ PROMPT:
 	.section .dic
 word_EVAL:
 	.word	word_PROMPT
-	.asciz	"eval"
+	.byte	4
+	.ascii	"eval"
 EVAL:
 	.word	code_ENTER
 eval1:
@@ -1391,7 +1443,8 @@ eval2:
 	.section .dic
 word_QUERY:
 	.word	word_EVAL
-	.asciz	"QUERY"
+	.byte	5
+	.ascii	"QUERY"
 QUERY:
 	.word	code_ENTER
 	.word	IMM, TIB
@@ -1408,6 +1461,7 @@ QUERY:
 	.word	IMM, NTIB
 	.word	STORE
 	.word	DROP
+
 	/* Reset input buffer pointer to start of buffer */
 	.word	IMM,0
 	.word	IMM,INN
@@ -1419,7 +1473,8 @@ QUERY:
 	.section .dic
 word_QUIT:
 	.word	word_QUERY
-	.asciz "QUIT"
+	.byte	4
+	.ascii	"QUIT"
 QUIT:
 	.word	code_ENTER
 QUIT1:
