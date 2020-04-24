@@ -131,7 +131,7 @@
 	.data
 IP:	.word	0	/* Instruction pointer */
 HEREP:	.word	0	/* Pointer to HERE, the address of next free byte in dic/data space */
-LASTP:	.word	0	/* Pointer to the last defined word or name */
+LASTP:	.word	0	/* Pointer to the last defined word entry */
 BASE:	.word	0	/* Value of the base used for number parsing */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
 
@@ -645,10 +645,27 @@ code_KEY:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
+	.section .dic
+word_LOADEXEC:
+	.word	word_KEY
+	.asciz	"doexec"
+LOADEXEC:
+	.word	code_ENTER	/* ptr */
+	.word	LOAD		/* word */
+	.word	DUP		/* word word */
+	.word	BRANCHZ, noexec /* word, exit if null */
+	/* TODO: check if zero and do nothing in that case */
+	.word	EXECUTE		/* continue execution at the loaded forth word*/
+noexec:
+	.word	RETURN		/* Nothing is stored. just return. */
+
+
+/*---------------------------------------------------------------------------*/
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_IMMSTR
+	.word	word_LOADEXEC
 	.asciz "2DUP"
 DDUP:
 	.word	code_ENTER
@@ -1239,6 +1256,36 @@ PARSE:
 	.word	RETURN
 
 /*===========================================================================*/
+/* Dic search */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* find ( a va -- ca na | a f ) */
+/* Search a name in a vocabulary. For the moment there is only one, but we keep word for later expansion */
+	.section .dic
+word_FIND:
+	.word	word_PARSE
+	.asciz	"FIND"
+FIND:
+	.word	code_ENTER
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
+/* Check vocabulary for a matching word and return code and name address, else same cstr and zero*/
+
+	.section .dic
+word_ISNAME:
+	.word	word_PARSE
+	.asciz	"NAME?"
+ISNAME:
+	.word	code_ENTER
+	.word	IMM,LASTP	/*cstr pointer containing the address of the last word*/
+	.word	LOAD		/*cstr address of last word -> vocabulary*/
+	.word	FIND		/*code name if found || cstr 0 if not found*/
+	.word	RETURN
+
+/*===========================================================================*/
 /* Interpreter */
 /*===========================================================================*/
 
@@ -1250,7 +1297,11 @@ word_INTERPRET:
 	.asciz	"INTERPRET"
 INTERPRET:
 	.word	code_ENTER
-	.word	COUNT, TYPE, CR	/* debug parsed words by displaying them for now */
+	.word	ISNAME
+	.word	BRANCHZ,donum
+
+donum:	/* No word was found, attempt to parse as number, then push */
+
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1313,22 +1364,11 @@ PROMPT:
 	.word	CR
 	.word	RETURN
 
-	.section .dic
-word_LOADEXEC:
-	.word	word_PROMPT
-	.asciz	"doexec"
-LOADEXEC:
-	.word	code_ENTER
-	.word	LOAD
-	/* TODO: check if zero and do nothing in that case */
-	.word	EXECUTE
-	.word	RETURN
-
 /*---------------------------------------------------------------------------*/
 /* ( -- ) evaluate all words in input buffer */
 	.section .dic
 word_EVAL:
-	.word	word_LOADEXEC
+	.word	word_PROMPT
 	.asciz	"eval"
 EVAL:
 	.word	code_ENTER
@@ -1338,7 +1378,7 @@ eval1:
 	.word	CLOAD		/*input stream empty?*/
 	.word	BRANCHZ, eval2	/* Could not parse: finish execution of buffer */
 	.word	IMM,BEHAP	/**/
-	.word	LOADEXEC	/*TODO implement ATEXE and do-nothing if ptr is zero */
+	.word	LOADEXEC	/* Execute contents of pointer as sub-word if not null */
 	/*.word	QSTAC*/		/*TODO Check stack */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
