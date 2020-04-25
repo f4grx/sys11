@@ -1312,7 +1312,7 @@ word_FIND:
 	.ascii	"FIND"
 FIND:
 	.word	code_ENTER
-	.word	2DROP
+	.word	DDROP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
