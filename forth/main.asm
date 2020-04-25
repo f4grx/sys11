@@ -1312,7 +1312,9 @@ word_FIND:
 	.ascii	"FIND"
 FIND:
 	.word	code_ENTER
-	.word	DDROP
+	.word	DROP
+	.word	COUNT,TYPE,CR
+	.word	IMM,0
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1346,7 +1348,7 @@ INTERPRET:
 	.word	code_ENTER
 	.word	ISNAME
 	.word	BRANCHZ,donum
-
+;	.word	COUNT,TYPE,CR
 donum:	/* No word was found, attempt to parse as number, then push */
 
 	.word	RETURN
