@@ -442,10 +442,25 @@ code_TOR:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
+/* @R ( -- x ) ( R: x -- x ) */
+	.section .dic
+word_RLOAD:
+	.word	word_TOR
+	.byte	2
+	.ascii	"@R"
+RLOAD:
+	.word	code_RLOAD
+
+	.text
+code_RLOAD:
+	ldd	2,Y
+	bra	PUSHD
+
+/*---------------------------------------------------------------------------*/
 /* DUP ( u -- u u ) */
 	.section .dic
 word_DUP:
-	.word	word_TOR
+	.word	word_RLOAD
 	.byte	3
 	.ascii	"DUP"
 DUP:
@@ -863,7 +878,7 @@ cmov1:
 	.word	TOR		/*src | R:count dest*/
 	.word	DUP		/*src src | R: count dest*/
 	.word	CLOAD		/*src data | R: count dest*/
-	.word	RFROM,DUP,TOR	/*RAT , src data dest | R: count dest*/
+	.word	RLOAD		/*src data dest | R: count dest*/
 	.word	CSTORE		/*src | R: count dest*/
 	.word	IMM,1		/*src 1 | R: count dest*/
 	.word	PLUS		/*src+1 | R: count dest*/
@@ -895,6 +910,43 @@ PACKS:
 	.word	SWAP		/*buf (dest+1) len | R:dest*/
 	.word	CMOVE		/*R:dest*/
 	.word	RFROM		/*dest*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   same?     ( a a u -- a a f \ -0+ ) */
+/*   compare u cells in two strings. return 0 if identical. */
+	.section .dic
+word_SAME:
+	.word	word_PACKS
+	.byte	5
+	.ascii	"SAME?"
+SAME:
+	.word	code_ENTER
+	.word	TOR
+	.word	BRANCH,same2
+same1:
+	.word	OVER
+	.word	RLOAD
+	.word	CELLS
+	.word	PLUS
+	.word	LOAD
+
+	.word	OVER
+	.word	RLOAD
+	.word	CELLS
+	.word	PLUS
+	.word	LOAD
+
+	.word	SUB
+	.word	DUPZ
+	.word	BRANCHZ,same2
+	/*strings not equal*/
+	.word	RFROM
+	.word	DROP
+	.word	RETURN
+same2:	.word	JNZD,same1
+	/*strings equal*/
+	.word	IMM,0
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1303,6 +1355,7 @@ PARSE:
 
 /*---------------------------------------------------------------------------*/
 /* find ( cstr voc -- cadr nadr | cstr f ) */
+/* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 /* Search a name in a vocabulary (pointer to last name of a chain).
    For the moment there is only one, but we keep word for later expansion */
 	.section .dic
@@ -1315,6 +1368,15 @@ FIND:
 	.word	DROP
 	.word	COUNT,TYPE,CR
 	.word	IMM,0
+find1:
+	/*compare cstr to current name stored at voc*/
+	/*skip name*/
+	/*is name similar? yes goto found*/
+	/*not similar. load pointer to previous word*/
+	/*pointer to next is zero? yes goto not found */
+	/*search again*/
+	.word	BRANCH,find1
+find2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
