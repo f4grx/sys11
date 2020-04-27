@@ -686,7 +686,6 @@ LOADEXEC:
 	.word	LOAD		/* word */
 	.word	DUP		/* word word */
 	.word	BRANCHZ, noexec /* word, exit if null */
-	/* TODO: check if zero and do nothing in that case */
 	.word	EXECUTE		/* continue execution at the loaded forth word*/
 noexec:
 	.word	RETURN		/* Nothing is stored. just return. */
@@ -696,9 +695,9 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_KEY
+	.word	word_KEY /* Loadexec is skipped on purpose */
 	.byte	4
-	.ascii "2DUP"
+	.ascii	"2DUP"
 DDUP:
 	.word	code_ENTER
 	.word	OVER
@@ -718,6 +717,21 @@ DDROP:
 	.word	DROP
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* DUPZ ( u -- u u if u not zero ) */
+	.section .dic
+word_DUPZ:
+	.word	word_DDROP
+	.byte	4
+	.ascii	"?DUP"
+DUPZ:
+	.word	code_ENTER
+	.word	DUP		/* Dup first, to allow testing */
+	.word	BRANCHZ,dupz2	/* if zero, no dup happens (this consumes the first dupe) */
+	.word	DUP		/* Not zero: Dup the value and leave on stack */
+dupz2:
+	.word	RETURN
+
 /*===========================================================================*/
 /* Math and logical */
 /*===========================================================================*/
@@ -725,7 +739,7 @@ DDROP:
 /*---------------------------------------------------------------------------*/
 	.section .dic
 word_NOT:
-	.word	word_DDROP
+	.word	word_DUPZ
 	.byte	3
 	.ascii	"NOT"
 NOT:
@@ -788,11 +802,24 @@ CHARP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( u -- u*2 ) - compute bytes required to store u cells */
+	.section .dic
+word_CELLS:
+	.word	word_CHARP
+	.byte	5
+	.ascii "CELLS"
+CELLS:
+	.word	code_ENTER
+	.word	DUP
+	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( u v -- u<v ) unsigned compare of top two items. */
 
 	.section .dic
 word_ULESS:
-	.word	word_CHARP
+	.word	word_CELLS
 	.byte	2
 	.ascii	"U<"
 ULESS:
