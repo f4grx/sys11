@@ -101,6 +101,15 @@ def findsymname(addr):
 
     return "None@%04X" % addr
 
+def parse_pstring(buf,off):
+    strlen = buf[off]
+    off += 1
+    s = ""
+    for i in range(strlen):
+        s = s + chr(buf[off])
+        off += 1
+    return s
+
 #------------------------------------------------------------------------------
 if rodata == None:
     print("No dic found")
@@ -138,12 +147,9 @@ while ptr < off+length:
     print("prev=%04X" % lnk, findsymname(lnk) )
 
     print("[%04X] " % (ptr+base), end='')
-    name = ""
-    while cnt[ptr] != 0:
-        name = name + chr(cnt[ptr])
-        ptr+=1
+    name = parse_pstring(cnt,ptr)
     print("name=%s" % name)
-    ptr+=1
+    ptr += 1+len(name)
 
     print("[%04X] " % (ptr+base), end='')
     code = struct.Struct(">H").unpack_from(cnt, ptr)
@@ -174,12 +180,8 @@ while ptr < off+length:
                 print("    %04X" % imm )
         elif word == adrimmstr:
             print("[%04X] " % (ptr+base), end='')
-            #immstr = struct.Struct(">P").unpack_from(cnt, ptr)[0]
-            strlen = cnt[ptr]
-            ptr += 1
-            immstr = ""
-            for i in range(strlen):
-                immstr = immstr + chr(cnt[ptr])
-                ptr += 1
+            immstr = parse_pstring(cnt,ptr)
+            strlen = len(immstr)
+            ptr += 1 + strlen
             print("    (len=",strlen,") '",immstr,"'", sep='' )
 

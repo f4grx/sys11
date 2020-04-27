@@ -178,14 +178,14 @@ _start:
 	ldx	#10
 	stx	*BASE
 
-	ldx	#word_QUIT
+	ldx	#word_BOOT
 	stx	*LASTP
 
 	/* Setup the runtime environment */
 
 	lds	#(0x8000-1)	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#(0x7C00-2)	/* Return stack 1K before end of RAM. We push word per word. */
-	ldx	#QUIT1		/* load pointer to startup code, skipping the native ENTER pointer! */
+	ldx	#BOOT1		/* load pointer to startup code, skipping the native ENTER pointer! */
 	bra	NEXT2		/* Start execution */
 
 /*===========================================================================*/
@@ -358,7 +358,7 @@ code_STORE:
 /* Store a char at address (c a -- ) */
 	.section .dic
 word_CSTORE:
-	.word	word_EXECUTE
+	.word	word_STORE
 	.byte	2
 	.ascii	"C!"
 CSTORE:
@@ -392,7 +392,7 @@ code_LOAD:
 /* Load a cell at given address (a -- d) */
 	.section .dic
 word_CLOAD:
-	.word	word_CLOAD
+	.word	word_LOAD
 	.byte	2
 	.ascii	"C@"
 CLOAD:
@@ -940,41 +940,22 @@ PACKS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   same?     ( a a u -- a a f \ -0+ ) */
-/*   compare u cells in two strings. return 0 if identical. */
+/* ccompare (cstr cstr -- flag ) - return zero if similar strings */
 	.section .dic
-word_SAME:
+word_CCOMPARE:
 	.word	word_PACKS
-	.byte	5
-	.ascii	"SAME?"
-SAME:
+	.byte	8
+	.ascii	"CCOMPARE"
+CCOMPARE:
 	.word	code_ENTER
-	.word	TOR
-	.word	BRANCH,same2
-same1:
-	.word	OVER
-	.word	RLOAD
-	.word	CELLS
-	.word	PLUS
-	.word	LOAD
-
-	.word	OVER
-	.word	RLOAD
-	.word	CELLS
-	.word	PLUS
-	.word	LOAD
-
-	.word	SUB
-	.word	DUPZ
-	.word	BRANCHZ,same2
-	/*strings not equal*/
-	.word	RFROM
-	.word	DROP
+	/*Compare lengths. not equal? not same strings.*/
+	/*Length match. Compare chars */
 	.word	RETURN
-same2:	.word	JNZD,same1
-	/*strings equal*/
-	.word	IMM,0
-	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   compare     ( buf1 len1 buf2 len2 -- flag ) */
+/*   compare strings up to the length of the shorter string. zero if match */
+/* TODO */
 
 /*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
@@ -989,7 +970,6 @@ IMMSTR:
 	.word	TOR		/* cstradr R: nextwordadr */
 	.word	RETURN
 
-
 /*===========================================================================*/
 /* Memory management */
 /*===========================================================================*/
@@ -997,7 +977,7 @@ IMMSTR:
 /*---------------------------------------------------------------------------*/
 /* Push the address of the next free byte ( -- a) */
 word_HERE:
-	.word	word_PACKS
+	.word	word_CCOMPARE
 	.byte	4
 	.ascii	"HERE"
 HERE:
@@ -1196,7 +1176,7 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
 word_ACCEPT:
 	.word	word_TTAP
 	.byte	6
-	.ascii "ACCEPT"
+	.ascii	"ACCEPT"
 ACCEPT:
 	.word	code_ENTER
 	.word	OVER		/*buf len buf*/
@@ -1229,7 +1209,7 @@ ACCEPT4:
 word_TYPE:
 	.word	word_ACCEPT
 	.byte	4
-	.ascii "TYPE"
+	.ascii	"TYPE"
 TYPE:
 	.word	code_ENTER
 	.word	TOR		/* buf | R: len */
@@ -1254,7 +1234,7 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 word_LPARSE:
 	.word	word_TYPE
 	.byte	5
-	.ascii "parse"
+	.ascii	"parse"
 LPARSE:
 	.word	code_ENTER	/**/
 	.word	IMM,pTEMP	/*buf buflen delim &TEMP */
@@ -1354,7 +1334,7 @@ pars8:	/* Empty buffer case */	/*buf 0 | R:bufinit */
 word_PARSE:
 	.word	word_LPARSE
 	.byte	5
-	.ascii "PARSE"
+	.ascii	"PARSE"
 PARSE:
 	.word	code_ENTER
 	/* Compute current input buffer pointer */
@@ -1381,10 +1361,9 @@ PARSE:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* find ( cstr voc -- cadr nadr | cstr f ) */
+/* find ( cstr voc -- cstr codeadr | cstr f ) */
+/* Search a name in a vocabulary (pointer to last entry of a chain). */
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
-/* Search a name in a vocabulary (pointer to last name of a chain).
-   For the moment there is only one, but we keep word for later expansion */
 	.section .dic
 word_FIND:
 	.word	word_PARSE
@@ -1392,34 +1371,88 @@ word_FIND:
 	.ascii	"FIND"
 FIND:
 	.word	code_ENTER
-	.word	DROP
-	.word	COUNT,TYPE,CR
-	.word	IMM,0
-find1:
+	#.word	OVER,COUNT,TYPE,CR /* DEBUG */
 	/*compare cstr to current name stored at voc*/
-	/*skip name*/
-	/*is name similar? yes goto found*/
-	/*not similar. load pointer to previous word*/
-	/*pointer to next is zero? yes goto not found */
+.if 0
+
+;This version is used if the name is stored before the prev link
+find1:
+	.word	SWAP		/*voc cstr */
+	.word	TOR		/*voc | R:cstr */
+	.word	DUP		/*voc voc */
+	.word	CLOAD		/*voc toklen */
+	.word	CHARP		/*voc (toklen+1) */
+	.word	PLUS		/*voc &voc->prev */
+
+	.word	SWAP		/*&prev voc | R:cstr*/
+	.word	RAT		/*&prev voc cstr | R:cstr*/
+	.word	CCOMPARE	/*&prev equal_flag | R:cstr | compare counted strings*/
+	.word	BRANCHZ, found
+	/*Strings not similar. Load previous voc entry */
+	.word	LOAD		/*voc->prev -> voc | R:cstr*/
+	.word	DUP		/*voc voc | R:cstr*/
+	.word	BRANCHZ,notfound /* | prev ptr is null? -> end with not found*/
 	/*search again*/
+	.word	RFROM		/*voc cstr */
 	.word	BRANCH,find1
-find2:
+found:
+	.word	CELLP		/* code_addr */
 	.word	RETURN
+notfound:
+	.word	IMM,0		/*cstr false */	
+	.word	RETURN
+
+.else
+
+;This version is used if the prev link is stored before the name
+found1:
+	.word	DUP		/*cstr voc voc */
+	.word	LOAD		/*cstr voc prev */
+	.word	TOR		/*cstr voc | R:prev */
+	.word	CELLP		/*cstr nameptr | R:prev */
+	
+	.word	DUP,COUNT,TYPE,CR	/* debug!*/
+
+	#.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
+	#.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
+	#.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
+
+	/* Strings are different */
+	.word	DROP		/*cstr */
+	.word	RFROM		/*cstr prev */
+	.word	DUPZ		/*cstr prev prev [if prev zero] / cstr prev [if prev not zero] */
+	.word	BRANCHZ,noprev
+
+	/* previous is not null */
+	.word	BRANCH,found1
+noprev:
+	.word	DROP		/*cstr */
+	.word	IMM,0		/*cstr false */
+	.word	RETURN
+found:
+	.word	RFROM		/*cstr nameptr prev */
+	.word	DROP		/*cstr nameptr */
+	.word	DUP		/*cstr nameptr nameptr */
+	.word	CLOAD		/*cstr nameptr namelen */
+	.word	CHARP		/*cstr nameptr namelen+1 */
+	.word	PLUS		/*cstr codeptr */
+	.word	RETURN
+.endif
 
 /*---------------------------------------------------------------------------*/
 /* ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
-/* Check vocabulary for a matching word and return code and name address, else same cstr and zero*/
+/* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
 
 	.section .dic
 word_ISNAME:
-	.word	word_PARSE
+	.word	word_FIND
 	.byte	5
 	.ascii	"NAME?"
 ISNAME:
 	.word	code_ENTER
-	.word	IMM,LASTP	/*cstr pointer containing the address of the last word*/
-	.word	LOAD		/*cstr address of last word -> vocabulary*/
-	.word	FIND		/*code name if found || cstr 0 if not found*/
+	.word	IMM,LASTP	/*cstr [pointer containing the address of the last word] */
+	.word	LOAD		/*cstr voc[address of last word entry] */
+	.word	FIND		/*code name [if found] || cstr 0 [if not found] */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1430,14 +1463,18 @@ ISNAME:
 /* ( a -- ) */
 	.section .dic
 word_INTERPRET:
-	.word	word_PARSE
+	.word	word_ISNAME
 	.byte	9
 	.ascii	"INTERPRET"
 INTERPRET:
 	.word	code_ENTER
-	.word	ISNAME
-	.word	BRANCHZ,donum
-;	.word	COUNT,TYPE,CR
+	.word	ISNAME		/*code name || cstr false */
+	.word	DUPZ		/*code name || cstr false false */
+	.word	BRANCHZ,donum	/* if not name then jump */
+	/*Name is found */
+	.word	DROP		/* code */
+	.word	EXECUTE		/* NO RETURN */
+
 donum:	/* No word was found, attempt to parse as number, then push */
 
 	.word	RETURN
@@ -1517,20 +1554,20 @@ EVAL:
 	.word	code_ENTER
 eval1:
 	.word	TOKEN		/* cstr */
-	.word	DUP		/**/
-	.word	CLOAD		/*input stream empty?*/
+	.word	DUP		/* tokcstr tokcstr */
+	.word	CLOAD		/* tokcstr toklen input stream empty?*/
 	.word	BRANCHZ, eval2	/* Could not parse: finish execution of buffer */
-	.word	IMM,BEHAP	/**/
-	.word	LOADEXEC	/* Execute contents of pointer as sub-word if not null */
+	.word	IMM,BEHAP	/* tokstr behap */
+	.word	LOADEXEC	/* Execute contents of behap as sub-word if not null */
 	/*.word	QSTAC*/		/*TODO Check stack */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
-	.word	DROP		/**/
+	.word	DROP		/*--*/
 	.word	PROMPT		/**/
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* accept input stream to terminal input buffer. */
+/* ( -- ) accept input stream to terminal input buffer. */
 	.section .dic
 word_QUERY:
 	.word	word_EVAL
@@ -1549,14 +1586,11 @@ QUERY:
 	.word	CR
 	/*end debug */
 
+	/* Save the length of the received buffer */
 	.word	IMM, NTIB
 	.word	STORE
 	.word	DROP
 
-	/* Reset input buffer pointer to start of buffer */
-	.word	IMM,0
-	.word	IMM,INN
-	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1569,6 +1603,30 @@ word_QUIT:
 QUIT:
 	.word	code_ENTER
 QUIT1:
+	/* Load the terminal input buffer */
+	.word	QUERY
+
+	/* Reset input buffer pointer to start of buffer */
+	.word	IMM,0
+	.word	IMM,INN
+	.word	STORE
+
+	/* Eecute the line */
+	.word	EVAL
+
+	/* Do it again */
+	.word	BRANCH, QUIT1
+
+/*---------------------------------------------------------------------------*/
+/* Main forth interactive interpreter loop */
+	.section .dic
+word_BOOT:
+	.word	word_QUIT
+	.byte	4
+	.ascii	"BOOT"
+BOOT:
+	.word	code_ENTER
+BOOT1:
 	/* Show a startup banner */
 	.word	CR
 	.word	IMMSTR
@@ -1581,12 +1639,5 @@ QUIT1:
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
 
-QUIT2:
-	/* Load the terminal input buffer */
-	.word	QUERY
-	.word	EVAL
-
-	.word	BRANCH, QUIT2
-	.word	RETURN /* Unreached */
-
+	.word	QUIT
 
