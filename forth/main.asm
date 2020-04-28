@@ -680,6 +680,9 @@ code_KEY:
 /*---------------------------------------------------------------------------*/
 /*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
 	.section .dic
+word_LOADEXEC:
+	.word	word_KEY
+	.byte	0
 /*compile only, no name*/
 LOADEXEC:
 	.word	code_ENTER	/* ptr */
@@ -695,7 +698,7 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_KEY /* Loadexec is skipped on purpose */
+	.word	word_LOADEXEC
 	.byte	4
 	.ascii	"2DUP"
 DDUP:
@@ -709,7 +712,7 @@ DDUP:
 	.section .dic
 word_DDROP:
 	.word	word_DDUP
-	.byte	4
+	.byte	5
 	.ascii	"2DROP"
 DDROP:
 	.word	code_ENTER
@@ -940,7 +943,20 @@ PACKS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ccompare (cstr cstr -- flag ) - return zero if similar strings */
+/* csame (ptra ptrb len -- flag ) - compare strings on len bytes */
+	.section .dic
+word_CSAME:
+	.word	word_PACKS
+	.byte	6
+	.ascii	"CSAME?"
+CSAME:
+	.word	code_ENTER
+	.word	DDROP,DROP
+	.word	IMM,0xFFFF
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ccompare (cstr cstr -- flag ) - return 0 if match */
 	.section .dic
 word_CCOMPARE:
 	.word	word_PACKS
@@ -948,8 +964,48 @@ word_CCOMPARE:
 	.ascii	"CCOMPARE"
 CCOMPARE:
 	.word	code_ENTER
+	.word	IMMSTR
+	.byte	8
+	.ascii	"COMPARE "
+	.word	COUNT,TYPE
+	.word	DUP,COUNT,TYPE,SPACE
+	.word	OVER,COUNT,TYPE,CR
+
 	/*Compare lengths. not equal? not same strings.*/
+	.word	OVER		/*cstra cstrb cstra*/
+	.word	CLOAD		/*cstra cstrb lena*/
+	.word	OVER		/*cstra cstrb lena cstrb*/
+	.word	CLOAD		/*cstra cstrb lena lenb*/
+	.word	SUB		/*cstra cstrb (lena-lenb)*/
+	.word	DUP		/*cstra cstrb lendiff lendiff*/
+	.word	TOR		/*cstra cstrb lendiff | R: lendiff*/
+	.word	BRANCHZ, ccoeq	/*cstra cstrb | R:lendiff*/
+	.word	DDROP		/*-- | R:lendiff*/
+	.word	RFROM		/*lendiff*/
+
+	#.word	IMMSTR
+	#.byte	7
+	#.ascii	"LENDIFF"
+	#.word	COUNT,TYPE,CR
+
+	.word	RETURN
 	/*Length match. Compare chars */
+ccoeq:
+
+	#.word	IMMSTR
+	#.byte	7
+	#.ascii	"SAMELEN"
+	#.word	COUNT,TYPE,CR
+
+	#.word	RFROM,DROP,DDROP,IMM,0,RETURN
+	.word	RFROM		/*cstra cstrb lendiff */
+	.word	DROP		/*cstra cstrb*/
+	.word	TOR		/*cstra / cstrb*/
+	.word	COUNT		/*bufa cnta / cstrb */
+	.word	RFROM		/*bufa cnta cstrb*/
+	.word	CHARP		/*bufa cnta bufb*/
+	.word	SWAP		/*bufa bufb cnta */
+	.word	CSAME		/*result */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -1386,6 +1442,7 @@ find1:
 
 	.word	SWAP		/*&prev voc | R:cstr*/
 	.word	RAT		/*&prev voc cstr | R:cstr*/
+
 	.word	CCOMPARE	/*&prev equal_flag | R:cstr | compare counted strings*/
 	.word	BRANCHZ, found
 	/*Strings not similar. Load previous voc entry */
@@ -1413,18 +1470,20 @@ found1:
 	
 	.word	DUP,COUNT,TYPE,CR	/* debug!*/
 
-	#.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
-	#.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
-	#.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
+	.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
+	.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
+	.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
 
 	/* Strings are different */
-	.word	DROP		/*cstr */
+	.word	DROP		/*cstr | R: prev*/
 	.word	RFROM		/*cstr prev */
-	.word	DUPZ		/*cstr prev prev [if prev zero] / cstr prev [if prev not zero] */
-	.word	BRANCHZ,noprev
+	.word	DUP		/*cstr prev prev*/
+	.word	BRANCHZ,noprev	/*cstr prev, jmp if prev null*/
 
-	/* previous is not null */
+	/* previous is not null, look at prev word */
 	.word	BRANCH,found1
+
+	/* no previous word */
 noprev:
 	.word	DROP		/*cstr */
 	.word	IMM,0		/*cstr false */
@@ -1469,14 +1528,26 @@ word_INTERPRET:
 INTERPRET:
 	.word	code_ENTER
 	.word	ISNAME		/*code name || cstr false */
-	.word	DUPZ		/*code name || cstr false false */
+	.word	DUP		/*code name name || cstr false false */
 	.word	BRANCHZ,donum	/* if not name then jump */
 	/*Name is found */
-	.word	DROP		/* code */
-	.word	EXECUTE		/* NO RETURN */
+	.word	IMMSTR
+	.byte	7
+	.ascii	"--FOUND"
+	.word	COUNT,TYPE
 
+	#.word	DROP		/* code */
+	#.word	EXECUTE		/* NO RETURN */
+
+	.word	DDROP
+	.word	RETURN
 donum:	/* No word was found, attempt to parse as number, then push */
+	.word	IMMSTR
+	.byte	8
+	.ascii	"--NUMBER"
+	.word	COUNT,TYPE
 
+	.word	DDROP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
