@@ -180,7 +180,6 @@ void gdbremote_query(struct gdbremote_t *gr)
 
 void gdbremote_command(struct gdbremote_t *gr)
   {
-printf("core=%p\n",gr->core);
     printf(">>> %s\n", gr->rxbuf);
     gr->lastcommand = gr->rxbuf[0];
 

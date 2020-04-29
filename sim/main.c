@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #include "log.h"
 #include "core.h"
@@ -88,6 +89,13 @@ void sig(int sig)
 
 struct hc11_core core;
 
+uint64_t getmicros(void)
+  {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000000LU + tv.tv_usec;
+  }
+
 int main(int argc, char **argv)
   {
     struct hc11_sci *sci;
@@ -97,6 +105,7 @@ int main(int argc, char **argv)
     int val;
     int prev;
     uint64_t cycles;
+    uint64_t micros;
 
     log_init();
 
@@ -192,8 +201,22 @@ int main(int argc, char **argv)
 
     hc11_core_reset(&core);
     prev = -1;
+    cycles = 0;
+    micros = getmicros();
     while(1)
       {
+        uint64_t newmicros = getmicros();
+        uint64_t deltatime = newmicros - micros;
+        if(deltatime > 1000000)
+          {
+            uint64_t deltacycles = core.clocks - cycles;
+            cycles = core.clocks;
+            micros = newmicros;
+            if(core.status == STATUS_RUNNING)
+              {
+                printf("Running at %.3f MHz     \r", (double)deltacycles/(double)deltatime);
+              }
+          }
         sem_getvalue(&end, &val);
         if(val)
           {
@@ -221,12 +244,10 @@ int main(int argc, char **argv)
           }
         else if(core.status == STATUS_RUNNING)
           {
-//            printf("(r)");
             hc11_core_step(&core);
           }
         else if(core.status == STATUS_STOPPED)
           {
-//            printf("(s)");
               usleep(10000);
           }
       }
