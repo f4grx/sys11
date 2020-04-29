@@ -132,7 +132,7 @@
 IP:	.word	0	/* Instruction pointer */
 HEREP:	.word	0	/* Pointer to HERE, the address of next free byte in dic/data space */
 LASTP:	.word	0	/* Pointer to the last defined word entry */
-BASE:	.word	0	/* Value of the base used for number parsing */
+BASEP:	.word	0	/* Value of the base used for number parsing */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
 
 	/* Input text buffering */
@@ -173,10 +173,6 @@ _start:
 	staa	BAUD
 	ldaa	#0x0C
 	staa	SCCR2
-
-	/* Init default values */
-	ldx	#10
-	stx	*BASE
 
 	ldx	#word_BOOT
 	stx	*LASTP
@@ -524,12 +520,32 @@ code_DROP:
 /* Math */
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u+v ) */
-/* Eforth defines UM+ ( u v -- u+v cy ) and then : + UM+ DROP ; */
+/* ( u v -- u+v cy ) */
+	.section .dic
+word_UPLUS:
+	.word	word_DROP
+	.byte	3
+	.ascii	"UM+"
+UPLUS:
+	.word	code_UPLUS
+
+	.text
+code_UPLUS:
+	pula
+	pulb		/*pull TOS*/
+	tsx
+	addd	0,X	/*add to new TOS */
+	std	0,X	/*Replace TOS, does not affect carry, clears V, changes N and Z */
+	rolb		/*Get carry flag in B0 (DLSB)*/
+	clra		/*Clear A (DMSB)*/
+	bra	PUSHD	/* Push second return item and do next word */
+
+/*---------------------------------------------------------------------------*/
+/* ( u v -- u+v ) : + UM+ DROP ; */
 /* We do a native version for speed */
 	.section .dic
 word_PLUS:
-	.word	word_DROP
+	.word	word_UPLUS
 	.byte	1
 	.ascii	"+"
 PLUS:
@@ -731,6 +747,21 @@ DUPZ:
 dupz2:
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* ROT ( a b c -- b c a ) */
+	.section .dic
+word_ROT:
+	.word	word_DUPZ
+	.byte	3
+	.ascii	"ROT"
+ROT:
+	.word	code_ENTER
+	.word	TOR
+	.word	SWAP
+	.word	RFROM
+	.word	SWAP
+	.word	RETURN
+
 /*===========================================================================*/
 /* Math and logical */
 /*===========================================================================*/
@@ -738,7 +769,7 @@ dupz2:
 /*---------------------------------------------------------------------------*/
 	.section .dic
 word_NOT:
-	.word	word_DUPZ
+	.word	word_ROT
 	.byte	3
 	.ascii	"NOT"
 NOT:
@@ -775,10 +806,42 @@ SUB:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/*( u v -- uvlo uvhi ) - long 16x32 multiplication */
+/*TODO native implementation since hc11 has a multiplier */
+	.section .dic
+word_UMSTAR:
+	.word	word_SUB
+	.byte	3
+	.ascii	"UM*"
+UMSTAR:
+	.word	code_ENTER
+	.word	IMM,0,SWAP,IMM,15,TOR
+umst1:	.word	DUP,UPLUS,TOR,TOR
+	.word	DUP,UPLUS,RFROM,PLUS,RFROM
+	.word	BRANCHZ,umst2
+	.word	TOR,OVER,UPLUS,RFROM,PLUS
+umst2:	.word	JNZD,umst1
+	.word	ROT,DROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
+	.section .dic
+word_STAR:
+	.word	word_UMSTAR
+	.byte	1
+	.ascii	"*"
+STAR:
+	.word	code_ENTER
+	.word	UMSTAR
+	.word	DROP		/*Forget the Most Significant word */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( u -- u+2 ) */
 	.section .dic
 word_CELLP:
-	.word	word_SUB
+	.word	word_STAR
 	.byte	5
 	.ascii "CELL+"
 CELLP:
@@ -837,10 +900,31 @@ ULESS1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( n1 n2 -- t ) - signed compare of top two items. */
+	.section .dic
+word_LESS:
+	.word	word_ULESS
+	.byte	1
+	.ascii	"<"
+LESS:
+	.word	code_ENTER
+	.word	DDUP
+	.word	XOR
+	.word	ZLESS
+	.word	BRANCHZ,less1
+	.word	DROP
+	.word	ZLESS
+	.word	RETURN
+less1:
+	.word	SUB
+	.word	ZLESS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( u ul uh -- ul <= u < uh ) */
 	.section .dic
 word_WITHIN:
-	.word	word_ULESS
+	.word	word_LESS
 	.byte	6
 	.ascii	"WITHIN"
 WITHIN:
@@ -1064,14 +1148,162 @@ IMMSTR:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/*   number?   ( a -- n t | a f ) - convert a number string to integer. push a flag on tos. */
 	.section .dic
-word_NUMQ:
+word_BASE:
 	.word	word_CCOMPARE
+	.byte	4
+	.ascii	"BASE"
+BASE:
+	.word	code_ENTER
+	.word	IMM,BASEP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_HEX:
+	.word	word_BASE
+	.byte	3
+	.ascii	"HEX"
+HEX:
+	.word	code_ENTER
+	.word	IMM,16
+	.word	BASE
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_DECIMAL:
+	.word	word_HEX
+	.byte	7
+	.ascii	"DECIMAL"
+DECIMAL:
+	.word	code_ENTER
+	.word	IMM,10
+	.word	BASE
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( c base -- u t ) convert ascii to digit with success flag*/
+	.section .dic
+word_DIGITQ:
+	.word	word_DECIMAL
+	.byte	6
+	.ascii	"DIGIT?"
+DIGITQ:
+	.word	code_ENTER
+	.word	TOR
+	.word	IMM,'0'
+	.word	SUB
+	.word	IMM,9
+	.word	OVER
+	.word	LESS
+	.word	BRANCHZ,dgtq1
+	.word	IMM,7
+	.word	SUB
+	.word	DUP
+	.word	IMM,10
+	.word	LESS
+	.word	OR
+dgtq1:
+	.word	DUP
+	.word	RFROM
+	.word	ULESS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   number?   ( a -- n t | a f ) - convert a number counted string to integer. push a flag on tos. */
+	.section .dic
+word_NUMBERQ:
+	.word	word_DIGITQ
 	.byte	7
 	.ascii	"NUMBER?"
-NUMQ:
+NUMBERQ:
 	.word	code_ENTER
+	.word	BASE
+	.word	LOAD
+	.word	TOR
+	.word	IMM,0
+	.word	OVER
+	.word	COUNT
+
+	.word	OVER
+	.word	CLOAD
+	.word	IMM,'$'
+	.word	EQUAL
+	.word	BRANCHZ,numq1
+
+	.word	HEX
+	.word	SWAP
+	.word	IMM,1
+	.word	PLUS
+	.word	SWAP
+	.word	IMM,1
+	.word	SUB
+numq1:
+	.word	OVER
+	.word	CLOAD
+	.word	IMM,'-'
+	.word	EQUAL
+	.word	TOR
+
+	.word	SWAP
+	.word	RLOAD
+	.word	SUB
+	.word	SWAP
+	.word	RLOAD
+	.word	PLUS
+	.word	DUPZ
+	.word	BRANCHZ,numq6
+
+	.word	IMM,1
+	.word	SUB
+	.word	TOR
+
+numq2:
+	.word	DUP
+	.word	TOR
+	.word	CLOAD
+	.word	BASE
+	.word	LOAD
+	.word	DIGITQ
+	.word	BRANCHZ,numq4
+
+	.word	SWAP
+	.word	BASE
+	.word	LOAD
+	.word	STAR
+	.word	PLUS
+	.word	RFROM
+	.word	IMM,1
+	.word	PLUS
+	.word	JNZD,numq2
+
+	.word	RLOAD
+	.word	SWAP
+	.word	DROP
+	.word	BRANCHZ,numq3
+
+	.word	NEGATE
+
+numq3:
+	.word	SWAP
+	.word	BRANCH,numq5
+numq4:
+	.word	RFROM
+	.word	RFROM
+	.word	DDROP
+	.word	DDROP
+	.word	IMM,0
+numq5:
+	.word	DUP
+numq6:
+	.word	RFROM
+	.word	DDROP
+	.word	RFROM
+	.word	BASE
+	.word	STORE
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1081,7 +1313,7 @@ NUMQ:
 /*---------------------------------------------------------------------------*/
 /* Push the address of the next free byte ( -- a) */
 word_HERE:
-	.word	word_NUMQ
+	.word	word_NUMBERQ
 	.byte	4
 	.ascii	"HERE"
 HERE:
@@ -1597,8 +1829,16 @@ donum:	/* No word was found, attempt to parse as number, then push */
 	.ascii	"--NUMBER"
 	.word	COUNT,TYPE
 
-	.word	DDROP
+	.word	NUMBERQ
+	.word	BRANCHZ,inte2
 	.word	RETURN
+inte2:
+	.word	IMMSTR
+	.byte	9
+	.ascii	"--UNKNOWN"
+	.word	COUNT,TYPE
+	.word	RETURN
+	#.word	THROW
 
 /*---------------------------------------------------------------------------*/
 /* Set the system state to interpretation */

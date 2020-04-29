@@ -216,10 +216,10 @@ enum
     OP_COMA_INH,
     OP_LSRA_INH,
     OP_RSVD_45,
-    OP_RORA_INH,
+    OP46_RORA_INH,
     OP_ASRA_INH,
     OP_ASLA_INH,
-    OP_ROLA_INH,
+    OP49_ROLA_INH,
     OP_DECA_INH,
     OP_RSVD_4B,
     OP_INCA_INH,
@@ -233,10 +233,10 @@ enum
     OP_COMB_INH,
     OP_LSRB_INH,
     OP_RSVD_55,
-    OP_RORB_INH,
+    OP56_RORA_INH,
     OP_ASRB_INH,
     OP_ASLB_INH,
-    OP_ROLB_INH,
+    OP59_ROLB_INH,
     OP_DECB_INH,
     OP_RSVD_5B,
     OP_INCB_INH,
@@ -1052,22 +1052,22 @@ void hc11_core_clock(struct hc11_core *core)
                 log_msg(SYS_CORE, CORE_INST, "LSLD/ASLD -> %02X\n", tmp);
                 break;
 
-              case OP_RORA_INH : /*NZVC*/
+              case OP46_RORA_INH : /*NZVC*/
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_RORB_INH : /*NZVC*/
+              case OP56_RORA_INH : /*NZVC*/
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_ROLA_INH : /*NZVC*/
+              case OP49_ROLA_INH : /*NZVC*/
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP_ROLB_INH : /*NZVC*/
+              case OP59_ROLB_INH : /*NZVC*/
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
