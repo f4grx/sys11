@@ -953,9 +953,8 @@ CSAME:
 	.word	code_ENTER
 	#.word	DDROP,DROP
 	#.word	IMM,0xFFFF
-	.word	IMM,1
-	.word	SUB
 	.word	TOR		/*ptra ptrb | R:len*/
+	.word	BRANCH,csame2
 csame0:
 	.word	OVER		/*ptra ptrb ptra | R:len*/
 	.word	DUP,IMM,1,TYPE,CR
@@ -981,6 +980,8 @@ csame1:
 	.word	CHARP		/*ptra+1 | R: len ptrb*/
 	.word	RFROM		/*ptra+1 ptrb | R: len*/
 	.word	CHARP		/*ptra+1 ptrb+1 | R: len*/
+
+csame2:
 	.word	JNZD, csame0	/*ptra+1 ptrb+1 | R: len if not null, else --*/
 	/* If we reached this point then both strings are same */
 	.word	DDROP
