@@ -957,10 +957,10 @@ CSAME:
 	.word	BRANCH,csame2
 csame0:
 	.word	OVER		/*ptra ptrb ptra | R:len*/
-	.word	DUP,IMM,1,TYPE,CR
+#	.word	DUP,IMM,1,TYPE,CR
 	.word	CLOAD		/*ptra ptrb chra | R:len*/
 	.word	OVER		/*ptra ptrb chra ptrb | R:len*/
-	.word	DUP,IMM,1,TYPE,CR
+#	.word	DUP,IMM,1,TYPE,CR
 	.word	CLOAD		/*ptra ptrb chra chrb | R:len*/
 	.word	SUB		/*ptra ptrb chrdiff | R:len*/
 	.word	DUP		/*ptra ptrb chrdiff chrdiff | R:len*/
@@ -997,12 +997,12 @@ word_CCOMPARE:
 	.ascii	"CCOMPARE"
 CCOMPARE:
 	.word	code_ENTER
-	.word	IMMSTR
-	.byte	8
-	.ascii	"COMPARE "
-	.word	COUNT,TYPE
-	.word	DUP,COUNT,TYPE,SPACE
-	.word	OVER,COUNT,TYPE,CR
+	#.word	IMMSTR
+	#.byte	8
+	#.ascii	"COMPARE "
+	#.word	COUNT,TYPE
+	#.word	DUP,COUNT,TYPE,SPACE
+	#.word	OVER,COUNT,TYPE,CR
 
 	/*Compare lengths. not equal? not same strings.*/
 	.word	OVER		/*cstra cstrb cstra*/
