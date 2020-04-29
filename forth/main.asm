@@ -951,8 +951,40 @@ word_CSAME:
 	.ascii	"CSAME?"
 CSAME:
 	.word	code_ENTER
-	.word	DDROP,DROP
-	.word	IMM,0xFFFF
+	#.word	DDROP,DROP
+	#.word	IMM,0xFFFF
+	.word	IMM,1
+	.word	SUB
+	.word	TOR		/*ptra ptrb | R:len*/
+csame0:
+	.word	OVER		/*ptra ptrb ptra | R:len*/
+	.word	DUP,IMM,1,TYPE,CR
+	.word	CLOAD		/*ptra ptrb chra | R:len*/
+	.word	OVER		/*ptra ptrb chra ptrb | R:len*/
+	.word	DUP,IMM,1,TYPE,CR
+	.word	CLOAD		/*ptra ptrb chra chrb | R:len*/
+	.word	SUB		/*ptra ptrb chrdiff | R:len*/
+	.word	DUP		/*ptra ptrb chrdiff chrdiff | R:len*/
+	.word	BRANCHZ,csame1	/*ptra ptrb chrdiff | R:len*/
+	/* chars are different, we're done */
+	.word	RFROM		/*ptra ptrb chrdiff len */
+	.word	DROP		/*ptra ptrb chrdiff */
+	.word	TOR		/*ptra ptrb | R: chrdiff*/
+	.word	DDROP		/*R: chrdiff*/
+	.word	RFROM		/*chrdiff*/
+	.word	RETURN
+
+csame1:
+	/*both chars are similar. Increment pointers and loop - ptra ptrb chrdiff | R:len*/
+	.word	DROP		/*ptra ptrb | R:len*/
+	.word	TOR		/*ptra | R: len ptrb*/
+	.word	CHARP		/*ptra+1 | R: len ptrb*/
+	.word	RFROM		/*ptra+1 ptrb | R: len*/
+	.word	CHARP		/*ptra+1 ptrb+1 | R: len*/
+	.word	JNZD, csame0	/*ptra+1 ptrb+1 | R: len if not null, else --*/
+	/* If we reached this point then both strings are same */
+	.word	DDROP
+	.word	IMM,0
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
