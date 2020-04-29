@@ -680,10 +680,7 @@ code_KEY:
 /*---------------------------------------------------------------------------*/
 /*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
 	.section .dic
-word_LOADEXEC:
-	.word	word_KEY
-	.byte	0
-/*compile only, no name*/
+/* NO NAME */
 LOADEXEC:
 	.word	code_ENTER	/* ptr */
 	.word	LOAD		/* word */
@@ -693,12 +690,11 @@ LOADEXEC:
 noexec:
 	.word	RETURN		/* Nothing is stored. just return. */
 
-
 /*---------------------------------------------------------------------------*/
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_LOADEXEC
+	.word	word_KEY
 	.byte	4
 	.ascii	"2DUP"
 DDUP:
@@ -992,7 +988,7 @@ csame2:
 /* ccompare (cstr cstr -- flag ) - return 0 if match */
 	.section .dic
 word_CCOMPARE:
-	.word	word_PACKS
+	.word	word_CSAME
 	.byte	8
 	.ascii	"CCOMPARE"
 CCOMPARE:
@@ -1049,7 +1045,7 @@ ccoeq:
 /*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
-/* compile-only*/
+/* NO NAME */
 IMMSTR:
 	.word	code_ENTER
 	.word	RFROM		/* adr of next word -> points to length of inline counted string */
@@ -1060,13 +1056,32 @@ IMMSTR:
 	.word	RETURN
 
 /*===========================================================================*/
+/* Numeric output */
+/*===========================================================================*/
+
+/*===========================================================================*/
+/* Numeric input */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/*   number?   ( a -- n t | a f ) - convert a number string to integer. push a flag on tos. */
+	.section .dic
+word_NUMQ:
+	.word	word_CCOMPARE
+	.byte	7
+	.ascii	"NUMBER?"
+NUMQ:
+	.word	code_ENTER
+	.word	RETURN
+
+/*===========================================================================*/
 /* Memory management */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
 /* Push the address of the next free byte ( -- a) */
 word_HERE:
-	.word	word_CCOMPARE
+	.word	word_NUMQ
 	.byte	4
 	.ascii	"HERE"
 HERE:
@@ -1501,7 +1516,7 @@ found1:
 	.word	TOR		/*cstr voc | R:prev */
 	.word	CELLP		/*cstr nameptr | R:prev */
 	
-	.word	DUP,COUNT,TYPE,CR	/* debug!*/
+	#.word	DUP,COUNT,TYPE,CR	/* debug!*/
 
 	.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
 	.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
@@ -1574,7 +1589,9 @@ INTERPRET:
 
 	.word	DDROP
 	.word	RETURN
+
 donum:	/* No word was found, attempt to parse as number, then push */
+
 	.word	IMMSTR
 	.byte	8
 	.ascii	"--NUMBER"
@@ -1640,8 +1657,8 @@ word_PROMPT:
 PROMPT:
 	.word	code_ENTER
 	.word	IMMSTR
-	.byte	5
-	.ascii	" .ok."
+	.byte	4
+	.ascii	"  ok"
 	.word	COUNT
 	.word	TYPE
 	.word	CR
@@ -1683,12 +1700,7 @@ QUERY:
 	.word	IMM, TIB_LEN
 	.word	ACCEPT
 
-	/* begin debug */
-	.word	CR
-	.word	DDUP
-	.word	TYPE
-	.word	CR
-	/*end debug */
+	#.word	CR,DDUP,TYPE,CR /* begin debug */
 
 	/* Save the length of the received buffer */
 	.word	IMM, NTIB

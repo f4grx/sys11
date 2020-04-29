@@ -138,18 +138,33 @@ for i in range(length):
 print()
 
 ptr  = off
+has_header = True
 while ptr < off+length:
-    print()
-    wordstart = ptr+base
-    print("[%04X] " % (wordstart), end='')
-    lnk = struct.Struct(">H").unpack_from(cnt, ptr)[0]
-    ptr += 2
-    print("prev=%04X" % lnk, findsymname(lnk) )
 
-    print("[%04X] " % (ptr+base), end='')
-    name = parse_pstring(cnt,ptr)
-    print("name=%s" % name)
-    ptr += 1+len(name)
+    if has_header:
+        lnk = struct.Struct(">H").unpack_from(cnt, ptr)[0]
+        if lnk == adrenter:
+            #surprise: prev link is a code_ENTER. We found a headerless word
+            has_header = False
+            continue
+
+        print()
+        wordstart = ptr+base
+        print("[%04X] " % (ptr+base), end='')
+        ptr += 2
+        print("prev=%04X" % lnk, findsymname(lnk) )
+
+        print("[%04X] " % (ptr+base), end='')
+        name = parse_pstring(cnt,ptr)
+        print("name=%s" % name)
+        ptr += 1+len(name)
+
+    else:
+        #Unnamed word (only used in compiling structures)
+        has_header = True #restore behaviour for next word
+        print()
+        print("[%04X] " % (ptr+base), end='')
+        print("Unnamed word (%s)" % findsymname(ptr+base))
 
     print("[%04X] " % (ptr+base), end='')
     code = struct.Struct(">H").unpack_from(cnt, ptr)
@@ -165,7 +180,11 @@ while ptr < off+length:
     while (ptr+base) < dicend:
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         if word == wordstart:
+            break #we found the PREV link of the next word
+        if word == adrenter:
+            has_header = False #next word does not have a header
             break
+
         print("[%04X] " % (ptr+base), end='')
         print("    %04X" % word, findsymname(word))
         ptr += 2
