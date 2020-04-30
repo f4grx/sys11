@@ -233,7 +233,7 @@ enum
     OP_COMB_INH,
     OP_LSRB_INH,
     OP_RSVD_55,
-    OP56_RORA_INH,
+    OP56_RORB_INH,
     OP_ASRB_INH,
     OP_ASLB_INH,
     OP59_ROLB_INH,
@@ -1053,23 +1053,49 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP46_RORA_INH : /*NZVC*/
+                core->regs.flags.C = (core->regs.d >> 8) & 1;
+                tmp = ((core->regs.d & 0x7F00) >> 9) | (core->regs.flags.C << 7);
+                core->regs.d = (core->regs.d & 0x00FF) | ((tmp & 0xFF) << 8);
+                core->regs.flags.N = core->regs.d >> 15;
+                core->regs.flags.Z = (core->regs.d >> 8) == 0;
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "RORA -> %02X C=%d\n", core->regs.d >> 8, core->regs.flags.C);
+
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
 
-              case OP56_RORA_INH : /*NZVC*/
+              case OP56_RORB_INH : /*NZVC*/
+                core->regs.flags.C = core->regs.d & 1;
+                tmp = ((core->regs.d & 0x7F) >> 1) | (core->regs.flags.C << 7);
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp & 0xFF);
+                core->regs.flags.N = (core->regs.d >> 7) & 1;
+                core->regs.flags.Z = (core->regs.d & 0xFF) == 0;
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "RORB -> %02X C=%d\n", core->regs.d & 0xFF, core->regs.flags.C);
+
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
                 break;
 
               case OP49_ROLA_INH : /*NZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = ((core->regs.d & 0xFF00) >> 7) | core->regs.flags.C;
+                core->regs.d = (core->regs.d & 0x00FF) | ((tmp & 0xFF) << 8);
+                core->regs.flags.C = (tmp>>8) & 1;
+                core->regs.flags.N = core->regs.d >> 15;
+                core->regs.flags.Z = (core->regs.d>>8) == 0;
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "ROLA -> %02X C=%d\n", core->regs.d >> 8, core->regs.flags.C);
                 break;
 
               case OP59_ROLB_INH : /*NZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp = (core->regs.d << 1) | core->regs.flags.C;
+                core->regs.d = (core->regs.d & 0xFF00) | (tmp & 0xFF);
+                core->regs.flags.C = (tmp>>8) & 1;
+                core->regs.flags.N = (core->regs.d & 0xFF) >> 7;
+                core->regs.flags.Z = (core->regs.d & 0xFF) == 0;
+                core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
+                log_msg(SYS_CORE, CORE_INST, "ROLB -> %02X C=%d\n", core->regs.d >> 8, core->regs.flags.C);
                 break;
 
               case OP_NEGA_INH : /*NZVC*/
