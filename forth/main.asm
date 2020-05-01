@@ -39,7 +39,7 @@
            BEHAP is changed to COMPILE when executing the immediate word ]
            COMPILE appends the word pointer on the parameter stack to the current definition
            EXECUTE executes the word by "calling" it.
-   BASE - Contains the value of the current number conversion base (unused now)
+   BASE - Contains the value of the current number conversion base
    
    Dictionary and Data space
    -------------------------
@@ -733,25 +733,25 @@ DDROP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* DUPZ ( u -- u u if u not zero ) */
+/* DUPNZ ( u -- u u if u not zero ) */
 	.section .dic
-word_DUPZ:
+word_DUPNZ:
 	.word	word_DDROP
 	.byte	4
 	.ascii	"?DUP"
-DUPZ:
+DUPNZ:
 	.word	code_ENTER
 	.word	DUP		/* Dup first, to allow testing */
-	.word	BRANCHZ,dupz2	/* if zero, no dup happens (this consumes the first dupe) */
+	.word	BRANCHZ,DUPNZ2	/* if zero, no dup happens (this consumes the first dupe) */
 	.word	DUP		/* Not zero: Dup the value and leave on stack */
-dupz2:
+DUPNZ2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* ROT ( a b c -- b c a ) */
 	.section .dic
 word_ROT:
-	.word	word_DUPZ
+	.word	word_DUPNZ
 	.byte	3
 	.ascii	"ROT"
 ROT:
@@ -946,11 +946,11 @@ word_EQUAL:
 EQUAL:
 	.word	code_ENTER
 	.word	XOR
-	.word	BRANCHZ,equ1
+	.word	BRANCHZ,equtrue
 	.word	IMM,0
 	.word	RETURN
-equ1:
-	.word	IMM,0xFFFF
+equtrue:
+	.word	IMM,0xFFFF	/* True is -1 ! */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1196,16 +1196,21 @@ DIGITQ:
 	.word	TOR
 	.word	IMM,'0'
 	.word	SUB
+
 	.word	IMM,9
 	.word	OVER
 	.word	LESS
+
 	.word	BRANCHZ,dgtq1
+
 	.word	IMM,7
 	.word	SUB
+
 	.word	DUP
 	.word	IMM,10
 	.word	LESS
 	.word	OR
+
 dgtq1:
 	.word	DUP
 	.word	RFROM
@@ -1213,7 +1218,7 @@ dgtq1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   number?   ( a -- n t | a f ) - convert a number counted string to integer. push a flag on tos. */
+/*   number?   ( cstr -- n t | a f ) - convert a number counted string to integer. push a flag on tos. */
 	.section .dic
 word_NUMBERQ:
 	.word	word_DIGITQ
@@ -1221,54 +1226,56 @@ word_NUMBERQ:
 	.ascii	"NUMBER?"
 NUMBERQ:
 	.word	code_ENTER
-	.word	BASE
-	.word	LOAD
-	.word	TOR
-	.word	IMM,0
-	.word	OVER
-	.word	COUNT
+	.word	BASE		/*cstr &base */
+	.word	LOAD		/*cstr base*/
+	.word	TOR		/*cstr | R:base*/
+	.word	IMM,0		/*cstr 0 | R:base*/
+	.word	OVER		/*cstr 0 cstr | R:base*/
+	.word	COUNT		/*cstr 0 strptr strlen | R:base*/
 
-	.word	OVER
-	.word	CLOAD
-	.word	IMM,'$'
-	.word	EQUAL
-	.word	BRANCHZ,numq1
+	.word	OVER		/*cstr 0 strptr strlen strptr | R:base*/
+	.word	CLOAD		/*cstr 0 strptr strlen strptr[0] | R:base*/
+	.word	IMM,'$'		/*cstr 0 strptr strlen strptr[0] $ | R:base*/
+	.word	EQUAL		/*cstr 0 strptr strlen (1 if strptr[0]==$) | R:base*/
+	.word	BRANCHZ,numq1	/*cstr 0 strptr strlen | R: base, jump if first buffer char is not $*/
 
-	.word	HEX
-	.word	SWAP
-	.word	IMM,1
-	.word	PLUS
-	.word	SWAP
-	.word	IMM,1
-	.word	SUB
-numq1:
-	.word	OVER
-	.word	CLOAD
-	.word	IMM,'-'
-	.word	EQUAL
-	.word	TOR
+	/* Equal returns 0 for FALSE (not equal). here we deal with $123 hex strings. */
+	.word	HEX		/*cstr 0 strptr strlen | R:base */
+	.word	SWAP		/*cstr 0 strlen strptr | R:base*/
+	.word	IMM,1		/*cstr 0 strlen strptr 1 | R:base*/
+	.word	PLUS		/*cstr 0 strlen strptr+1 | R:base TODO optimize CHARP or INC*/
+	.word	SWAP		/*cstr 0 strptr+1 strlen | R:base*/
+	.word	IMM,1		/*cstr 0 strptr+1 strlen 1 | R:base*/
+	.word	SUB		/*cstr 0 strptr+1 strlen-1 | R:base TODO optimize DEC*/
 
-	.word	SWAP
-	.word	RLOAD
-	.word	SUB
-	.word	SWAP
-	.word	RLOAD
-	.word	PLUS
-	.word	DUPZ
-	.word	BRANCHZ,numq6
+numq1:	/* Buffer doesnt start with a $ sign. Check for initial minus sign. */
+	.word	OVER		/*cstr 0 strptr strlen strbuf | R: base*/
+	.word	CLOAD		/*cstr 0 strptr strlen strchar | R:base*/
+	.word	IMM,'-'		/*cstr 0 strptr strlen strchar '-' | R:base*/
+	.word	EQUAL		/*cstr 0 strptr strlen strchar=='-' */
+	.word	TOR		/*cstr 0 strptr strlen | R:base -1_if_negative*/
 
-	.word	IMM,1
-	.word	SUB
-	.word	TOR
+	.word	SWAP		/*cstr 0 strlen strbuf | R:base -1_if_negative*/
+	.word	RLOAD		/*cstr 0 strlen strbuf -1_if_neg | R:base -1_if_negative*/
+	.word	SUB		/*cstr 0 strlen strbuf+1 | R:base -1_if_negative*/
+	.word	SWAP		/*cstr 0 strbuf+1 strlen | R:base -1_if_negative*/
+	.word	RLOAD		/*cstr 0 strbuf+1 strlen -1_if_neg | R:base -1_if_negative*/
+	.word	PLUS		/*cstr 0 strbuf+1 strlen-1 | R:base -1_if_negative*/
+	.word	DUPNZ		/*cstr 0 strbuf+1 strlen-1 [strlen-1 if not zero] | R:base -1_if_negative*/
+	.word	BRANCHZ,numq6	/*jump to end if new len is zero*/
+
+	.word	IMM,1		/*cstr 0 strptr strlen 1 | R:base -1_if_negative*/
+	.word	SUB		/*cstr 0 strptr strlen-1 (for JNZD) | R:base -1_if_negative*/
+	.word	TOR		/*cstr 0 strptr | R:base -1_if_negative strlen-1*/
 
 numq2:
-	.word	DUP
-	.word	TOR
-	.word	CLOAD
-	.word	BASE
-	.word	LOAD
-	.word	DIGITQ
-	.word	BRANCHZ,numq4
+	.word	DUP		/*cstr 0 strptr strptr | R:base -1_if_negative strlen-1*/
+	.word	TOR		/*cstr 0 strptr | R:base -1_if_negative strlen-1 strptr*/
+	.word	CLOAD		/*cstr 0 strchar | R:base -1_if_negative strlen-1 strptr*/
+	.word	BASE		/*cstr 0 strchar &base | R:base -1_if_negative strlen-1 strptr */
+	.word	LOAD		/*cstr 0 strchar base | R:base -1_if_negative strlen-1 strptr */
+	.word	DIGITQ		/*cstr 0 digit flag | R:base -1_if_negative strlen-1 strptr*/
+	.word	BRANCHZ,numq4	/*cstr 0 digit - if failed (false) goto numq4 | R:base -1_if_negative strlen-1 strptr*/
 
 	.word	SWAP
 	.word	BASE
@@ -1290,20 +1297,21 @@ numq2:
 numq3:
 	.word	SWAP
 	.word	BRANCH,numq5
-numq4:
-	.word	RFROM
-	.word	RFROM
-	.word	DDROP
-	.word	DDROP
-	.word	IMM,0
+
+numq4:	/*invalid digit 	  cstr 0 digit | R:base -1_if_negative strlen-1 strptr*/
+	.word	RFROM		/*cstr 0 digit strptr | R:base -1_if_negative strlen-1*/
+	.word	RFROM		/*cstr 0 digit strptr strlen-1 | R:base -1_if_negative*/
+	.word	DDROP		/*cstr 0 digit | R:base -1_if_negative*/
+	.word	DDROP		/*cstr | R:base -1_if_negative*/
+	.word	IMM,0		/*cstr 0 | R:base -1_if_negative*/
 numq5:
-	.word	DUP
-numq6:
-	.word	RFROM
-	.word	DDROP
-	.word	RFROM
-	.word	BASE
-	.word	STORE
+	.word	DUP		/*cstr 0 0 |R:base is_negative*/
+numq6:	/* Process String End	  cstr 0 strbuf | R:base is_negative */
+	.word	RFROM		/*cstr 0 strbuf is_negative | R:base*/
+	.word	DDROP		/*cstr 0 | R:base*/
+	.word	RFROM		/*cstr 0 base */
+	.word	BASE		/*cstr 0 base &BASE*/
+	.word	STORE		/*cstr 0 */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1808,7 +1816,7 @@ word_INTERPRET:
 INTERPRET:
 	.word	code_ENTER
 	.word	ISNAME		/*code name || cstr false */
-	.word	DUP		/*code name name || cstr false false */
+	.word	DUPNZ		/*code name name || cstr false */
 	.word	BRANCHZ,donum	/* if not name then jump */
 	/*Name is found */
 	.word	IMMSTR
@@ -1816,21 +1824,19 @@ INTERPRET:
 	.ascii	"--FOUND"
 	.word	COUNT,TYPE
 
-	#.word	DROP		/* code */
 	#.word	EXECUTE		/* NO RETURN */
+	.word	DROP
 
-	.word	DDROP
 	.word	RETURN
 
 donum:	/* No word was found, attempt to parse as number, then push */
+	.word	NUMBERQ
+	.word	BRANCHZ,inte2
 
 	.word	IMMSTR
 	.byte	8
 	.ascii	"--NUMBER"
 	.word	COUNT,TYPE
-
-	.word	NUMBERQ
-	.word	BRANCHZ,inte2
 	.word	RETURN
 inte2:
 	.word	IMMSTR
@@ -1994,6 +2000,7 @@ BOOT1:
 
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
+	.word	DECIMAL
 
 	.word	QUIT
 
