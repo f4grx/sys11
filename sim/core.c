@@ -444,6 +444,14 @@ void hc11_core_init(struct hc11_core *core)
       }
     hc11_core_iocallback(core, REG_INIT, 1, core, init_read, init_write);
     core->status = STATUS_STOPPED;
+
+    for(i=0;i<256;i++)
+      {
+        core->istat_main[i] = 0;
+        core->istat_pg18[i] = 0;
+        core->istat_pg1A[i] = 0;
+        core->istat_pgCD[i] = 0;
+      }
   }
 
 int hc11_core_set_bkpt(struct hc11_core *core, uint16_t pc)
@@ -779,6 +787,7 @@ void hc11_core_clock(struct hc11_core *core)
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
 
+          core->istat_main[core->opcode] += 1;
           switch(core->opcode)
             {
               uint16_t tmp,tmp2,tmp3;
@@ -1095,7 +1104,7 @@ void hc11_core_clock(struct hc11_core *core)
                 core->regs.flags.N = (core->regs.d & 0xFF) >> 7;
                 core->regs.flags.Z = (core->regs.d & 0xFF) == 0;
                 core->regs.flags.V = core->regs.flags.C ^ core->regs.flags.N;
-                log_msg(SYS_CORE, CORE_INST, "ROLB -> %02X C=%d\n", core->regs.d >> 8, core->regs.flags.C);
+                log_msg(SYS_CORE, CORE_INST, "ROLB -> %02X C=%d\n", core->regs.d & 0xFF, core->regs.flags.C);
                 break;
 
               case OP_NEGA_INH : /*NZVC*/
@@ -2050,6 +2059,7 @@ void hc11_core_clock(struct hc11_core *core)
           log_msg(SYS_CORE, CORE_INST, "STATE_EXECUTE_18 op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
+          core->istat_pg18[core->opcode] += 1;
           switch(core->opcode)
             {
               uint16_t tmp,tmp2,tmp3;
@@ -2567,6 +2577,7 @@ void hc11_core_clock(struct hc11_core *core)
           log_msg(SYS_CORE, CORE_INST, "STATE_EXECUTE_1A op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
+          core->istat_pg1A[core->opcode] += 1;
           switch(core->opcode)
             {
               uint16_t tmp;
@@ -2623,6 +2634,7 @@ void hc11_core_clock(struct hc11_core *core)
           log_msg(SYS_CORE, CORE_INST, "STATE_EXECUTE_CD op %02X operand %04X\n", core->opcode, core->operand);
           core->prefix = 0; //prepare for next opcode
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
+          core->istat_pgCD[core->opcode] += 1;
           switch(core->opcode)
             {
               uint16_t tmp;
@@ -2743,3 +2755,36 @@ void hc11_core_step(struct hc11_core *core)
       }
   }
 
+void hc11_core_istats(FILE *dest, struct hc11_core *core)
+  {
+    int i;
+
+    for(i=0;i<256;i++)
+      {
+        if(core->istat_main[i] != 0)
+          {
+            fprintf(dest,"  %02X : %lu\n", i, core->istat_main[i]);
+          }
+      }
+    for(i=0;i<256;i++)
+      {
+        if(core->istat_pg18[i] != 0)
+          {
+            fprintf(dest,"18%02X : %lu\n", i, core->istat_pg18[i]);
+          }
+      }
+    for(i=0;i<256;i++)
+      {
+        if(core->istat_pg1A[i] != 0)
+          {
+            fprintf(dest,"1A%02X : %lu\n", i, core->istat_pg1A[i]);
+          }
+      }
+    for(i=0;i<256;i++)
+      {
+        if(core->istat_pgCD[i] != 0)
+          {
+            fprintf(dest,"CD%02X : %lu\n", i, core->istat_pgCD[i]);
+          }
+      }
+  }

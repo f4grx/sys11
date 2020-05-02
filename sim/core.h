@@ -121,6 +121,13 @@ struct hc11_core
     uint16_t             operand;
     uint8_t              op2,op3, pulsel;
     uint16_t             pc_opcode;
+
+    //execution stats
+    uint64_t istat_main[256];
+    uint64_t istat_pg18[256];
+    uint64_t istat_pg1A[256];
+    uint64_t istat_pgCD[256];
+
   };
 
 void hc11_core_init(struct hc11_core *core);
@@ -144,6 +151,8 @@ void    hc11_core_writeb(struct hc11_core *core, uint16_t adr,
 void hc11_core_reset(struct hc11_core *core);
 void hc11_core_clock(struct hc11_core *core);
 void hc11_core_step (struct hc11_core *core);
+
+void hc11_core_istats(FILE *dest, struct hc11_core *core);
 
 #endif /* __core__h__ */
 

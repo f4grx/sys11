@@ -133,6 +133,7 @@ IP:	.word	0	/* Instruction pointer */
 HEREP:	.word	0	/* Pointer to HERE, the address of next free byte in dic/data space */
 LASTP:	.word	0	/* Pointer to the last defined word entry */
 BASEP:	.word	0	/* Value of the base used for number parsing */
+HOLDP:	.word	0	/* Pointer used for numeric output */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
 
 	/* Input text buffering */
@@ -224,7 +225,7 @@ code_ENTER:
 	xgdx			/* Put enter opcode address in X */
 	inx			/* Increment, now X is the address of the first word in the list */
 	inx
-	bra	NEXT2		/* Manage text opcode address */
+	bra	NEXT2		/* Manage next opcode address */
 
 /*---------------------------------------------------------------------------*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
@@ -517,7 +518,9 @@ code_DROP:
 	pulx			/* Get a parameter and discard it */
 	bra	NEXT		/* This will push top of stack again */
 
+/*===========================================================================*/
 /* Math */
+/*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
 /* ( u v -- u+v cy ) */
@@ -534,10 +537,11 @@ code_UPLUS:
 	pula
 	pulb		/*pull TOS*/
 	tsx
-	addd	0,X	/*add to new TOS */
+	addd	0,X	/*add to new TOS, sets N,Z,C,V */
 	std	0,X	/*Replace TOS, does not affect carry, clears V, changes N and Z */
-	rolb		/*Get carry flag in B0 (DLSB)*/
-	clra		/*Clear A (DMSB)*/
+	ldab	#0	/*CLRB clears carry, LDAB leaves it.*/
+	rolb		/*Get carry flag in B0 (D.LSB)*/
+	clra		/*Clear A (D.MSB)*/
 	bra	PUSHD	/* Push second return item and do next word */
 
 /*---------------------------------------------------------------------------*/
@@ -557,8 +561,8 @@ code_PLUS:
 	pulb
 	tsx
 	addd	0,X
-	pulx
-	bra	PUSHD
+	std	0,X
+	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
 /* ( u v -- u^v ) */
@@ -649,7 +653,7 @@ code_ZLESS:
 /*---------------------------------------------------------------------------*/
 	.section .dic
 word_EMIT:
-	.word	word_XOR
+	.word	word_ZLESS
 	.byte	4
 	.ascii	"EMIT"
 EMIT:
@@ -694,6 +698,24 @@ code_KEY:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/*   pad       ( -- a ) - return the address of a temporary buffer. */
+/* Note: this returns the END of a 80 byte buffer right after the current colon definition.
+   The buffer is filled in reverse using a div/mod by base algorithm.
+   No overflow because numeric output is never overlapping compilation. PAD is always used
+   in the context defined by <# and #> */
+	.section .dic
+word_PAD:
+	.word	word_KEY
+	.byte	3
+	.ascii	"PAD"
+PAD:
+	.word	code_ENTER
+	.word	HERE
+	.word	IMM,80
+	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
 	.section .dic
 /* NO NAME */
@@ -710,7 +732,7 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_KEY
+	.word	word_PAD
 	.byte	4
 	.ascii	"2DUP"
 DDUP:
@@ -733,7 +755,7 @@ DDROP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* DUPNZ ( u -- u u if u not zero ) */
+/* DUPNZ ( u -- u u if u NOT zero ) */
 	.section .dic
 word_DUPNZ:
 	.word	word_DDROP
@@ -806,11 +828,26 @@ SUB:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+	.section .dic
+word_ABS:
+	.word	word_SUB
+	.byte	3
+	.ascii	"ABS"
+ABS:
+	.word	code_ENTER
+	.word	DUP
+	.word	ZLESS
+	.word	BRANCHZ,abspos
+	.word	NEGATE	
+abspos:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /*( u v -- uvlo uvhi ) - long 16x32 multiplication */
 /*TODO native implementation since hc11 has a multiplier */
 	.section .dic
 word_UMSTAR:
-	.word	word_SUB
+	.word	word_ABS
 	.byte	3
 	.ascii	"UM*"
 UMSTAR:
@@ -825,10 +862,48 @@ umst2:	.word	JNZD,umst1
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/*   um/mod    ( udl udh u -- ur uq ) 32/16 division and modulo */
+/*TODO native implementation since hc11 has a divider*/
+	.section .dic
+word_UMMOD:
+	.word	word_UMSTAR
+	.byte	6
+	.ascii	"UM/MOD"
+UMMOD:
+	.word	code_ENTER
+	.word	DDUP
+	.word	ULESS
+	.word	BRANCHZ,umm4
+	.word	NEGATE
+	.word	IMM,15
+	.word	TOR
+umm1:
+	.word	TOR
+	.word	DUP
+	.word	UPLUS
+	.word	TOR,TOR,DUP,UPLUS
+	.word	RFROM,PLUS,DUP
+	.word	RFROM,RLOAD,SWAP,TOR
+	.word	UPLUS,RFROM,OR
+	.word	BRANCHZ,umm2
+	.word	TOR,DROP,IMM,1,PLUS,RFROM
+	.word	BRANCH,umm3
+umm2:
+	.word	DROP
+umm3:
+	.word	RFROM
+	.word	JNZD,umm1
+	.word	DROP,SWAP,RETURN
+umm4:
+	.word	DROP,DDROP
+	.word	IMM,-1,DUP		/* overflow, return max*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
 	.section .dic
 word_STAR:
-	.word	word_UMSTAR
+	.word	word_UMMOD
 	.byte	1
 	.ascii	"*"
 STAR:
@@ -1093,24 +1168,12 @@ CCOMPARE:
 	.word	DUP		/*cstra cstrb lendiff lendiff*/
 	.word	TOR		/*cstra cstrb lendiff | R: lendiff*/
 	.word	BRANCHZ, ccoeq	/*cstra cstrb | R:lendiff*/
+	/* Different lengths */
 	.word	DDROP		/*-- | R:lendiff*/
 	.word	RFROM		/*lendiff*/
-
-	#.word	IMMSTR
-	#.byte	7
-	#.ascii	"LENDIFF"
-	#.word	COUNT,TYPE,CR
-
 	.word	RETURN
 	/*Length match. Compare chars */
 ccoeq:
-
-	#.word	IMMSTR
-	#.byte	7
-	#.ascii	"SAMELEN"
-	#.word	COUNT,TYPE,CR
-
-	#.word	RFROM,DROP,DDROP,IMM,0,RETURN
 	.word	RFROM		/*cstra cstrb lendiff */
 	.word	DROP		/*cstra cstrb*/
 	.word	TOR		/*cstra / cstrb*/
@@ -1143,6 +1206,199 @@ IMMSTR:
 /* Numeric output */
 /*===========================================================================*/
 
+/*---------------------------------------------------------------------------*/
+/**/
+	.section .dic
+word_BDIGS:
+	.word	word_CCOMPARE
+	.byte	2
+	.ascii	"<#"
+BDIGS:
+	.word	code_ENTER
+	.word	PAD
+	.word	HOLD
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*  #>    ( w -- b u ) - prepare the output string to be type'd. */
+	.section .dic
+word_EDIGS:
+	.word	word_BDIGS
+	.byte	2
+	.ascii	"#>"
+EDIGS:
+	.word	code_ENTER
+	.word	DROP
+	.word	IMM,HOLDP
+	.word	LOAD
+	.word	PAD
+	.word	OVER
+	.word	SUB
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*  hold ( c -- ) - insert a character into the numeric output string. Storage is predecremented. */
+	.section .dic
+word_HOLD:
+	.word	word_EDIGS
+	.byte	4
+	.ascii	"HOLD"
+HOLD:
+	.word	code_ENTER
+	.word	IMM,HOLDP
+	.word	LOAD
+	.word	IMM,1
+	.word	SUB
+	.word	DUP
+	.word	IMM,HOLDP
+	.word	STORE
+	.word	CSTORE
+	.word	RETURN
+	
+/*---------------------------------------------------------------------------*/
+/*   digit     ( u -- c ) - convert digit u to a character.*/
+	.section .dic
+word_DIGIT:
+	.word	word_HOLD
+	.byte	5
+	.ascii	"DIGIT"
+DIGIT:
+	.word	code_ENTER
+	.word	IMM,9
+	.word	OVER
+	.word	LESS
+	.word	IMM,7
+	.word	AND
+	.word	PLUS
+	.word	IMM,'0'
+	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/**/
+	.section .dic
+word_EXTRACT:
+	.word	word_DIGIT
+	.byte	7
+	.ascii	"EXTRACT"
+EXTRACT:
+	.word	code_ENTER
+	.word	IMM,0
+	.word	SWAP
+	.word	UMMOD
+	.word	SWAP
+	.word	DIGIT
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/**/
+	.section .dic
+word_DIG:
+	.word	word_EXTRACT
+	.byte	1
+	.ascii	"#"
+DIG:
+	.word	code_ENTER
+	.word	BASE
+	.word	LOAD
+	.word	EXTRACT
+	.word	HOLD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/**/
+	.section .dic
+word_DIGS:
+	.word	word_DIG
+	.byte	2
+	.ascii	"#S"
+DIGS:
+	.word	code_ENTER
+digs1:
+	.word	DIG
+	.word	DUP
+	.word	BRANCHZ,digs2
+	.word	BRANCH,digs1
+digs2:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/**/
+	.section .dic
+word_SIGN:
+	.word	word_DIGS
+	.byte	4
+	.ascii	"SIGN"
+SIGN:
+	.word	code_ENTER
+	.word	ZLESS
+	.word	BRANCHZ,sign1
+	.word	IMM,'-'
+	.word	HOLD
+sign1:
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
+/*   str       ( n -- b u ) - convert a signed integer to a numeric string. */
+	.section .dic
+word_STR:
+	.word	word_SIGN
+	.byte	3
+	.ascii	"STR"
+STR:
+	.word	code_ENTER
+	.word	DUP
+	.word	TOR
+	.word	ABS
+	.word	BDIGS
+	.word	DIGS
+	.word	RFROM
+	.word	SIGN
+	.word	EDIGS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   u.    ( u -- ) - display an unsigned integer in free format. */
+	.section .dic
+word_UDOT:
+	.word	word_STR
+	.byte	2
+	.ascii	"U."
+UDOT:
+	.word	code_ENTER
+	.word	SPACE
+	.word	BDIGS
+	.word	DIGS
+	.word	EDIGS
+	.word	TYPE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   .     ( w -- ) display an integer in free format, preceeded by a space. */
+	.section .dic
+word_DOT:
+	.word	word_UDOT
+	.byte	1
+	.ascii	"."
+DOT:
+	.word	code_ENTER
+	.word	BASE
+	.word	LOAD
+	.word	IMM,10
+	.word	XOR
+	.word	BRANCHZ,dot1
+	/* Not decimal: display unsigned */
+	.word	UDOT
+	.word	RETURN
+dot1:
+	/* Decimal: display signed */
+	.word	SPACE
+	.word	STR
+	.word	TYPE
+	.word	RETURN
+
 /*===========================================================================*/
 /* Numeric input */
 /*===========================================================================*/
@@ -1150,7 +1406,7 @@ IMMSTR:
 /*---------------------------------------------------------------------------*/
 	.section .dic
 word_BASE:
-	.word	word_CCOMPARE
+	.word	word_DOT
 	.byte	4
 	.ascii	"BASE"
 BASE:
@@ -1997,6 +2253,8 @@ BOOT1:
 	.word	COUNT
 	.word	TYPE
 	.word	CR
+
+	.word	IMM,42,DOT,CR
 
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
