@@ -576,7 +576,8 @@ printf("core=%p\n",gr->core);
       }
 
     server.sin_family = AF_INET;
-    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    server.sin_addr.s_addr = htonl(INADDR_ANY);
+    //server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     server.sin_port = ntohs(gr->port);
     ret = bind(gr->sock, (struct sockaddr*)&server, sizeof(server));
     if(ret < 0)

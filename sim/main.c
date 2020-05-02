@@ -18,10 +18,15 @@
 
 static struct option long_options[] =
   {
-    {"debug"   , no_argument      , 0, 'd' },
-    {"bin"     , required_argument, 0, 'b' },
-    {"s19"     , required_argument, 0, 's' },
-    {"writable", no_argument      , 0, 'w' },
+    {"debug"      , no_argument      , 0, 'd' },
+    {"bin"        , required_argument, 0, 'b' },
+    {"s19"        , required_argument, 0, 's' },
+    {"writable"   , no_argument      , 0, 'w' },
+    {"preset-regs", required_argument, 0, 'p' },
+    {"preset-mem" , required_argument, 0, 'm' },
+    {"run"        , no_argument      , 0, 'r' },
+    {"expect-regs", required_argument, 0, 'e' },
+
     {0         , 0                , 0,  0  }
   };
 
@@ -74,10 +79,15 @@ void help(void)
   {
     printf("sim -d [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
            "\n"
-           "  -d --debug           Display verbose debug\n"
-           "  -s --s19 <file>      Load S-record file\n"
-           "  -b --bin <adr,file>  Load binary file at address\n"
-           "  -w --writable        Map 8K of RAM in monitor address space\n"
+           "  -d --debug                Display verbose debug\n"
+           "  -s --s19 <file>           Load S-record file\n"
+           "  -b --bin <adr,file>       Load binary file at address\n"
+           "  -w --writable             Map 8K of RAM in monitor address space\n"
+           "  -p --preset-regs          Set register values, comma-separated list\n"
+           "                            each entry reg=[0x]val, reg in d,a,b,x,y,pc,sp,ccr\n"
+           "  -m --preset-mem <adr,hex> load hex bytes at specified address\n"
+           "  -r --run                  start executing instructions as soon as inits are done\n"
+           "  -e --expect-regs          Set expected register values after execution\n"
          );
   }
 
@@ -94,6 +104,12 @@ uint64_t getmicros(void)
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return tv.tv_sec * 1000000LU + tv.tv_usec;
+  }
+
+static int preset_regs(struct hc11_core *core, const char *param)
+  {
+#warning todo
+    return 0;
   }
 
 int main(int argc, char **argv)
@@ -169,7 +185,28 @@ int main(int argc, char **argv)
                 printf("TODO load S19 file\n");
                 return -1;
               }
-
+            case 'p': //--preset-regs
+              {
+                if(preset_regs(&core,optarg) != 0)
+                  {
+                    fprintf(stderr,"invalid preset regs\n");
+                    return -1;
+                  }
+                break;
+              }
+            case 'm': //--preset-mem
+              {
+                break;
+              }
+            case 'r': //--run
+              {
+                core.status = STATUS_RUNNING;
+                break;
+              }
+            case 'e': //--expect-regs
+              {
+                break;
+              }
             case '?':
               {
                 help();
@@ -259,5 +296,6 @@ int main(int argc, char **argv)
       }
     gdbremote_close(&remote);
     hc11_sci_close(sci);
+    hc11_core_istats(stdout, &core);
   }
 
