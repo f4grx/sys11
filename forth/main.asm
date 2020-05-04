@@ -2076,20 +2076,20 @@ INTERPRET:
 	.word	ISNAME		/*code name || cstr false */
 	.word	DUPNZ		/*code name name || cstr false */
 	.word	BRANCHZ,donum	/* if not name then jump */
+
 	/*Name is found */
 	.word	IMMSTR
 	.byte	7
 	.ascii	"--FOUND"
 	.word	COUNT,TYPE
 
-	#.word	EXECUTE		/* NO RETURN */
-	.word	DROP
+	.word	EXECUTE		/* NO RETURN */
 
 	.word	RETURN
 
 donum:	/* No word was found, attempt to parse as number, then push */
 	.word	NUMBERQ
-	.word	BRANCHZ,inte2
+	.word	BRANCHZ,inte2	/*This consumes the conversion flag and leaves the number on the stack for later use*/
 
 	.word	IMMSTR
 	.byte	8
