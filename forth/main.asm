@@ -179,6 +179,8 @@ _start:
 	stx	*LASTP
 
 	/* Setup the runtime environment */
+	ldx	#(0x100)
+	stx	*HEREP		/*Define HERE, the beginning of the user data zone */
 
 	lds	#(0x8000-1)	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#(0x7C00-2)	/* Return stack 1K before end of RAM. We push word per word. */
@@ -1257,7 +1259,7 @@ HOLD:
 	.word	RETURN
 	
 /*---------------------------------------------------------------------------*/
-/*   digit     ( u -- c ) - convert digit u to a character.*/
+/* digit ( u -- c ) - convert digit u to a character.*/
 	.section .dic
 word_DIGIT:
 	.word	word_HOLD
@@ -1276,7 +1278,7 @@ DIGIT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/**/
+/* extract ( n base -- n c ) - extract the least significant digit from n. */
 	.section .dic
 word_EXTRACT:
 	.word	word_DIGIT
@@ -1292,7 +1294,7 @@ EXTRACT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/**/
+/* # ( u -- u ) - extract one digit from u and append the digit to output string. */
 	.section .dic
 word_DIG:
 	.word	word_EXTRACT
@@ -1307,7 +1309,7 @@ DIG:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/**/
+/* #s ( u -- 0 ) - convert u until all digits are added to the output string. */
 	.section .dic
 word_DIGS:
 	.word	word_DIG
@@ -1324,7 +1326,7 @@ digs2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/**/
+/* sign ( n -- ) - add a minus sign to the numeric output string. */
 	.section .dic
 word_SIGN:
 	.word	word_DIGS
