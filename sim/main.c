@@ -84,7 +84,7 @@ void help(void)
            "  -b --bin <adr,file>       Load binary file at address\n"
            "  -w --writable             Map 8K of RAM in monitor address space\n"
            "  -p --preset-regs          Set register values, comma-separated list\n"
-           "                            each entry reg=[0x]val, reg in d,a,b,x,y,pc,sp,ccr\n"
+           "                            each entry reg=[0x]val, reg in d,a,b,x,y,p,s,c\n"
            "  -m --preset-mem <adr,hex> load hex bytes at specified address\n"
            "  -r --run                  start executing instructions as soon as inits are done\n"
            "  -e --expect-regs          Set expected register values after execution\n"
@@ -106,9 +106,56 @@ uint64_t getmicros(void)
   return tv.tv_sec * 1000000LU + tv.tv_usec;
   }
 
-static int preset_regs(struct hc11_core *core, const char *param)
+static int parse_reg(struct hc11_core *core, char *param)
   {
-#warning todo
+    char *ptr = strchr(param,'=');
+    int val;
+    if(!ptr)
+      {
+        fprintf(stderr, "expected: , - reg=val, where reg = d,a,b,x,y,p(pc),s(sp),c(ccr)\n");
+        return -1;
+      }
+    *ptr=0;
+    ptr += 1;
+    if(!*ptr)
+      {
+        fprintf(stderr, "expected: value - reg=val, where reg = d,a,b,x,y,p(pc),s(sp),c(ccr)\n");
+      }
+    val = strtol(ptr,NULL,0);
+    printf("reg %c value %d (%04X)\n",*param,val,val);
+    switch(*param)
+      {
+        case 'd': core->regs.d   = val; break;
+        case 'x': core->regs.x   = val; break;
+        case 'y': core->regs.y   = val; break;
+        case 'p': core->regs.pc  = val; break;
+        case 's': core->regs.sp  = val; break;
+        case 'c': core->regs.ccr = val; break;
+        case 'a': core->regs.d   = (core->regs.d & 0x00FF) | ((val & 0xFF) << 8); break;
+        case 'b': core->regs.d   = (core->regs.d & 0xFF00) |  (val & 0xFF)      ; break;
+      }
+  }
+
+static int parse_preset_regs(struct hc11_core *core, char *param)
+  {
+    //split using commas
+    char *ptr;
+    int   ret;
+    ptr = param;
+    while(*param)
+      {
+        while(*param && *param!=',') param++;
+        if(*param!=0)
+          {
+            *param = 0;
+            param++;
+          }
+        ret = parse_reg(core,ptr);
+        if(ret != 0)
+          {
+          }
+        ptr = param;
+      }
     return 0;
   }
 
@@ -138,7 +185,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:wd", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:wdp:m:re:", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -187,7 +234,7 @@ int main(int argc, char **argv)
               }
             case 'p': //--preset-regs
               {
-                if(preset_regs(&core,optarg) != 0)
+                if(parse_preset_regs(&core,optarg) != 0)
                   {
                     fprintf(stderr,"invalid preset regs\n");
                     return -1;
