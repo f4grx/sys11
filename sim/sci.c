@@ -119,7 +119,7 @@ static void* sci_thread(void *param)
         sci->client = accept(sci->sock, (struct sockaddr*)&client, &clientsize);
         if(sci->client < 0)
           {
-            perror("sci_accept()");
+            //perror("sci_accept()");
             break;
           }
         log_msg(SYS_SCI, 0, "hc11_sci: client connected\n");
@@ -270,7 +270,7 @@ int hc11_sci_close(struct hc11_sci *sci)
     close(sci->sock);
 
     val.sival_ptr = sci;
-    pthread_sigqueue(sci->thread, SIGUSR1, val);
+    pthread_sigqueue(sci->thread, SIGINT, val);
     pthread_join(sci->thread, &ret);
     log_msg(SYS_SCI, 0, "hc11_sci: thread terminated\n");
     free(sci);

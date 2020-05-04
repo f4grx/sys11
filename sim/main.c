@@ -19,7 +19,9 @@
 
 static struct option long_options[] =
   {
+    {"version"    , no_argument      , 0, 'v' },
     {"debug"      , no_argument      , 0, 'd' },
+    {"no-gdb"     , no_argument      , 0, 'g' },
     {"bin"        , required_argument, 0, 'b' },
     {"s19"        , required_argument, 0, 's' },
     {"writable"   , no_argument      , 0, 'w' },
@@ -81,7 +83,9 @@ void help(void)
   {
     printf("sim -d [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
            "\n"
+           "  -v --version              Display version info\n"
            "  -d --debug                Display verbose debug\n"
+           "  -g --no-gdb               Do not start a GDB server\n"
            "  -s --s19 <file>           Load S-record file (not implemented yet)\n"
            "  -b --bin <adr,file>       Load binary file at address\n"
            "  -w --writable             Map 8K of RAM in monitor address space\n"
@@ -93,9 +97,14 @@ void help(void)
          );
   }
 
+void version(void)
+  {
+    printf("sys11 simulator v0.1 by f4grx (c) 2019-2020\n");
+  }
+
 void sig(int sig)
   {
-    printf("Signal caught\n");
+    //printf("Signal caught\n");
     sem_post(&end);
   }
 
@@ -135,7 +144,11 @@ static int parse_preset_reg(struct hc11_core *core, char *param)
         case 'c': core->regs.ccr = val; break;
         case 'a': core->regs.d   = (core->regs.d & 0x00FF) | ((val & 0xFF) << 8); break;
         case 'b': core->regs.d   = (core->regs.d & 0xFF00) |  (val & 0xFF)      ; break;
+        default:
+          fprintf(stderr,"unknown reg: %s\n",param);
+          return -1;
       }
+    return 0;
   }
 
 static int parse_preset_regs(struct hc11_core *core, char *param)
@@ -159,8 +172,6 @@ static int parse_preset_regs(struct hc11_core *core, char *param)
           }
         ptr = param;
       }
-    //take a snapshot of those regs so we can compare them later
-    memcpy(&initial_regs, &core->regs, sizeof(struct hc11_regs));
     return 0;
   }
 
@@ -231,9 +242,12 @@ static int parse_check_reg(struct hc11_core *core, char *param)
         case 'y': real = core->regs.y; break;
         case 'p': real = core->regs.pc; break;
         case 's': real = core->regs.sp; break;
-        case 'c': byte = true; real = core->regs.ccr; break;
         case 'a': byte = true; real = core->regs.d >> 8; break;
         case 'b': byte = true; real = core->regs.d & 0xFF; break;
+        case 'c': byte = true; real = core->regs.ccr; break;
+        default:
+          fprintf(stderr,"unknown reg: %s\n",param);
+          return -1;
       }
     if(byte)
       {
@@ -241,7 +255,7 @@ static int parse_check_reg(struct hc11_core *core, char *param)
         check = (real == val);
         if(!check)
           {
-            printf("WARNING REG %s VALUE %02X (%d) EXPECTED %02X (%d)\n",param, real, real, val, val);
+            printf("WARNING REG %s VALUE 0x%02X (%d) EXPECTED 0x%02X (%d)\n",param, real, real, val, val);
           }
       }
     else
@@ -250,7 +264,7 @@ static int parse_check_reg(struct hc11_core *core, char *param)
         check = (real == val);
         if(!check)
           {
-            printf("WARNING REG %s VALUE %04X (%d) EXPECTED %04X (%d)\n",param, real, real, val, val);
+            printf("WARNING REG %s VALUE 0x%04X (%d) EXPECTED 0x%04X (%d)\n",param, real, real, val, val);
           }
       }
   }
@@ -289,11 +303,10 @@ int main(int argc, char **argv)
     uint64_t cycles;
     uint64_t micros;
     bool debug = false;
+    bool dogdb = true;
     char *regcheck = NULL;
 
     log_init();
-
-    printf("sys11 simulator v0.1 by f4grx (c) 2019-2020\n");
 
     sem_init(&end,0,0);
     memset(&sa_mine, 0, sizeof(struct sigaction));
@@ -308,7 +321,7 @@ int main(int argc, char **argv)
     while (1)
       {
         int option_index = 0;
-        c = getopt_long(argc, argv, "b:s:wdp:m:re:", long_options, &option_index);
+        c = getopt_long(argc, argv, "b:s:wdp:m:re:gv", long_options, &option_index);
         if (c == -1)
           {
             break;
@@ -319,6 +332,8 @@ int main(int argc, char **argv)
               log_enable(0,0);
               debug = true;
               break;
+
+            case 'g': dogdb = false; break;
 
             case 'b':
               {
@@ -410,9 +425,12 @@ int main(int argc, char **argv)
 
     sci = hc11_sci_init(&core);
 
-    remote.port = 3333;
-    remote.core = &core;
-    gdbremote_init(&remote);
+    if(dogdb)
+      {
+        remote.port = 3333;
+        remote.core = &core;
+        gdbremote_init(&remote);
+      }
 
     prev = -1;
     cycles = 0;
@@ -426,7 +444,7 @@ int main(int argc, char **argv)
             uint64_t deltacycles = core.clocks - cycles;
             cycles = core.clocks;
             micros = newmicros;
-            if(core.status == STATUS_RUNNING)
+            if((core.status == STATUS_RUNNING) && !debug)
               {
                 printf("Running at %.3f MHz     \r", (double)deltacycles/(double)deltatime);
               }
@@ -440,12 +458,15 @@ int main(int argc, char **argv)
 
         if(prev != core.status)
           {
-            printf("status: %d -> %d\n", prev, core.status);
+            if(debug) printf("status: %d -> %d\n", prev, core.status);
             if(core.status == STATUS_STOPPED && prev != -1)
               {
-                gdbremote_stopped(&remote, (core.busadr == VECTOR_ILLEGAL) ?
-                                           GDBREMOTE_STOP_FAIL :
-                                           GDBREMOTE_STOP_NORMAL);
+                if(dogdb)
+                  {
+                    gdbremote_stopped(&remote, (core.busadr == VECTOR_ILLEGAL) ?
+                                               GDBREMOTE_STOP_FAIL :
+                                               GDBREMOTE_STOP_NORMAL);
+                  }
               }
             prev = core.status;
           }
@@ -466,7 +487,7 @@ int main(int argc, char **argv)
           }
         else if(core.status == STATUS_EXECUTED_STOP)
           {
-            printf("Simulation ended\n");
+            //printf("Simulation ended\n");
             sem_post(&end);
             break;
           }
@@ -484,7 +505,10 @@ int main(int argc, char **argv)
         printf("Waiting for ctrl-c...\n");
         sem_wait(&end);
       }
-    gdbremote_close(&remote);
+    if(dogdb)
+      {
+        gdbremote_close(&remote);
+      }
     hc11_sci_close(sci);
     if(debug)
       {
