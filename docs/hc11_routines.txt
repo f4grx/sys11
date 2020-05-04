@@ -1,0 +1,35 @@
+https://stackoverflow.com/questions/29337946/assembly-multiply-two-16-bit-program-using-68hc11
+
+MULU_16_16: PSHD               ; The HC11 has an 8-bit CPU, and so cannot deal with 16-bit
+           PSHD               ; multiplication. MULU_16_16 takes two 16-bit numbers and
+           LDAA  $09,SP       ; multiplies them together, placing the 32-bit result in 
+           LDAB  $07,SP       ; the stack space where the two operands once occupied.
+           MUL                ; This routine doesn't need any static variables, but it
+           STD   $02,SP       ; does use 10 bytes of stack space, including the call to
+           LDAA  $09,SP       ; the sub, and all parameter passing. A call to this sub
+           LDAB  $06,SP       ; would look like this:
+           MUL                ; LDD   Operand1    ; I used D to illustrate, but this should
+           ADDB  $02,SP       ; PSHD              ; also work using an index register, or a
+           ADCA  #0           ; LDD   Operand2    ; MOVW instruction. Placing values on the
+           STD   $01,SP       ; PSHD              ; stack before the call is passing factors.
+           LDAA  $08,SP       ; JSR   MULU_16_16  ; Call the sub.
+           LDAB  $07,SP       ; PULD              ; Most significant word of product.
+           MUL                ; PULD              ; Least significant word of product.
+           ADDB  $02,SP       
+           ADCA  $01,SP       ; READ THIS DAMMIT! You MUST re-adjust the stack after calling 
+           STD   $01,SP       ; MULU_16_16 even if you aren't interested in the result.
+           LDAA  $08,SP       ; What's more, you MUST PLACE four bytes on the stack before
+           LDAB  $06,SP       ; calling MULU_16_16. If you do not do either of these things,
+           MUL                ; your program will get a nice surprise when you try to RTS
+           ADDB  $01,SP       ; next. Remember, this function modifies values on the stack
+           ADCA  #0           ; that were placed there BEFORE the return address from the JSR
+           STD   $00,SP       ; that called it. 
+           PULD               ; Destroy the stack space we created at the beginning of this 
+           STD   $04,SP       ; sub.
+           PULD
+           STD   $04,SP
+           RTS
+
+
+http://test.dankohn.info/~myhome/projects/68HC11/AXIOM_HC11/Source/Users%20Group/
+
