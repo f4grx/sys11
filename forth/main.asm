@@ -1218,7 +1218,7 @@ word_BDIGS:
 BDIGS:
 	.word	code_ENTER
 	.word	PAD
-	.word	HOLD
+	.word	IMM,HOLDP
 	.word	STORE
 	.word	RETURN
 
@@ -1348,13 +1348,13 @@ sign1:
 word_STR:
 	.word	word_SIGN
 	.byte	3
-	.ascii	"STR"
+	.ascii	"str"
 STR:
 	.word	code_ENTER
-	.word	DUP
-	.word	TOR
-	.word	ABS
-	.word	BDIGS
+	.word	DUP		/* n n */
+	.word	TOR		/* n | R: n */
+	.word	ABS		/* absn | R:n */
+	.word	BDIGS		/* absn | R:n */
 	.word	DIGS
 	.word	RFROM
 	.word	SIGN
