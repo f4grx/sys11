@@ -329,11 +329,10 @@ EXECUTE:
 
 	.text
 code_EXECUTE:
-	pulx		/* Retrieve a word address from stack */
-	inx
-	inx		/* Skip the code pointer , since we're already executing a word list */
-	bra	NEXT2	/* Launch it */
-
+	pulx		/* Retrieve a word address from stack. This address contains a code pointer */
+	ldd	0,X	/* Load the code pointer in D (expected by code_ENTER)*/
+	xgdx		
+	jmp	0,X	/* Set PC to this address! */
 
 /*---------------------------------------------------------------------------*/
 /* Store a cell at address (d a -- ) */
@@ -726,7 +725,7 @@ LOADEXEC:
 	.word	LOAD		/* word */
 	.word	DUP		/* word word */
 	.word	BRANCHZ, noexec /* word, exit if null */
-	.word	EXECUTE		/* continue execution at the loaded forth word*/
+	.word	EXECUTE		/* Execute the loaded forth word*/
 noexec:
 	.word	RETURN		/* Nothing is stored. just return. */
 
@@ -2083,7 +2082,9 @@ INTERPRET:
 	.ascii	"--FOUND"
 	.word	COUNT,TYPE
 
-	.word	EXECUTE		/* NO RETURN */
+	.word	DUP,HEX,DOT
+	.word	EXECUTE
+	#.word	DROP
 
 	.word	RETURN
 
@@ -2256,7 +2257,7 @@ BOOT1:
 	.word	TYPE
 	.word	CR
 
-	.word	IMM,42,DOT,CR
+	#.word	IMM,42,DOT,CR
 
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
