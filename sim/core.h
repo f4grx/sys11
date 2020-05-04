@@ -52,7 +52,8 @@ enum
   {
     STATUS_STOPPED,
     STATUS_STEPPING,
-    STATUS_RUNNING
+    STATUS_RUNNING,
+    STATUS_EXECUTED_STOP,  /* Core has executed a STOP instruction */
   };
 
 typedef uint8_t (*read_f )(void *ctx, uint16_t off);

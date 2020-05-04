@@ -32,6 +32,7 @@ static struct option long_options[] =
 
 sem_t end;
 
+struct hc11_regs initial_regs;
 static uint8_t* loadbin(const char *fname, uint16_t *size)
   {
     FILE *f;
@@ -156,6 +157,8 @@ static int parse_preset_regs(struct hc11_core *core, char *param)
           }
         ptr = param;
       }
+    //take a snapshot of those regs so we can compare them later
+    memcpy(&initial_regs, &core->regs, sizeof(struct hc11_regs));
     return 0;
   }
 
@@ -334,7 +337,15 @@ int main(int argc, char **argv)
           {
               usleep(10000);
           }
+        else if(core.status == STATUS_EXECUTED_STOP)
+          {
+            printf("Simulation ended\n");
+            break;
+          }
       }
+
+    //If register check was selected, parse and compare regs
+
     sem_getvalue(&end, &val);
     if(!val)
       {

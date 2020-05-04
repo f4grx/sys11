@@ -1260,6 +1260,7 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_STOP_INH  :
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
+                core->status = STATUS_EXECUTED_STOP;
                 log_msg(SYS_CORE, CORE_INST, "TODO stop the clock until an IRQ (SCI?) happens\n");
                 break;
 
@@ -2736,6 +2737,11 @@ void hc11_core_step(struct hc11_core *core)
         if(core->state == STATE_VECTORFETCH_H && core->busadr == VECTOR_ILLEGAL)
           {
             //unimplemented opcode
+            //Special feature: Detect STOP to end simulation for core testing
+            if(core->status == STATUS_EXECUTED_STOP)
+              {
+                return; //dont change status, dont change any register
+              }
             core->regs.pc = core->pc_opcode; //reset PC to start of failed instruction
             core->status = STATUS_STOPPED;
             return;
