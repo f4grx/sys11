@@ -108,7 +108,7 @@ uint64_t getmicros(void)
   return tv.tv_sec * 1000000LU + tv.tv_usec;
   }
 
-static int parse_reg(struct hc11_core *core, char *param)
+static int parse_preset_reg(struct hc11_core *core, char *param)
   {
     char *ptr = strchr(param,'=');
     int val;
@@ -152,9 +152,10 @@ static int parse_preset_regs(struct hc11_core *core, char *param)
             *param = 0;
             param++;
           }
-        ret = parse_reg(core,ptr);
+        ret = parse_preset_reg(core,ptr);
         if(ret != 0)
           {
+            return ret;
           }
         ptr = param;
       }
@@ -202,6 +203,80 @@ static int parse_preset_mem(struct hc11_core *core, char *param)
     return 0;
   }
 
+static int parse_check_reg(struct hc11_core *core, char *param)
+  {
+    char *ptr = strchr(param,'=');
+    int val;
+    bool check;
+    bool byte;
+    uint16_t real;
+
+    if(!ptr)
+      {
+        fprintf(stderr, "expected: , - reg=val, where reg = d,a,b,x,y,p(pc),s(sp),c(ccr)\n");
+        return -1;
+      }
+    *ptr=0;
+    ptr += 1;
+    if(!*ptr)
+      {
+        fprintf(stderr, "expected: value - reg=val, where reg = d,a,b,x,y,p(pc),s(sp),c(ccr)\n");
+      }
+    val = strtol(ptr,NULL,0);
+    byte = false;
+    switch(*param)
+      {
+        case 'd': real = core->regs.d; break;
+        case 'x': real = core->regs.x; break;
+        case 'y': real = core->regs.y; break;
+        case 'p': real = core->regs.pc; break;
+        case 's': real = core->regs.sp; break;
+        case 'c': byte = true; real = core->regs.ccr; break;
+        case 'a': byte = true; real = core->regs.d >> 8; break;
+        case 'b': byte = true; real = core->regs.d & 0xFF; break;
+      }
+    if(byte)
+      {
+        val &= 0xFF;
+        check = (real == val);
+        if(!check)
+          {
+            printf("WARNING REG %s VALUE %02X (%d) EXPECTED %02X (%d)\n",param, real, real, val, val);
+          }
+      }
+    else
+      {
+        val &= 0xFFFF;
+        check = (real == val);
+        if(!check)
+          {
+            printf("WARNING REG %s VALUE %04X (%d) EXPECTED %04X (%d)\n",param, real, real, val, val);
+          }
+      }
+  }
+
+int parse_check_regs(struct hc11_core *core, char *param)
+  {
+    //split using commas
+    char *ptr;
+    int   ret;
+    ptr = param;
+    while(*param)
+      {
+        while(*param && *param!=',') param++;
+        if(*param!=0)
+          {
+            *param = 0;
+            param++;
+          }
+        ret = parse_check_reg(core,ptr);
+        if(ret != 0)
+          {
+          }
+        ptr = param;
+      }
+    return 0;
+  }
 
 int main(int argc, char **argv)
   {
@@ -214,6 +289,7 @@ int main(int argc, char **argv)
     uint64_t cycles;
     uint64_t micros;
     bool debug = false;
+    char *regcheck = NULL;
 
     log_init();
 
@@ -306,6 +382,7 @@ int main(int argc, char **argv)
               }
             case 'e': //--expect-regs
               {
+                regcheck = optarg;
                 break;
               }
             case '?':
@@ -396,6 +473,10 @@ int main(int argc, char **argv)
       }
 
     //If register check was selected, parse and compare regs
+    if(regcheck)
+      {
+        parse_check_regs(&core, regcheck);
+      }
 
     sem_getvalue(&end, &val);
     if(!val)
