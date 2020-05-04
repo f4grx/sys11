@@ -557,7 +557,6 @@ int gdbremote_init(struct gdbremote_t *gr)
     int ret;
     int yes = 1;
 
-printf("core=%p\n",gr->core);
     printf("gdbremote: starting\n");
     sem_init(&gr->startstop, 0, 0);
 
