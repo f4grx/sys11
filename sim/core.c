@@ -793,7 +793,11 @@ void hc11_core_clock(struct hc11_core *core)
               uint16_t tmp,tmp2,tmp3;
               int16_t  rel;
               case OP00_TEST_INH :
-                log_msg(SYS_CORE, CORE_INST, "TEST instruction not available in sim\n");
+                core->busadr  = VECTOR_ILLEGAL;
+                core->state   = STATE_VECTORFETCH_H;
+                core->status = STATUS_EXECUTED_STOP;
+                log_msg(SYS_CORE, CORE_INST, "TEST instruction not available in sim -> stop\n");
+                //behave as STOP
                 break;
 
               case OP01_NOP_INH  :
@@ -1260,7 +1264,6 @@ void hc11_core_clock(struct hc11_core *core)
               case OP_STOP_INH  :
                 core->busadr  = VECTOR_ILLEGAL;
                 core->state   = STATE_VECTORFETCH_H;
-                core->status = STATUS_EXECUTED_STOP;
                 log_msg(SYS_CORE, CORE_INST, "TODO stop the clock until an IRQ (SCI?) happens\n");
                 break;
 

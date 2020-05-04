@@ -1,6 +1,7 @@
 /* working hc11 simulator for sys11 and others */
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,7 +82,7 @@ void help(void)
     printf("sim -d [-s,--s19 <file>] [-b,--bin <adr,file>] [-w,--writable]\n"
            "\n"
            "  -d --debug                Display verbose debug\n"
-           "  -s --s19 <file>           Load S-record file\n"
+           "  -s --s19 <file>           Load S-record file (not implemented yet)\n"
            "  -b --bin <adr,file>       Load binary file at address\n"
            "  -w --writable             Map 8K of RAM in monitor address space\n"
            "  -p --preset-regs          Set register values, comma-separated list\n"
@@ -123,7 +124,7 @@ static int parse_reg(struct hc11_core *core, char *param)
         fprintf(stderr, "expected: value - reg=val, where reg = d,a,b,x,y,p(pc),s(sp),c(ccr)\n");
       }
     val = strtol(ptr,NULL,0);
-    printf("reg %c value %d (%04X)\n",*param,val,val);
+    //printf("reg %c value %d (%04X)\n",*param,val,val);
     switch(*param)
       {
         case 'd': core->regs.d   = val; break;
@@ -162,6 +163,46 @@ static int parse_preset_regs(struct hc11_core *core, char *param)
     return 0;
   }
 
+static int parse_preset_mem(struct hc11_core *core, char *param)
+  {
+    char *ptr;
+    uint16_t adr;
+    uint16_t size;
+    int val;
+    uint8_t *bin;
+    ptr = strchr(optarg, ',');
+    if(!ptr)
+      {
+        fprintf(stderr,"--preset-mem adr,hexdata\n");
+        return -1;
+      }
+    *ptr = 0;
+    ptr++;
+    adr = (uint16_t)strtoul(optarg, NULL, 0);
+    size = strlen(ptr);
+    if(size & 1)
+      {
+        fprintf(stderr,"bad hex data\n");
+        return -1;
+      }
+
+    while(size>1)
+      {
+        if(sscanf(ptr,"%02X",&val) != 1)
+          {
+            fprintf(stderr, "bad hex data: %s\n",ptr);
+            return -1;
+          }
+        hc11_core_writeb(core,adr,val&0xFF);
+        adr  += 1;
+        ptr  += 2;
+        size -= 2;
+      }
+
+    return 0;
+  }
+
+
 int main(int argc, char **argv)
   {
     struct hc11_sci *sci;
@@ -172,10 +213,11 @@ int main(int argc, char **argv)
     int prev;
     uint64_t cycles;
     uint64_t micros;
+    bool debug = false;
 
     log_init();
 
-    printf("sys11 simulator v0.1 by f4grx (c) 2019\n");
+    printf("sys11 simulator v0.1 by f4grx (c) 2019-2020\n");
 
     sem_init(&end,0,0);
     memset(&sa_mine, 0, sizeof(struct sigaction));
@@ -183,6 +225,8 @@ int main(int argc, char **argv)
     sigaction(SIGINT, &sa_mine, NULL);
 
     hc11_core_init(&core);
+    hc11_core_reset(&core);
+
     //map 32k of RAM in the first half of the address space
     hc11_core_map_ram(&core, "ram", 0x0000, 0x8000); //100h bytes masked by internal mem
     while (1)
@@ -197,6 +241,7 @@ int main(int argc, char **argv)
           {
             case 'd':
               log_enable(0,0);
+              debug = true;
               break;
 
             case 'b':
@@ -246,11 +291,17 @@ int main(int argc, char **argv)
               }
             case 'm': //--preset-mem
               {
+                if(parse_preset_mem(&core,optarg) != 0)
+                  {
+                    fprintf(stderr,"invalid preset mem\n");
+                    return -1;
+                  }
                 break;
               }
             case 'r': //--run
               {
                 core.status = STATUS_RUNNING;
+                core.state  = 2; //set core to the FETCH state, avoiding any vector fetch
                 break;
               }
             case 'e': //--expect-regs
@@ -286,7 +337,6 @@ int main(int argc, char **argv)
     remote.core = &core;
     gdbremote_init(&remote);
 
-    hc11_core_reset(&core);
     prev = -1;
     cycles = 0;
     micros = getmicros();
@@ -340,6 +390,7 @@ int main(int argc, char **argv)
         else if(core.status == STATUS_EXECUTED_STOP)
           {
             printf("Simulation ended\n");
+            sem_post(&end);
             break;
           }
       }
@@ -354,6 +405,9 @@ int main(int argc, char **argv)
       }
     gdbremote_close(&remote);
     hc11_sci_close(sci);
-    hc11_core_istats(stdout, &core);
+    if(debug)
+      {
+        hc11_core_istats(stdout, &core);
+      }
   }
 
