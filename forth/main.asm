@@ -224,7 +224,7 @@ code_ENTER:
 	stx	0,Y		/* Push the next IP to be executed after return from this thread */
 	dey			/* Post-Decrement Y by 2 to push */
 	dey
-	xgdx			/* Put enter opcode address in X */
+	xgdx			/* Put forth word address in X */
 	inx			/* Increment, now X is the address of the first word in the list */
 	inx
 	bra	NEXT2		/* Manage next opcode address */
@@ -330,8 +330,8 @@ EXECUTE:
 	.text
 code_EXECUTE:
 	pulx		/* Retrieve a word address from stack. This address contains a code pointer */
-	ldd	0,X	/* Load the code pointer in D (expected by code_ENTER)*/
-	xgdx		
+	ldd	0,X	/* Load the code pointer in D*/
+	xgdx		/* Put code pointer in X and word address in D */
 	jmp	0,X	/* Set PC to this address! */
 
 /*---------------------------------------------------------------------------*/
@@ -1975,7 +1975,7 @@ FIND:
 	#.word	OVER,COUNT,TYPE,CR /* DEBUG */
 	/*compare cstr to current name stored at voc*/
 .if 0
-
+TOFIX
 ;This version is used if the name is stored before the prev link
 find1:
 	.word	SWAP		/*voc cstr */
@@ -2082,9 +2082,8 @@ INTERPRET:
 	.ascii	"--FOUND"
 	.word	COUNT,TYPE
 
-	.word	DUP,HEX,DOT
+	.word	BASE,LOAD,OVER,HEX,DOT,BASE,STORE
 	.word	EXECUTE
-	#.word	DROP
 
 	.word	RETURN
 
@@ -2096,6 +2095,7 @@ donum:	/* No word was found, attempt to parse as number, then push */
 	.byte	8
 	.ascii	"--NUMBER"
 	.word	COUNT,TYPE
+	.word	DUP,DOT /*This dot is able to display the number that was just parsed so it works*/
 	.word	RETURN
 inte2:
 	.word	IMMSTR
