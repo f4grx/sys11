@@ -171,9 +171,9 @@ _start:
 	/* Init serial port */
 
 	ldaa	#0x30
-	staa	BAUD
+	staa	*BAUD
 	ldaa	#0x0C
-	staa	SCCR2
+	staa	*SCCR2
 
 	ldx	#word_BOOT
 	stx	*LASTP
@@ -210,29 +210,31 @@ NEXT2:				/* We can call here if X already has the value for IP */
 	dex			/* Redecrement, because we need the original IP */
 	dex			/* Now X contains pointer to pointer to code (aka IP, pointer to forth opcode) */
 	ldx	0,X		/* Now X contains pointer to code (forth opcode == address of first cell in any word) */
+doEXECUTE:
 	ldd	0,X		/* Now D contains the code address to execute opcode (a code_THING value) */
-	xgdx			/* Switch, so X contains the code_THING value for this forth word 
-				   and D contains address of instruction being run */
-	jmp	0,X		/* Call the code that must run now, D containing the forth opcode being run */
+	pshb
+	psha
+	rts			/* Call the code_THING address pushed on stack, X contains new IP */
 
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
 code_ENTER:
 	/* This is called with the address of instruction being run (aka forth opcode) in D*/
-	ldx	*IP
-	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+	ldd	*IP
+	std	0,Y		/* Push the next IP to be executed after return from this thread */
 	dey			/* Post-Decrement Y by 2 to push */
 	dey
-	xgdx			/* Put forth word address in X */
 	inx			/* Increment, now X is the address of the first word in the list */
 	inx
 	bra	NEXT2		/* Manage next opcode address */
 
 /*---------------------------------------------------------------------------*/
 /* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
+	.section .rodata
 RETURN:
 	.word	code_RETURN
+	.text
 code_RETURN:
 	ldab	#2
 	aby			/* Pre-Increment Y by 2 to pop */
@@ -330,9 +332,7 @@ EXECUTE:
 	.text
 code_EXECUTE:
 	pulx		/* Retrieve a word address from stack. This address contains a code pointer */
-	ldd	0,X	/* Load the code pointer in D*/
-	xgdx		/* Put code pointer in X and word address in D */
-	jmp	0,X	/* Set PC to this address! */
+	bra	doEXECUTE
 
 /*---------------------------------------------------------------------------*/
 /* Store a cell at address (d a -- ) */
@@ -816,7 +816,7 @@ NEGATE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( a b -- a-b ) */
+/* ( a b -- a-b ) - could be assembly to improve performance a bit */
 	.section .dic
 word_SUB:
 	.word word_NEGATE
@@ -954,7 +954,6 @@ CELLS:
 
 /*---------------------------------------------------------------------------*/
 /* ( u v -- u<v ) unsigned compare of top two items. */
-
 	.section .dic
 word_ULESS:
 	.word	word_CELLS
@@ -1014,7 +1013,7 @@ WITHIN:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( w w -- t ) equality flag */
+/* ( w w -- t ) equality flag FFFF if both value are the same (xor would return zero for equality)*/
 word_EQUAL:
 	.word	word_WITHIN
 	.byte	5
@@ -1107,16 +1106,12 @@ word_CSAME:
 	.ascii	"CSAME?"
 CSAME:
 	.word	code_ENTER
-	#.word	DDROP,DROP
-	#.word	IMM,0xFFFF
 	.word	TOR		/*ptra ptrb | R:len*/
 	.word	BRANCH,csame2
 csame0:
 	.word	OVER		/*ptra ptrb ptra | R:len*/
-#	.word	DUP,IMM,1,TYPE,CR
 	.word	CLOAD		/*ptra ptrb chra | R:len*/
 	.word	OVER		/*ptra ptrb chra ptrb | R:len*/
-#	.word	DUP,IMM,1,TYPE,CR
 	.word	CLOAD		/*ptra ptrb chra chrb | R:len*/
 	.word	SUB		/*ptra ptrb chrdiff | R:len*/
 	.word	DUP		/*ptra ptrb chrdiff chrdiff | R:len*/
@@ -1153,12 +1148,6 @@ word_CCOMPARE:
 	.ascii	"CCOMPARE"
 CCOMPARE:
 	.word	code_ENTER
-	#.word	IMMSTR
-	#.byte	8
-	#.ascii	"COMPARE "
-	#.word	COUNT,TYPE
-	#.word	DUP,COUNT,TYPE,SPACE
-	#.word	OVER,COUNT,TYPE,CR
 
 	/*Compare lengths. not equal? not same strings.*/
 	.word	OVER		/*cstra cstrb cstra*/
@@ -1962,7 +1951,7 @@ PARSE:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* find ( cstr voc -- cstr codeadr | cstr f ) */
+/* find ( cstr voc -- codeadr cstr | cstr f ) */
 /* Search a name in a vocabulary (pointer to last entry of a chain). */
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 	.section .dic
@@ -1972,40 +1961,7 @@ word_FIND:
 	.ascii	"FIND"
 FIND:
 	.word	code_ENTER
-	#.word	OVER,COUNT,TYPE,CR /* DEBUG */
 	/*compare cstr to current name stored at voc*/
-.if 0
-TOFIX
-;This version is used if the name is stored before the prev link
-find1:
-	.word	SWAP		/*voc cstr */
-	.word	TOR		/*voc | R:cstr */
-	.word	DUP		/*voc voc */
-	.word	CLOAD		/*voc toklen */
-	.word	CHARP		/*voc (toklen+1) */
-	.word	PLUS		/*voc &voc->prev */
-
-	.word	SWAP		/*&prev voc | R:cstr*/
-	.word	RAT		/*&prev voc cstr | R:cstr*/
-
-	.word	CCOMPARE	/*&prev equal_flag | R:cstr | compare counted strings*/
-	.word	BRANCHZ, found
-	/*Strings not similar. Load previous voc entry */
-	.word	LOAD		/*voc->prev -> voc | R:cstr*/
-	.word	DUP		/*voc voc | R:cstr*/
-	.word	BRANCHZ,notfound /* | prev ptr is null? -> end with not found*/
-	/*search again*/
-	.word	RFROM		/*voc cstr */
-	.word	BRANCH,find1
-found:
-	.word	CELLP		/* code_addr */
-	.word	RETURN
-notfound:
-	.word	IMM,0		/*cstr false */	
-	.word	RETURN
-
-.else
-
 ;This version is used if the prev link is stored before the name
 found1:
 	.word	DUP		/*cstr voc voc */
@@ -2013,8 +1969,6 @@ found1:
 	.word	TOR		/*cstr voc | R:prev */
 	.word	CELLP		/*cstr nameptr | R:prev */
 	
-	#.word	DUP,COUNT,TYPE,CR	/* debug!*/
-
 	.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
 	.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
 	.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
@@ -2040,8 +1994,8 @@ found:
 	.word	CLOAD		/*cstr nameptr namelen */
 	.word	CHARP		/*cstr nameptr namelen+1 */
 	.word	PLUS		/*cstr codeptr */
+	.word	SWAP		/*codeptr cstr , as required by spec*/
 	.word	RETURN
-.endif
 
 /*---------------------------------------------------------------------------*/
 /* ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
@@ -2072,39 +2026,18 @@ word_INTERPRET:
 	.ascii	"INTERPRET"
 INTERPRET:
 	.word	code_ENTER
-	.word	SPLOAD,DOT,CR
 	.word	ISNAME		/*code name || cstr false */
-	#.word	DUP		/*code name || cstr false */
 	.word	BRANCHZ,donum	/* if not name then jump */
 
-	/*Name is found 		code */
-	#.word	IMMSTR
-	#.byte	7
-	#.ascii	"--FOUND"
-	#.word	COUNT,TYPE
-
-	#.word	BASE,LOAD,OVER,HEX,DOT,BASE,STORE
-	.word	SPLOAD,DOT,CR
+	/*Name is found */
 	.word	EXECUTE
 	.word	RETURN
 
 donum:	/* No word was found, attempt to parse as number, then push */
 	.word	NUMBERQ
-	.word	BRANCHZ,inte2	/*This consumes the conversion flag and leaves the number on the stack for later use*/
-
-	#.word	IMMSTR
-	#.byte	8
-	#.ascii	"--NUMBER"
-	#.word	COUNT,TYPE
-	.word	SPLOAD,DOT,CR
-	#.word	DUP,DOT /*This dot is able to display the number that was just parsed so it works*/
+	.word	BRANCHZ,notfound	/*consume the OK flag and leaves the number on the stack for later use*/
 	.word	RETURN
-inte2:
-	#.word	IMMSTR
-	#.byte	9
-	#.ascii	"--UNKNOWN"
-	#.word	COUNT,TYPE
-	.word	SPLOAD,DOT,CR
+notfound:
 	.word	DROP
 	.word	RETURN
 	#.word	THROW
@@ -2128,7 +2061,7 @@ INTERP:
    is used as temp memory. HERE pointer is not modified so each parsed word
    is stored at the same address. If an executed or compiled word manipulates HERE,
    then it is no problem: the user data will overwrite the word that was parsed and
-   the next word will be stored a bit farter. It does not matter since this buffer
+   the next word will be stored a bit farther. It does not matter since this buffer
    is only used to FIND the code pointer for this word, usually.*/
 /*(delim -- cs)*/
 	.section .dic
@@ -2140,7 +2073,7 @@ WORD:
 	.word	code_ENTER
 	.word	PARSE		/*buf len*/
 	.word	HERE		/*buf len dest*/
-	.word	PACKS		/*--*/
+	.word	PACKS		/*dest*/
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2183,10 +2116,10 @@ word_EVAL:
 EVAL:
 	.word	code_ENTER
 eval1:
-	.word	TOKEN		/* cstr */
+	.word	TOKEN		/* tokcstr */
 	.word	DUP		/* tokcstr tokcstr */
 	.word	CLOAD		/* tokcstr toklen input stream empty?*/
-	.word	BRANCHZ, eval2	/* Could not parse: finish execution of buffer */
+	.word	BRANCHZ, eval2	/* tokcstr Could not parse: finish execution of buffer */
 	.word	IMM,BEHAP	/* tokstr behap */
 	.word	LOADEXEC	/* Execute contents of behap as sub-word if not null */
 	/*.word	QSTAC*/		/*TODO Check stack */
@@ -2246,7 +2179,7 @@ QUIT1:
 	.section .dic
 word_SPLOAD:
 	.word	word_QUIT
-	.byte	5
+	.byte	3
 	.ascii	"SP@"
 SPLOAD:
 	.word	code_SPLOAD
