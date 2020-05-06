@@ -2072,36 +2072,40 @@ word_INTERPRET:
 	.ascii	"INTERPRET"
 INTERPRET:
 	.word	code_ENTER
+	.word	SPLOAD,DOT,CR
 	.word	ISNAME		/*code name || cstr false */
-	.word	DUPNZ		/*code name name || cstr false */
+	#.word	DUP		/*code name || cstr false */
 	.word	BRANCHZ,donum	/* if not name then jump */
 
-	/*Name is found */
-	.word	IMMSTR
-	.byte	7
-	.ascii	"--FOUND"
-	.word	COUNT,TYPE
+	/*Name is found 		code */
+	#.word	IMMSTR
+	#.byte	7
+	#.ascii	"--FOUND"
+	#.word	COUNT,TYPE
 
-	.word	BASE,LOAD,OVER,HEX,DOT,BASE,STORE
+	#.word	BASE,LOAD,OVER,HEX,DOT,BASE,STORE
+	.word	SPLOAD,DOT,CR
 	.word	EXECUTE
-
 	.word	RETURN
 
 donum:	/* No word was found, attempt to parse as number, then push */
 	.word	NUMBERQ
 	.word	BRANCHZ,inte2	/*This consumes the conversion flag and leaves the number on the stack for later use*/
 
-	.word	IMMSTR
-	.byte	8
-	.ascii	"--NUMBER"
-	.word	COUNT,TYPE
-	.word	DUP,DOT /*This dot is able to display the number that was just parsed so it works*/
+	#.word	IMMSTR
+	#.byte	8
+	#.ascii	"--NUMBER"
+	#.word	COUNT,TYPE
+	.word	SPLOAD,DOT,CR
+	#.word	DUP,DOT /*This dot is able to display the number that was just parsed so it works*/
 	.word	RETURN
 inte2:
-	.word	IMMSTR
-	.byte	9
-	.ascii	"--UNKNOWN"
-	.word	COUNT,TYPE
+	#.word	IMMSTR
+	#.byte	9
+	#.ascii	"--UNKNOWN"
+	#.word	COUNT,TYPE
+	.word	SPLOAD,DOT,CR
+	.word	DROP
 	.word	RETURN
 	#.word	THROW
 
@@ -2237,6 +2241,20 @@ QUIT1:
 
 	/* Do it again */
 	.word	BRANCH, QUIT1
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_SPLOAD:
+	.word	word_QUIT
+	.byte	5
+	.ascii	"SP@"
+SPLOAD:
+	.word	code_SPLOAD
+	.text
+code_SPLOAD:
+	tsx
+	xgdx
+	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
