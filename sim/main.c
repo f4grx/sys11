@@ -294,7 +294,7 @@ int parse_check_regs(struct hc11_core *core, char *param)
 
 static void show_regs(struct hc11_core *core)
   {
-    printf("PC=%04X D=%04X X=%04X Y=%04X SP=%04X CCR=%c%c%c%c%c%c%c\n",
+    printf("PC=%04X D=%04X X=%04X Y=%04X SP=%04X CCR=%c%c%c%c%c%c%c%c\n",
             core->regs.pc,
             core->regs.d,
             core->regs.x,
