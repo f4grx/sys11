@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "core.h"
 #include "log.h"
@@ -726,7 +727,7 @@ void hc11_core_clock(struct hc11_core *core)
 
         case STATE_EXECUTENEXT: //finish BRSET/BRCLR insns
           core->state = STATE_FETCHOPCODE; //default action when nothing needs writing
-          log_msg(SYS_CORE, CORE_INST, "[%8ld] EXEC_NEXT\n",core->clocks);
+          log_msg(SYS_CORE, CORE_INST, "[%10"PRIu64"] EXEC_NEXT\n",core->clocks);
           switch(core->opcode)
             {
               uint16_t tmp;
@@ -2772,28 +2773,28 @@ void hc11_core_istats(FILE *dest, struct hc11_core *core)
       {
         if(core->istat_main[i] != 0)
           {
-            fprintf(dest,"  %02X : %lu\n", i, core->istat_main[i]);
+            fprintf(dest,"  %02X : %"PRIu64"\n", i, core->istat_main[i]);
           }
       }
     for(i=0;i<256;i++)
       {
         if(core->istat_pg18[i] != 0)
           {
-            fprintf(dest,"18%02X : %lu\n", i, core->istat_pg18[i]);
+            fprintf(dest,"18%02X : %"PRIu64"\n", i, core->istat_pg18[i]);
           }
       }
     for(i=0;i<256;i++)
       {
         if(core->istat_pg1A[i] != 0)
           {
-            fprintf(dest,"1A%02X : %lu\n", i, core->istat_pg1A[i]);
+            fprintf(dest,"1A%02X : %"PRIu64"\n", i, core->istat_pg1A[i]);
           }
       }
     for(i=0;i<256;i++)
       {
         if(core->istat_pgCD[i] != 0)
           {
-            fprintf(dest,"CD%02X : %lu\n", i, core->istat_pgCD[i]);
+            fprintf(dest,"CD%02X : %"PRIu64"\n", i, core->istat_pgCD[i]);
           }
       }
   }

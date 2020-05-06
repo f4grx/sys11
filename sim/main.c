@@ -292,6 +292,25 @@ int parse_check_regs(struct hc11_core *core, char *param)
     return 0;
   }
 
+static void show_regs(struct hc11_core *core)
+  {
+    printf("PC=%04X D=%04X X=%04X Y=%04X SP=%04X CCR=%c%c%c%c%c%c%c\n",
+            core->regs.pc,
+            core->regs.d,
+            core->regs.x,
+            core->regs.y,
+            core->regs.sp,
+            core->regs.flags.S?'S':'-',
+            core->regs.flags.X?'X':'-',
+            core->regs.flags.I?'I':'-',
+            core->regs.flags.H?'H':'-',
+            core->regs.flags.N?'N':'-',
+            core->regs.flags.Z?'Z':'-',
+            core->regs.flags.V?'V':'-',
+            core->regs.flags.C?'C':'-'
+            );
+  }
+
 int main(int argc, char **argv)
   {
     struct hc11_sci *sci;
@@ -475,11 +494,13 @@ int main(int argc, char **argv)
           {
             printf("doing a step\n");
             hc11_core_step(&core);
+            if(debug) show_regs(&core);
             core.status = STATUS_STOPPED;
           }
         else if(core.status == STATUS_RUNNING)
           {
             hc11_core_step(&core);
+            if(debug) show_regs(&core);
           }
         else if(core.status == STATUS_STOPPED)
           {
