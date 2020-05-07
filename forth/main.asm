@@ -2002,6 +2002,49 @@ PARSE:
 	.word	PLUS_STORE	/* buf wordlen */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* (Parse-word')' -- ) Display a string */
+	.section .dic
+word_DOTPAR:
+	.word	word_PARSE
+	.byte	2
+	.ascii	".("
+DOTPAR:
+	.word	code_ENTER
+	.word	IMM,')'
+	.word	PARSE
+	.word	TYPE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (Parse-word')' -- ) Inline comment, nop */
+	.section .dic
+word_PAR:
+	.word	word_DOTPAR
+	.byte	1
+	.ascii	"("
+PAR:
+	.word	code_ENTER
+	.word	IMM,')'
+	.word	PARSE
+	.word	DDROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* Line comment , discard the rest of the input buffer */
+	.section .dic
+word_BSLASH:
+	.word	word_PAR
+	.byte	1
+	.ascii	"\\"
+BSLASH:
+	.word	code_ENTER
+	.word	IMM, NTIB
+	.word	LOAD
+	.word	IMM, INN
+	.word	STORE
+	.word	RETURN
+
 /*===========================================================================*/
 /* Dic search */
 /*===========================================================================*/
@@ -2012,7 +2055,7 @@ PARSE:
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 	.section .dic
 word_FIND:
-	.word	word_PARSE
+	.word	word_BSLASH
 	.byte	4
 	.ascii	"FIND"
 FIND:
