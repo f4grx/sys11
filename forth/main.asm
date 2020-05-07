@@ -455,10 +455,66 @@ code_RLOAD:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
+	.section .dic
+word_SPLOAD:
+	.word	word_RLOAD
+	.byte	3
+	.ascii	"SP@"
+SPLOAD:
+	.word	code_SPLOAD
+	.text
+code_SPLOAD:
+	tsx
+	dex
+	pshx
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_SPSTORE:
+	.word	word_SPLOAD
+	.byte	3
+	.ascii	"SP!"
+SPSTORE:
+	.word	code_SPSTORE
+	.text
+code_SPSTORE:
+	pulx
+	inx
+	txs
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_RPLOAD:
+	.word	word_SPSTORE
+	.byte	3
+	.ascii	"RP@"
+RPLOAD:
+	.word	code_RPLOAD
+	.text
+code_RPLOAD:
+	pshy
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_RPSTORE:
+	.word	word_RPLOAD
+	.byte	3
+	.ascii	"RP!"
+RPSTORE:
+	.word	code_RPSTORE
+	.text
+code_RPSTORE:
+	puly
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
 /* DUP ( u -- u u ) */
 	.section .dic
 word_DUP:
-	.word	word_RLOAD
+	.word	word_RPSTORE
 	.byte	3
 	.ascii	"DUP"
 DUP:
@@ -2176,20 +2232,6 @@ QUIT1:
 	.word	BRANCH, QUIT1
 
 /*---------------------------------------------------------------------------*/
-	.section .dic
-word_SPLOAD:
-	.word	word_QUIT
-	.byte	3
-	.ascii	"SP@"
-SPLOAD:
-	.word	code_SPLOAD
-	.text
-code_SPLOAD:
-	tsx
-	xgdx
-	bra	PUSHD
-
-/*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_BOOT:
@@ -2208,11 +2250,8 @@ BOOT1:
 	.word	TYPE
 	.word	CR
 
-	#.word	IMM,42,DOT,CR
-
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
 	.word	DECIMAL
 
 	.word	QUIT
-
