@@ -135,6 +135,7 @@ LASTP:	.word	0	/* Pointer to the last defined word entry */
 BASEP:	.word	0	/* Value of the base used for number parsing */
 HOLDP:	.word	0	/* Pointer used for numeric output */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
+HANDP:	.word	0	/* Exception handler pointer */
 
 	/* Input text buffering */
 
@@ -2118,12 +2119,43 @@ ISNAME:
 
 /*---------------------------------------------------------------------------*/
 	.section .dic
-word_CATCH:
+word_HANDLER:
 	.word	word_ISNAME
+	.byte	7
+	.ascii	"HANDLER"
+HANDLER:
+	.word	code_ENTER
+	.word	IMM,HANDP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( xt -- err#\0 ) setup frame to handle errors thrown while executing xt */
+	.section .dic
+word_CATCH:
+	.word	word_HANDLER
 	.byte	5
 	.ascii	"CATCH"
 CATCH:
 	.word	code_ENTER
+	/* save error frame */
+	.word	SPLOAD
+	.word	TOR
+	.word	HANDLER
+	.word	LOAD
+	.word	TOR
+	/* Execute */
+	.word	RPLOAD
+	.word	HANDLER
+	.word	STORE
+	.word	EXECUTE
+	/* Restore error frame */
+	.word	RFROM
+	.word	HANDLER
+	.word	STORE
+	/* No error */
+	.word	RFROM
+	.word	DROP
+	.word	IMM,0
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2303,6 +2335,9 @@ word_QUIT:
 	.ascii	"QUIT"
 QUIT:
 	.word	code_ENTER
+QUIT0:
+	.word	INTERP	/* Force interpretation mode in case catch aborts during compilation */
+
 QUIT1:
 	/* Load the terminal input buffer */
 	.word	QUERY
@@ -2313,10 +2348,16 @@ QUIT1:
 	.word	STORE
 
 	/* Eecute the line */
-	.word	EVAL
+	.word	IMM,EVAL
+	.word	CATCH		/* returns zero if no error */
+	.word	DUPNZ		/* Does nothing if no error */
+	.word	BRANCHZ, QUIT1	/* Consume catch return code. If thats zero, no error, loop again */
 
-	/* Do it again */
-	.word	BRANCH, QUIT1
+	/* CATCH caught an error, DUPNZ left the error that was thrown on the stack */
+	/* TODO CONSOLE reinstall console (setup IO vectors for console, in case IO was happening from another device) */
+	.word	COUNT,TYPE	/* Display error message from throw */
+	/* TODO PRESET reinit data stack to top */
+	.word	BRANCH,QUIT0	/* Interpret again */
 
 /*---------------------------------------------------------------------------*/
 /* ( -- u ) */
@@ -2341,10 +2382,9 @@ hi:
 	.word	code_ENTER
 	.word	CR
 	.word	IMMSTR
-	.byte	15
-	.ascii	"hc11 forth ver "
-	.word	COUNT
-	.word	TYPE
+	.byte	18
+	.ascii	"hc11 grxforth ver "
+	.word	COUNT,TYPE
 	.word	HEX,VER,BDIGS,DIG,DIG,IMM,'.',HOLD,DIG,EDIGS,TYPE
 	.word	CR
 	.word	RETURN
@@ -2363,7 +2403,6 @@ BOOT1:
 	.word	hi
 
 	/* Setup environment */
-	.word	INTERP	/* Setup to interpret words */
 	.word	DECIMAL
 
 	.word	QUIT
