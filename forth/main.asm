@@ -2113,6 +2113,50 @@ ISNAME:
 	.word	RETURN
 
 /*===========================================================================*/
+/* Error handling */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_CATCH:
+	.word	word_ISNAME
+	.byte	5
+	.ascii	"CATCH"
+CATCH:
+	.word	code_ENTER
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_THROW:
+	.word	word_CATCH
+	.byte	5
+	.ascii	"THROW"
+THROW:
+	.word	code_ENTER
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_ABORT:
+	.word	word_THROW
+	.byte	5
+	.ascii	"ABORT"
+ABORT:
+	.word	code_ENTER
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_ABORTS:
+	.word	word_ABORT
+	.byte	6
+	.ascii	"abort\""
+ABORTS:
+	.word	code_ENTER
+	.word	RETURN
+
+/*===========================================================================*/
 /* Interpreter */
 /*===========================================================================*/
 
@@ -2120,7 +2164,7 @@ ISNAME:
 /* ( a -- ) */
 	.section .dic
 word_INTERPRET:
-	.word	word_ISNAME
+	.word	word_ABORTS
 	.byte	9
 	.ascii	"INTERPRET"
 INTERPRET:
@@ -2275,23 +2319,48 @@ QUIT1:
 	.word	BRANCH, QUIT1
 
 /*---------------------------------------------------------------------------*/
+/* ( -- u ) */
+	.section .dic
+word_VER:
+	.word	word_QUIT
+	.byte	3
+	.ascii	"VER"
+VER:
+	.word	code_ENTER
+	.word	IMM, 0x100
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( -- ) */
+	.section .dic
+word_hi:
+	.word	word_VER
+	.byte	2
+	.ascii	"hi"
+hi:
+	.word	code_ENTER
+	.word	CR
+	.word	IMMSTR
+	.byte	15
+	.ascii	"hc11 forth ver "
+	.word	COUNT
+	.word	TYPE
+	.word	HEX,VER,BDIGS,DIG,DIG,IMM,'.',HOLD,DIG,EDIGS,TYPE
+	.word	CR
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_BOOT:
-	.word	word_QUIT
+	.word	word_hi
 	.byte	4
 	.ascii	"BOOT"
 BOOT:
 	.word	code_ENTER
 BOOT1:
 	/* Show a startup banner */
-	.word	CR
-	.word	IMMSTR
-	.byte	10
-	.ascii	"hc11 forth"
-	.word	COUNT
-	.word	TYPE
-	.word	CR
+	.word	hi
 
 	/* Setup environment */
 	.word	INTERP	/* Setup to interpret words */
