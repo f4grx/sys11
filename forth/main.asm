@@ -2159,6 +2159,7 @@ CATCH:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( err# -- err# ) return from the encapsulating catch with an error code */
 	.section .dic
 word_THROW:
 	.word	word_CATCH
@@ -2166,6 +2167,21 @@ word_THROW:
 	.ascii	"THROW"
 THROW:
 	.word	code_ENTER
+	/* restore return stack */
+	.word	HANDLER
+	.word	LOAD
+	.word	RPSTORE
+	/* restore handler frame */
+	.word	RFROM
+	.word	HANDLER
+	.word	STORE
+	/* restore data stack */
+	.word	RFROM
+	.word	SWAP
+	.word	TOR
+	.word	SPSTORE
+	.word	DROP
+	.word	RFROM
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2213,9 +2229,7 @@ donum:	/* No word was found, attempt to parse as number, then push */
 	.word	BRANCHZ,notfound	/*consume the OK flag and leaves the number on the stack for later use*/
 	.word	RETURN
 notfound:
-	.word	DROP
-	.word	RETURN
-	#.word	THROW
+	.word	THROW	/* Throw the failed name as exception, to be caught in QUIT */
 
 /*---------------------------------------------------------------------------*/
 /* Set the system state to interpretation */
@@ -2347,15 +2361,20 @@ QUIT1:
 	.word	IMM,INN
 	.word	STORE
 
-	/* Eecute the line */
-	.word	IMM,EVAL
+	/* Execute the line */
+	.word	IMM,EVAL	/* Function to be caught */
 	.word	CATCH		/* returns zero if no error */
 	.word	DUPNZ		/* Does nothing if no error */
 	.word	BRANCHZ, QUIT1	/* Consume catch return code. If thats zero, no error, loop again */
 
 	/* CATCH caught an error, DUPNZ left the error that was thrown on the stack */
 	/* TODO CONSOLE reinstall console (setup IO vectors for console, in case IO was happening from another device) */
+	.word	IMMSTR
+	.byte	7
+	.ascii	"  err: "
+	.word	COUNT,TYPE	/* Display error msg prefix */
 	.word	COUNT,TYPE	/* Display error message from throw */
+	.word	CR
 	/* TODO PRESET reinit data stack to top */
 	.word	BRANCH,QUIT0	/* Interpret again */
 
