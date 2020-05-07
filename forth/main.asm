@@ -2404,7 +2404,9 @@ hi:
 	.byte	18
 	.ascii	"hc11 grxforth ver "
 	.word	COUNT,TYPE
+	.word	BASE,LOAD,TOR
 	.word	HEX,VER,BDIGS,DIG,DIG,IMM,'.',HOLD,DIG,EDIGS,TYPE
+	.word	RFROM,BASE,STORE
 	.word	CR
 	.word	RETURN
 
