@@ -78,6 +78,10 @@
    POP  is pre-increment, pull MSB first.
    The stack pointer always point at the next free location in the stack.
    For the moment underflow and overflows are not detected.
+   The parameter stack is also used using push/rts to simplify the inner interpreter.
+   This means that we need one more item to jump to the next forth opcode. This is important:
+   if the forth stack underflows, we still need the stack to work for one more item.
+   This will not work if a word produces a double underflow.
 
    Return stack
    ------------
@@ -124,7 +128,7 @@
 	.equ SCSR_TDRE     ,0x80 /* Transmit buffer empty */
 
 	/* Forth memory map */
-	.equ	SP_ZERO, 0x8000-1	/* End of RAM (address of first free byte)*/
+	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) except 2 underflow buckets (2drop) */
 	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
 
 	/* Forth config */
