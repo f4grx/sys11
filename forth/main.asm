@@ -123,6 +123,9 @@
 	.equ SCSR_RDRF     ,0x20 /* Receive buffer full */
 	.equ SCSR_TDRE     ,0x80 /* Transmit buffer empty */
 
+	/* Forth memory map */
+	.equ	SP_ZERO, 0x8000-1	/* End of RAM (address of first free byte)*/
+	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
 
 	/* Forth config */
 	.equ	TIB_LEN, 80
@@ -183,8 +186,8 @@ _start:
 	ldx	#(0x100)
 	stx	*HEREP		/*Define HERE, the beginning of the user data zone */
 
-	lds	#(0x8000-1)	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
-	ldy	#(0x7C00-2)	/* Return stack 1K before end of RAM. We push word per word. */
+	lds	#SP_ZERO	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
+	ldy	#RP_ZERO	/* Return stack 1K before end of RAM. We push word per word. */
 	ldx	#BOOT1		/* load pointer to startup code, skipping the native ENTER pointer! */
 	bra	NEXT2		/* Start execution */
 
@@ -756,21 +759,37 @@ code_KEY:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/*   pad       ( -- a ) - return the address of a temporary buffer. */
-/* Note: this returns the END of a 80 byte buffer right after the current colon definition.
-   The buffer is filled in reverse using a div/mod by base algorithm.
-   No overflow because numeric output is never overlapping compilation. PAD is always used
-   in the context defined by <# and #> */
 	.section .dic
-word_PAD:
+word_SPZERO:
 	.word	word_KEY
 	.byte	3
-	.ascii	"PAD"
-PAD:
+	.ascii	"SP0"
+SPZERO:
 	.word	code_ENTER
-	.word	HERE
-	.word	IMM,80
-	.word	PLUS
+	.word	IMM,SP_ZERO
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_RPZERO:
+	.word	word_SPZERO
+	.byte	3
+	.ascii	"RP0"
+RPZERO:
+	.word	code_ENTER
+	.word	IMM,RP_ZERO
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*   depth     ( -- n )  return the depth of the data stack. */
+word_DEPTH:
+	.word	word_RPZERO
+	.byte	5
+	.ascii	"DEPTH"
+DEPTH:
+	.word	code_ENTER
+	.word	SPLOAD,SPZERO,SWAP,SUB
+	.word	IMM,2,SLASH
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -790,7 +809,7 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_PAD
+	.word	word_DEPTH
 	.byte	4
 	.ascii	"2DUP"
 DDUP:
@@ -873,10 +892,24 @@ NEGATE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( d -- (-d) ) DNEGATE: Twos complement */
+	.section .dic
+word_DNEGATE:
+	.word	word_NEGATE
+	.byte	7
+	.ascii	"DNEGATE"
+DNEGATE:
+	.word	code_ENTER
+	.word	NOT,TOR,NOT
+	.word	IMM,1,UPLUS
+	.word	RFROM,PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( a b -- a-b ) - could be assembly to improve performance a bit */
 	.section .dic
 word_SUB:
-	.word word_NEGATE
+	.word word_DNEGATE
 	.byte	1
 	.ascii	"-"
 SUB:
@@ -920,11 +953,40 @@ umst2:	.word	JNZD,umst1
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
+	.section .dic
+word_STAR:
+	.word	word_UMSTAR
+	.byte	1
+	.ascii	"*"
+STAR:
+	.word	code_ENTER
+	.word	UMSTAR
+	.word	DROP		/*Forget the Most Significant word */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/*  m*    ( n n -- d ) signed multiply. return double product. */
+word_MSTAR:
+	.word	word_STAR
+	.byte	2
+	.ascii	"M*"
+MSTAR:
+	.word	code_ENTER
+	.word	DDUP,XOR,ZLESS,TOR
+	.word	ABS,SWAP,ABS,UMSTAR
+	.word	RFROM
+	.word	BRANCHZ,msta1
+	.word	DNEGATE
+msta1:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /*   um/mod    ( udl udh u -- ur uq ) 32/16 division and modulo */
 /*TODO native implementation since hc11 has a divider*/
 	.section .dic
 word_UMMOD:
-	.word	word_UMSTAR
+	.word	word_MSTAR
 	.byte	6
 	.ascii	"UM/MOD"
 UMMOD:
@@ -958,23 +1020,73 @@ umm4:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
+/* m/mod     ( d n -- r q ) signed floored divide of double by single. return mod and quotient. */
+word_MSMOD:
 	.section .dic
-word_STAR:
 	.word	word_UMMOD
-	.byte	1
-	.ascii	"*"
-STAR:
+	.byte	5
+	.ascii	"M/MOD"
+MSMOD:
 	.word	code_ENTER
-	.word	UMSTAR
-	.word	DROP		/*Forget the Most Significant word */
+	.word	DUP,ZLESS,DUP,TOR
+	.word	BRANCHZ,mmod1
+	.word	NEGATE,TOR,DNEGATE,RFROM
+
+mmod1:
+	.word	TOR,DUP,ZLESS
+	.word	BRANCHZ,mmod2
+	.word	RLOAD,PLUS
+mmod2:
+	.word	RFROM,UMMOD,RFROM
+	.word	BRANCHZ,mmod3
+	.word	SWAP,NEGATE,SWAP
+mmod3:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* /mod ( n n -- r q ) signed divide. return mod and quotient. */
+word_SLMOD:
+	.word	word_MSMOD
+	.byte	4
+	.ascii	"/MOD"
+SLMOD:
+	.word	code_ENTER
+	.word	OVER
+	.word	ZLESS
+	.word	SWAP
+	.word	MSMOD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* mod       ( n n -- r ) signed divide. return mod only. */
+word_MOD:
+	.word	word_SLMOD
+	.byte	3
+	.ascii	"MOD"
+MOD:
+	.word	code_ENTER
+	.word	SLMOD
+	.word	DROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* /     ( n n -- q ) signed divide. return quotient only. */
+word_SLASH:
+	.word	word_MOD
+	.byte	1
+	.ascii	"/"
+SLASH:
+	.word	code_ENTER
+	.word	SLMOD
+	.word	SWAP
+	.word	DROP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* ( u -- u+2 ) */
 	.section .dic
 word_CELLP:
-	.word	word_STAR
+	.word	word_SLASH
 	.byte	5
 	.ascii "CELL+"
 CELLP:
@@ -1237,16 +1349,26 @@ ccoeq:
 /* TODO */
 
 /*---------------------------------------------------------------------------*/
+/* dostr Common code from inline string extraction. MUST BE used by another word,
+   since the string is searched in the previous-previous entry */
+DOSTR:
+	.word	code_ENTER
+	.word	RFROM
+	.word	RLOAD
+	.word	RFROM
+	.word	COUNT
+	.word	PLUS
+	.word	TOR
+	.word	SWAP
+	.word	TOR
+	.word	RETURN
+/*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
 /* NO NAME */
 IMMSTR:
 	.word	code_ENTER
-	.word	RFROM		/* adr of next word -> points to length of inline counted string */
-	.word	DUP		/* cstradr cstradr*/
-	.word	COUNT		/* cstradr bufadr len */
-	.word	PLUS		/* cstradr endadr */
-	.word	TOR		/* cstradr R: nextwordadr */
+	.word	DOSTR
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1254,10 +1376,29 @@ IMMSTR:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/*   pad       ( -- a ) - return the address of a temporary buffer. */
+/* Note: this returns the END of a 80 byte buffer right after the current colon definition.
+   The buffer is filled in reverse using a div/mod by base algorithm.
+   No overflow because numeric output is never overlapping compilation. PAD is always used
+   in the context defined by <# and #> */
+	.section .dic
+word_PAD:
+	.word	word_CCOMPARE
+	.byte	3
+	.ascii	"PAD"
+PAD:
+	.word	code_ENTER
+	.word	HERE
+	.word	IMM,80
+	.word	PLUS
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
 /**/
 	.section .dic
 word_BDIGS:
-	.word	word_CCOMPARE
+	.word	word_PAD
 	.byte	2
 	.ascii	"<#"
 BDIGS:
@@ -2098,12 +2239,45 @@ found:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* WORD and TOKEN. Create a counted string at HERE, which
+   is used as temp memory. HERE pointer is not modified so each parsed word
+   is stored at the same address. If an executed or compiled word manipulates HERE,
+   then it is no problem: the user data will overwrite the word that was parsed and
+   the next word will be stored a bit farther. It does not matter since this buffer
+   is only used to FIND the code pointer for this word, usually.*/
+/*(delim -- cs)*/
+	.section .dic
+word_WORD:
+	.word	word_FIND
+	.byte	4
+	.ascii	"WORD"
+WORD:
+	.word	code_ENTER
+	.word	PARSE		/*buf len*/
+	.word	HERE		/*buf len dest*/
+	.word	PACKS		/*dest*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( -- cs) */
+	.section .dic
+word_TOKEN:
+	.word	word_WORD
+	.byte	5
+	.ascii	"TOKEN"
+TOKEN:
+	.word	code_ENTER
+	.word	BL
+	.word	WORD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
 
 	.section .dic
 word_ISNAME:
-	.word	word_FIND
+	.word	word_TOKEN
 	.byte	5
 	.ascii	"NAME?"
 ISNAME:
@@ -2185,6 +2359,7 @@ THROW:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* ( -- ) Jump to quit */
 	.section .dic
 word_ABORT:
 	.word	word_THROW
@@ -2192,16 +2367,26 @@ word_ABORT:
 	.ascii	"ABORT"
 ABORT:
 	.word	code_ENTER
-	.word	RETURN
+	.word	IMMSTR
+	.byte	7
+	.ascii	" abort!"
+	.word	THROW
 
 /*---------------------------------------------------------------------------*/
+/* abort"    ( f -- ) run time routine of abort" . abort with a message. */
 	.section .dic
-word_ABORTS:
+word_ABORTZ:
 	.word	word_ABORT
 	.byte	6
 	.ascii	"abort\""
-ABORTS:
+ABORTZ:
 	.word	code_ENTER
+	.word	BRANCHZ,abor1
+	.word	DOSTR
+	.word	THROW
+abor1:	/* Cancel abort */
+	.word	DOSTR
+	.word	DROP
 	.word	RETURN
 
 /*===========================================================================*/
@@ -2212,7 +2397,7 @@ ABORTS:
 /* ( a -- ) */
 	.section .dic
 word_INTERPRET:
-	.word	word_ABORTS
+	.word	word_ABORTZ
 	.byte	9
 	.ascii	"INTERPRET"
 INTERPRET:
@@ -2245,44 +2430,15 @@ INTERP:
 	.word	STORE
 	.word	RETURN
 
-/*---------------------------------------------------------------------------*/
-/* WORD and TOKEN. Create a counted string at HERE, which
-   is used as temp memory. HERE pointer is not modified so each parsed word
-   is stored at the same address. If an executed or compiled word manipulates HERE,
-   then it is no problem: the user data will overwrite the word that was parsed and
-   the next word will be stored a bit farther. It does not matter since this buffer
-   is only used to FIND the code pointer for this word, usually.*/
-/*(delim -- cs)*/
-	.section .dic
-word_WORD:
-	.word	word_INTERP
-	.byte	4
-	.ascii	"WORD"
-WORD:
-	.word	code_ENTER
-	.word	PARSE		/*buf len*/
-	.word	HERE		/*buf len dest*/
-	.word	PACKS		/*dest*/
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* ( -- cs) */
-	.section .dic
-word_TOKEN:
-	.word	word_WORD
-	.byte	5
-	.ascii	"TOKEN"
-TOKEN:
-	.word	code_ENTER
-	.word	BL
-	.word	WORD
-	.word	RETURN
+/*===========================================================================*/
+/* Shell */
+/*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
 /* PROMPT */
 	.section .dic
 word_PROMPT:
-	.word	word_TOKEN
+	.word	word_INTERP
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
@@ -2296,10 +2452,28 @@ PROMPT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) evaluate all words in input buffer */
+/*  ?stack    ( -- ) abort if the data stack underflows. */
+	.section .dic
+word_QSTACK:
+	.word	word_PROMPT
+	.byte	6
+	.ascii	"?STACK"
+QSTACK:
+	.word	code_ENTER
+	.word	DEPTH
+	.word	ZLESS
+	.word	ABORTZ
+	.byte	11
+	.ascii	" underflow!"
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
+/* ( -- ) evaluate all words in input buffer. Each word is interpreted or */
+/* compiled according to current behaviour */
 	.section .dic
 word_EVAL:
-	.word	word_PROMPT
+	.word	word_QSTACK
 	.byte	4
 	.ascii	"eval"
 EVAL:
@@ -2311,7 +2485,7 @@ eval1:
 	.word	BRANCHZ, eval2	/* tokcstr Could not parse: finish execution of buffer */
 	.word	IMM,BEHAP	/* tokstr behap */
 	.word	LOADEXEC	/* Execute contents of behap as sub-word if not null */
-	/*.word	QSTAC*/		/*TODO Check stack */
+	.word	QSTACK		/*TODO Check stack underflow */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
 	.word	DROP		/*--*/
@@ -2330,8 +2504,6 @@ QUERY:
 	.word	IMM, TIB
 	.word	IMM, TIB_LEN
 	.word	ACCEPT
-
-	#.word	CR,DDUP,TYPE,CR /* begin debug */
 
 	/* Save the length of the received buffer */
 	.word	IMM, NTIB
@@ -2401,8 +2573,8 @@ hi:
 	.word	code_ENTER
 	.word	CR
 	.word	IMMSTR
-	.byte	18
-	.ascii	"hc11 grxforth ver "
+	.byte	16
+	.ascii	"sys11 forth ver "
 	.word	COUNT,TYPE
 	.word	BASE,LOAD,TOR
 	.word	HEX,VER,BDIGS,DIG,DIG,IMM,'.',HOLD,DIG,EDIGS,TYPE
@@ -2420,10 +2592,8 @@ word_BOOT:
 BOOT:
 	.word	code_ENTER
 BOOT1:
-	/* Show a startup banner */
-	.word	hi
-
-	/* Setup environment */
-	.word	DECIMAL
+	.word	hi		/* Show a startup banner */
+	.word	DECIMAL		/* Setup environment */
 
 	.word	QUIT
+
