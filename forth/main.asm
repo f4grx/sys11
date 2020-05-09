@@ -78,6 +78,7 @@
    POP  is pre-increment, pull MSB first.
    The stack pointer always point at the next free location in the stack.
    For the moment underflow and overflows are not detected.
+
    The parameter stack is also used using push/rts to simplify the inner interpreter.
    This means that we need one more item to jump to the next forth opcode. This is important:
    if the forth stack underflows, we still need the stack to work for one more item.
@@ -128,8 +129,9 @@
 	.equ SCSR_TDRE     ,0x80 /* Transmit buffer empty */
 
 	/* Forth memory map */
-	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) except 2 underflow buckets (2drop) */
+	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) */
 	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
+	.equ	USE_RTS, 1
 
 	/* Forth config */
 	.equ	TIB_LEN, 80
@@ -220,19 +222,36 @@ NEXT2:				/* We can call here if X already has the value for IP */
 	ldx	0,X		/* Now X contains pointer to code (forth opcode == address of first cell in any word) */
 doEXECUTE:
 	ldd	0,X		/* Now D contains the code address to execute opcode (a code_THING value) */
+.if USE_RTS
 	pshb
 	psha
-	rts			/* Call the code_THING address pushed on stack, X contains new IP */
+	rts			/* X contains new IP, D contains code_ address, pushed on stack. */
+.else
+	xgdx
+	jmp	0,X		/* D contains new IP, X contains code_ address */
+.endif
 
 /*---------------------------------------------------------------------------*/
 /* Starts execution of a compiled word. The current IP is pushed on the return stack, then we jump */
 /* This function is always called by the execution of NEXT. */
 code_ENTER:
 	/* This is called with the address of instruction being run (aka forth opcode) in D*/
+.if USE_RTS
+	/* Preserve X that contains new IP */
 	ldd	*IP
 	std	0,Y		/* Push the next IP to be executed after return from this thread */
+.else
+	/* Preserve D that contains new IP */
+	ldx	*IP
+	stx	0,Y		/* Push the next IP to be executed after return from this thread */
+.endif
 	dey			/* Post-Decrement Y by 2 to push */
 	dey
+.if USE_RTS
+.else
+	/* IP was in D, transfer in X */
+	xgdx
+.endif
 	inx			/* Increment, now X is the address of the first word in the list */
 	inx
 	bra	NEXT2		/* Manage next opcode address */

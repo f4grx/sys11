@@ -121,6 +121,7 @@ adrenter = findsymaddr(b"code_ENTER")
 adrexit  = findsymaddr(b"RETURN")
 adrimm   = findsymaddr(b"IMM")
 adrimmstr= findsymaddr(b"IMMSTR")
+adrabortz= findsymaddr(b"ABORTZ")
 
 print("ENTER=%04X EXIT=%04X IMM=%04X IMMSTR=%04X" % (adrenter,adrexit,adrimm,adrimmstr))
 print("start=%04X end=%04X" % (dicstart,dicend))
@@ -197,7 +198,7 @@ while ptr < off+length:
                 print("    %04X" % imm, findsymname(imm) )
             else:
                 print("    %04X" % imm )
-        elif word == adrimmstr:
+        elif (word == adrimmstr) or (word==adrabortz):
             print("[%04X] " % (ptr+base), end='')
             immstr = parse_pstring(cnt,ptr)
             strlen = len(immstr)
