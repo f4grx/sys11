@@ -1798,44 +1798,10 @@ HERE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
-	.section .dic
-word_COMMA:
-	.word	word_HERE
-	.byte	1
-	.ascii	","
-COMMA:
-	.word	code_ENTER
-	.word	HERE		/* (VALUE) (HERE) */
-	.word	DUP		/* (VALUE) (HERE) (HERE) */
-	.word	CELLP		/* (VALUE) (HERE) (HERE+2) */
-	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
-	.word	STORE		/* (VALUE) (HERE) */
-	.word	STORE		/* Empty */
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next cell */
-	.section .dic
-word_CCOMMA:
-	.word	word_COMMA
-	.byte	2
-	.ascii	"C,"
-CCOMMA:
-	.word	code_ENTER
-	.word	HERE		/* (VALUE) (HERE) */
-	.word	DUP		/* (VALUE) (HERE) (HERE) */
-	.word	CHARP		/* (VALUE) (HERE) (HERE+1) */
-	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
-	.word	STORE		/* (VALUE) (HERE) */
-	.word	CSTORE		/* Empty */
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
 /* (val adr -- ) add val to the contents of adr */
 	.section .dic
 word_PLUS_STORE:
-	.word	word_CCOMMA
+	.word	word_HERE
 	.byte	2
 	.ascii	"+!"
 PLUS_STORE:
@@ -2573,11 +2539,90 @@ QUIT1:
 	/* TODO PRESET reinit data stack to top */
 	.word	BRANCH,QUIT0	/* Interpret again */
 
+/*===========================================================================*/
+/* Compiler */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* '     ( -- ca ) - search context vocabularies for the next word in input stream. */
+	.section .dic
+word_TICK:
+	.word	word_QUIT
+	.byte	1
+	.ascii	"'"
+TICK:
+	.word	code_ENTER
+	.word	TOKEN
+	.word	ISNAME
+	.word	BRANCHZ,tick1
+	.word	RETURN
+tick1:
+	.word	THROW
+
+/*---------------------------------------------------------------------------*/
+/*  allot     ( n -- ) - allocate n bytes to the code dictionary. */
+	.section .dic
+word_ALLOT:
+	.word	word_TICK
+	.byte	5
+	.ascii	"ALLOT"
+ALLOT:
+	.word	code_ENTER
+	.word	IMM,HEREP
+	.word	PLUS_STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
+	.section .dic
+word_COMMA:
+	.word	word_TICK
+	.byte	1
+	.ascii	","
+COMMA:
+	.word	code_ENTER
+	.word	HERE		/* (VALUE) (HERE) */
+	.word	DUP		/* (VALUE) (HERE) (HERE) */
+	.word	CELLP		/* (VALUE) (HERE) (HERE+2) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
+	.word	STORE		/* (VALUE) (HERE) */
+	.word	STORE		/* Empty */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next char */
+	.section .dic
+word_CCOMMA:
+	.word	word_COMMA
+	.byte	2
+	.ascii	"C,"
+CCOMMA:
+	.word	code_ENTER
+	.word	HERE		/* (VALUE) (HERE) */
+	.word	DUP		/* (VALUE) (HERE) (HERE) */
+	.word	CHARP		/* (VALUE) (HERE) (HERE+1) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
+	.word	STORE		/* (VALUE) (HERE) */
+	.word	CSTORE		/* Empty */
+	.word	RETURN
+
+/*===========================================================================*/
+/* Tools */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+
+/*===========================================================================*/
+/* Boot */
+/*===========================================================================*/
+
 /*---------------------------------------------------------------------------*/
 /* ( -- u ) */
 	.section .dic
 word_VER:
-	.word	word_QUIT
+	.word	word_CCOMMA
 	.byte	3
 	.ascii	"VER"
 VER:
