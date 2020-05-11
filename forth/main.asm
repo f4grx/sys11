@@ -2456,7 +2456,6 @@ QSTACK:
 	.ascii	" underflow!"
 	.word	RETURN
 
-
 /*---------------------------------------------------------------------------*/
 /* ( -- ) evaluate all words in input buffer. Each word is interpreted or */
 /* compiled according to current behaviour */
@@ -2576,7 +2575,7 @@ ALLOT:
 /* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
 	.section .dic
 word_COMMA:
-	.word	word_TICK
+	.word	word_ALLOT
 	.byte	1
 	.ascii	","
 COMMA:
@@ -2606,6 +2605,52 @@ CCOMMA:
 	.word	CSTORE		/* Empty */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* [compile] ( -- ; <string> ) - compile the next immediate word into code dictionary. */
+	.section .dic
+word_BRCOMPILE:
+	.word	word_CCOMMA
+	.byte	9
+	.ascii	"[COMPILE]"
+BRCOMPILE:
+	.word	code_ENTER
+	.word	TICK
+	.word	COMMA
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* compile   ( -- ) - compile the next address in colon list to code dictionary. */
+
+	.section .dic
+word_COMPILE:
+	.word	word_BRCOMPILE
+	.byte	7
+	.ascii	"COMPILE"
+COMPILE:
+	.word	code_ENTER
+	.word	RFROM
+	.word	DUP
+	.word	LOAD
+	.word	COMMA
+	.word	CELLP
+	.word	TOR
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* literal   ( w -- ) - compile tos to code dictionary as an integer literal. */
+
+	.section .dic
+word_LITTERAL:
+	.word	word_COMPILE
+	.byte	8
+	.ascii	"LITTERAL"
+LITTERAL:
+	.word	code_ENTER
+	.word	COMPILE
+	.word	IMM
+	.word	COMMA
+	.word	RETURN
+
 /*===========================================================================*/
 /* Tools */
 /*===========================================================================*/
@@ -2622,7 +2667,7 @@ CCOMMA:
 /* ( -- u ) */
 	.section .dic
 word_VER:
-	.word	word_CCOMMA
+	.word	word_LITTERAL
 	.byte	3
 	.ascii	"VER"
 VER:
