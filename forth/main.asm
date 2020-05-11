@@ -2279,7 +2279,9 @@ found:
    is stored at the same address. If an executed or compiled word manipulates HERE,
    then it is no problem: the user data will overwrite the word that was parsed and
    the next word will be stored a bit farther. It does not matter since this buffer
-   is only used to FIND the code pointer for this word, usually.*/
+   is only used to FIND the code pointer for this word, usually.
+   Another advantage of storing the word at HERE is that it helps compiling new
+   word definitions! */
 /*(delim -- cs)*/
 	.section .dic
 word_WORD:
@@ -2633,9 +2635,13 @@ word_SCOMPQ:
 	.ascii	"$,\""
 SCOMPQ:
 	.word	code_ENTER
-#                    fdb       dolit,'"',word      ; literal " (move word to dictionary)
-#                    fdb       count,plus,algnd    ; calculate aligned end of string
-#                    fdb       cp,store,exit       ; adjust the code pointer
+	.word	IMM,'"'
+	.word	WORD		/* Clever! Use HERE as storage temporary, cstring is already put at the right place! */
+	/* Compute the new value for HERE */
+	.word	COUNT
+	.word	PLUS
+	.word	HERE
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2815,36 +2821,74 @@ UNIQUE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* $,N */
+/* $,N ( na -- ) - build a new dictionary name using the string at na. */
 	.section .dic
-word_SCOMN:
+word_NAME:
 	.word	word_UNIQUE
 	.byte	3 + WORD_COMPILEONLY
 	.ascii	"$,N"
-SCOMN:
+SNAME:
 	.word	code_ENTER
+#                    fdb       dup,cat             ; ?null input
+#                   fdb       qbran,snam1
+#                    fdb       uniqu               ; ?redefinition
+#                    fdb       dup,last,store      ; save na for vocab link
+#                    fdb       here,algnd,swap     ; align code address
+#                    fdb       cellm               ; link address
+#                    fdb       crrnt,at,at,over,store
+#                    fdb       cellm,dup,np,store  ; adjust name pointer
+#                    fdb       store,exit          ; save code pointer
+#snam1               fdb       strqp
+#                    fcb       5
+#                    fcc       ' name'             ; null input
+#                    fdb       throw
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* : */
+/* : ( -- ; <string> ) - start a new colon definition using next word as its name. */
 	.section .dic
 word_COLON:
-	.word	word_SCOMN
+	.word	word_NAME
 	.byte	1
 	.ascii	":"
 COLON:
 	.word	code_ENTER
+	.word	IMM,LASTP
+	.word	LOAD		/* Load pointer to last name */
+	.word	COMMA		/* save prev address */
+	.word	TOKEN		/* save name string at HERE */
+	.word	IMM,code_ENTER	/* save code to execute the definition */
+	.word	COMMA
+	.word	COMPIL		/* Enter compilation mode */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ; */
+/* Link last word in current vocabulary */
+word_OVERT:
+	.word	word_COLON
+	.byte	5
+	.ascii	"OVERT"
+OVERT:
+	.word	code_ENTER
+#	.word	LAST
+#	.word	LOAD
+#	.word	CURRENT
+#	.word	LOAD
+#	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ; ( -- ) - terminate a colon definition.*/
 	.section .dic
 word_SEMICOL:
 	.word	word_COLON
-	.byte	1 + WORD_COMPILEONLY
+	.byte	1 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	";"
 SEMICOL:
 	.word	code_ENTER
+	.word	COMPILE,RETURN	/* Write the final RETURN */
+	.word	INTERP		/* Back to interpreter mode */
+	.word	OVERT		/* Save new LAST */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
