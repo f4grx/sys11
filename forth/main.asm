@@ -136,6 +136,11 @@
 	/* Forth config */
 	.equ	TIB_LEN, 80
 
+	/* Word flags - added to length, so word length is encoded on 6 bits*/
+	.equ	WORD_IMMEDIATE   , 0x80
+	.equ	WORD_COMPILEONLY , 0x40
+	.equ	WORD_LENMASK     , 0x3F
+
 	/* Define variables in internal HC11 RAM */
 	.data
 IP:	.word	0	/* Instruction pointer */
@@ -145,6 +150,7 @@ BASEP:	.word	0	/* Value of the base used for number parsing */
 HOLDP:	.word	0	/* Pointer used for numeric output */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
 HANDP:	.word	0	/* Exception handler pointer */
+CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 	/* Input text buffering */
 
@@ -435,7 +441,7 @@ code_CLOAD:
 	.section .dic
 word_RFROM:
 	.word word_CLOAD
-	.byte	2
+	.byte	2 + WORD_COMPILEONLY
 	.ascii	"R>"
 RFROM:
 	.word code_RFROM
@@ -452,7 +458,7 @@ code_RFROM:
 	.section .dic
 word_TOR:
 	.word	word_RFROM
-	.byte	2
+	.byte	2 + WORD_COMPILEONLY
 	.ascii	">R"
 TOR:
 	.word	code_TOR
@@ -528,7 +534,7 @@ code_RPLOAD:
 	.section .dic
 word_RPSTORE:
 	.word	word_RPLOAD
-	.byte	3
+	.byte	3 + WORD_COMPILEONLY
 	.ascii	"RP!"
 RPSTORE:
 	.word	code_RPSTORE
@@ -1391,11 +1397,11 @@ NAMECOMPARE:
 	.word	code_ENTER
 	.word	OVER		/*cstra cstrb cstra*/
 	.word	CLOAD		/*cstra cstrb lena*/
-	.word	IMM, 0x3F
+	.word	IMM, WORD_LENMASK
 	.word	AND
 	.word	OVER		/*cstra cstrb lena cstrb*/
 	.word	CLOAD		/*cstra cstrb lena lenb*/
-	.word	IMM, 0x3F
+	.word	IMM, WORD_LENMASK
 	.word	AND
 	.word	internal_compare
 	.word	RETURN
@@ -1424,6 +1430,10 @@ DOSTR:
 /*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
+word_STRQP:
+	.word	word_NAMECOMPARE
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"str\"|"
 /* NO NAME */
 IMMSTR:
 	.word	code_ENTER
@@ -1442,7 +1452,7 @@ IMMSTR:
    in the context defined by <# and #> */
 	.section .dic
 word_PAD:
-	.word	word_NAMECOMPARE
+	.word	word_STRQP
 	.byte	3
 	.ascii	"PAD"
 PAD:
@@ -2174,7 +2184,7 @@ PARSE:
 	.section .dic
 word_DOTPAR:
 	.word	word_PARSE
-	.byte	2
+	.byte	2 + WORD_IMMEDIATE
 	.ascii	".("
 DOTPAR:
 	.word	code_ENTER
@@ -2188,7 +2198,7 @@ DOTPAR:
 	.section .dic
 word_PAR:
 	.word	word_DOTPAR
-	.byte	1
+	.byte	1 + WORD_IMMEDIATE
 	.ascii	"("
 PAR:
 	.word	code_ENTER
@@ -2202,7 +2212,7 @@ PAR:
 	.section .dic
 word_BSLASH:
 	.word	word_PAR
-	.byte	1
+	.byte	1 + WORD_IMMEDIATE
 	.ascii	"\\"
 BSLASH:
 	.word	code_ENTER
@@ -2402,7 +2412,7 @@ ABORT:
 	.section .dic
 word_ABORTZ:
 	.word	word_ABORT
-	.byte	6
+	.byte	6 + WORD_COMPILEONLY
 	.ascii	"abort\""
 ABORTZ:
 	.word	code_ENTER
@@ -2419,41 +2429,259 @@ abor1:	/* Cancel abort */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* Set the system state to interpretation */
+	.section .dic
+word_INTERP:
+	.word	word_ABORTZ
+	.byte	1 + WORD_IMMEDIATE
+	.ascii	"["
+INTERP:
+	.word	code_ENTER
+	.word	IMM, DOINTERPRET
+	.word	IMM, BEHAP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( a -- ) */
 	.section .dic
-word_INTERPRET:
-	.word	word_ABORTZ
-	.byte	9
-	.ascii	"INTERPRET"
-INTERPRET:
+word_DOINTERPRET:
+	.word	word_INTERP
+	.byte	10
+	.ascii	"$INTERPRET"
+DOINTERPRET:
 	.word	code_ENTER
 	.word	ISNAME		/*code name || cstr false */
-	.word	BRANCHZ,donum	/* if not name then jump */
+	.word	BRANCHZ,donumi	/* if not name then jump */
 
 	/*Name is found */
 	.word	EXECUTE
 	.word	RETURN
 
-donum:	/* No word was found, attempt to parse as number, then push */
+donumi:	/* No word was found, attempt to parse as number, then push */
 	.word	NUMBERQ
-	.word	BRANCHZ,notfound	/*consume the OK flag and leaves the number on the stack for later use*/
+	.word	BRANCHZ,notfoundi	/*consume the OK flag and leaves the number on the stack for later use*/
 	.word	RETURN
-notfound:
+notfoundi:
 	.word	THROW	/* Throw the failed name as exception, to be caught in QUIT */
 
+/*===========================================================================*/
+/* Compiler */
+/*===========================================================================*/
+
 /*---------------------------------------------------------------------------*/
-/* Set the system state to interpretation */
+/* Set the system state to compilation */
 	.section .dic
-word_INTERP:
-	.word	word_INTERPRET
-	.byte	1
-	.ascii	"["
-INTERP:
+word_COMPIL:
+	.word	word_DOINTERPRET
+	.byte	1 + WORD_IMMEDIATE
+	.ascii	"]"
+COMPIL:
 	.word	code_ENTER
-	.word	IMM, INTERPRET
+	.word	IMM, DOCOMPILE
 	.word	IMM, BEHAP
 	.word	STORE
 	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* $compile  ( a -- ) - compile next word to code dictionary as a token or literal. */
+word_DOCOMPILE:
+	.word	word_COMPIL
+	.byte	8
+	.ascii	"$COMPILE"
+DOCOMPILE:
+	.word	code_ENTER
+	.word	ISNAME		/*code name || cstr false */
+	.word	DUPNZ
+	.word	BRANCHZ,donumc
+				/*code cstr*/
+	/* Read the word name length to get the options */
+#;                   fdb       at,dolit,IMMED,and  ; ?immediate
+#                    fdb       cat,dolit,IMMED,and ; ?immediate
+#                    fdb       qbran,scom1
+	/* Word is immediate -> execute */
+	.word	EXECUTE
+	.word	RETURN
+notimm:
+	/* Word is not immediate -> Save a call to this word */
+	.word	COMMA
+	.word	RETURN
+donumc:				/*cstr*/
+	.word	NUMBERQ
+	.word	BRANCHZ,notfoundc
+	/* Generate code to push the number */
+	.word	LITTERAL
+	.word	RETURN
+notfoundc:
+	/* Not a word, not a number */
+	.word	THROW
+
+/*---------------------------------------------------------------------------*/
+/* '     ( -- ca ) - search context vocabularies for the next word in input stream. */
+	.section .dic
+word_TICK:
+	.word	word_DOCOMPILE
+	.byte	1
+	.ascii	"'"
+TICK:
+	.word	code_ENTER
+	.word	TOKEN
+	.word	ISNAME
+	.word	BRANCHZ,tick1
+	.word	RETURN
+tick1:
+	.word	THROW
+
+/*---------------------------------------------------------------------------*/
+/*  allot     ( n -- ) - allocate n bytes to the code dictionary. */
+	.section .dic
+word_ALLOT:
+	.word	word_TICK
+	.byte	5
+	.ascii	"ALLOT"
+ALLOT:
+	.word	code_ENTER
+	.word	IMM,HEREP
+	.word	PLUS_STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
+	.section .dic
+word_COMMA:
+	.word	word_ALLOT
+	.byte	1
+	.ascii	","
+COMMA:
+	.word	code_ENTER
+	.word	HERE		/* (VALUE) (HERE) */
+	.word	DUP		/* (VALUE) (HERE) (HERE) */
+	.word	CELLP		/* (VALUE) (HERE) (HERE+2) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
+	.word	STORE		/* (VALUE) (HERE) */
+	.word	STORE		/* Empty */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next char */
+	.section .dic
+word_CCOMMA:
+	.word	word_COMMA
+	.byte	2
+	.ascii	"C,"
+CCOMMA:
+	.word	code_ENTER
+	.word	HERE		/* (VALUE) (HERE) */
+	.word	DUP		/* (VALUE) (HERE) (HERE) */
+	.word	CHARP		/* (VALUE) (HERE) (HERE+1) */
+	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
+	.word	STORE		/* (VALUE) (HERE) */
+	.word	CSTORE		/* Empty */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* [compile] ( -- ; <string> ) - compile the next immediate word into code dictionary. */
+	.section .dic
+word_BRCOMPILE:
+	.word	word_CCOMMA
+	.byte	9 + WORD_IMMEDIATE
+	.ascii	"[COMPILE]"
+BRCOMPILE:
+	.word	code_ENTER
+	.word	TICK
+	.word	COMMA
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* compile   ( -- ) - compile the next address in colon list to code dictionary. */
+
+	.section .dic
+word_COMPILE:
+	.word	word_BRCOMPILE
+	.byte	7 + WORD_COMPILEONLY
+	.ascii	"COMPILE"
+COMPILE:
+	.word	code_ENTER
+	.word	RFROM
+	.word	DUP
+	.word	LOAD
+	.word	COMMA
+	.word	CELLP
+	.word	TOR
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* literal   ( w -- ) - compile tos to code dictionary as an integer literal. */
+
+	.section .dic
+word_LITTERAL:
+	.word	word_COMPILE
+	.byte	8 + WORD_IMMEDIATE
+	.ascii	"LITTERAL"
+LITTERAL:
+	.word	code_ENTER
+	.word	COMPILE
+	.word	IMM
+	.word	COMMA
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* $,"       ( -- ) - compile a literal string up to next " */
+word_SCOMPQ:
+	.word	word_LITTERAL
+	.byte	3
+	.ascii	"$,\""
+SCOMPQ:
+	.word	code_ENTER
+#                    fdb       dolit,'"',word      ; literal " (move word to dictionary)
+#                    fdb       count,plus,algnd    ; calculate aligned end of string
+#                    fdb       cp,store,exit       ; adjust the code pointer
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* FOR */
+/*---------------------------------------------------------------------------*/
+/* BEGIN */
+/*---------------------------------------------------------------------------*/
+/* NEXT */
+/*---------------------------------------------------------------------------*/
+/* UNTIL */
+/*---------------------------------------------------------------------------*/
+/* AGAIN */
+/*---------------------------------------------------------------------------*/
+/* IF */
+/*---------------------------------------------------------------------------*/
+/* AHEAD */
+/*---------------------------------------------------------------------------*/
+/* REPEAT */
+/*---------------------------------------------------------------------------*/
+/* THEN */
+/*---------------------------------------------------------------------------*/
+/* AFT */
+/*---------------------------------------------------------------------------*/
+/* ELSE */
+/*---------------------------------------------------------------------------*/
+/* WHILE */
+/*---------------------------------------------------------------------------*/
+/* ABORT" */
+/*---------------------------------------------------------------------------*/
+/* $" */
+/*---------------------------------------------------------------------------*/
+/* ." */
+/*---------------------------------------------------------------------------*/
+/* ?UNIQUE */
+/*---------------------------------------------------------------------------*/
+/* $,N */
+/*---------------------------------------------------------------------------*/
+/* : */
+/*---------------------------------------------------------------------------*/
+/* ; */
+/*---------------------------------------------------------------------------*/
+/* IMMEDIATE */
+/*---------------------------------------------------------------------------*/
+/* CREATE */
+/*---------------------------------------------------------------------------*/
+/* VARIABLE */
 
 /*===========================================================================*/
 /* Shell */
@@ -2463,7 +2691,7 @@ INTERP:
 /* PROMPT */
 	.section .dic
 word_PROMPT:
-	.word	word_INTERP
+	.word	word_LITTERAL
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
@@ -2575,125 +2803,96 @@ QUIT1:
 	.word	BRANCH,QUIT0	/* Interpret again */
 
 /*===========================================================================*/
-/* Compiler */
-/*===========================================================================*/
-
-/*---------------------------------------------------------------------------*/
-/* '     ( -- ca ) - search context vocabularies for the next word in input stream. */
-	.section .dic
-word_TICK:
-	.word	word_QUIT
-	.byte	1
-	.ascii	"'"
-TICK:
-	.word	code_ENTER
-	.word	TOKEN
-	.word	ISNAME
-	.word	BRANCHZ,tick1
-	.word	RETURN
-tick1:
-	.word	THROW
-
-/*---------------------------------------------------------------------------*/
-/*  allot     ( n -- ) - allocate n bytes to the code dictionary. */
-	.section .dic
-word_ALLOT:
-	.word	word_TICK
-	.byte	5
-	.ascii	"ALLOT"
-ALLOT:
-	.word	code_ENTER
-	.word	IMM,HEREP
-	.word	PLUS_STORE
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
-	.section .dic
-word_COMMA:
-	.word	word_ALLOT
-	.byte	1
-	.ascii	","
-COMMA:
-	.word	code_ENTER
-	.word	HERE		/* (VALUE) (HERE) */
-	.word	DUP		/* (VALUE) (HERE) (HERE) */
-	.word	CELLP		/* (VALUE) (HERE) (HERE+2) */
-	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+2) (HEREP=&HERE) */
-	.word	STORE		/* (VALUE) (HERE) */
-	.word	STORE		/* Empty */
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next char */
-	.section .dic
-word_CCOMMA:
-	.word	word_COMMA
-	.byte	2
-	.ascii	"C,"
-CCOMMA:
-	.word	code_ENTER
-	.word	HERE		/* (VALUE) (HERE) */
-	.word	DUP		/* (VALUE) (HERE) (HERE) */
-	.word	CHARP		/* (VALUE) (HERE) (HERE+1) */
-	.word	IMM, HEREP	/* (VALUE) (HERE) (HERE+1) (HP=&HERE) */
-	.word	STORE		/* (VALUE) (HERE) */
-	.word	CSTORE		/* Empty */
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* [compile] ( -- ; <string> ) - compile the next immediate word into code dictionary. */
-	.section .dic
-word_BRCOMPILE:
-	.word	word_CCOMMA
-	.byte	9
-	.ascii	"[COMPILE]"
-BRCOMPILE:
-	.word	code_ENTER
-	.word	TICK
-	.word	COMMA
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* compile   ( -- ) - compile the next address in colon list to code dictionary. */
-
-	.section .dic
-word_COMPILE:
-	.word	word_BRCOMPILE
-	.byte	7
-	.ascii	"COMPILE"
-COMPILE:
-	.word	code_ENTER
-	.word	RFROM
-	.word	DUP
-	.word	LOAD
-	.word	COMMA
-	.word	CELLP
-	.word	TOR
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* literal   ( w -- ) - compile tos to code dictionary as an integer literal. */
-
-	.section .dic
-word_LITTERAL:
-	.word	word_COMPILE
-	.byte	8
-	.ascii	"LITTERAL"
-LITTERAL:
-	.word	code_ENTER
-	.word	COMPILE
-	.word	IMM
-	.word	COMMA
-	.word	RETURN
-
-/*===========================================================================*/
 /* Tools */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* dump ( a u -- ) - dump u bytes from a, in a formatted manner. */
+word_DUMP:
+	.word	word_QUIT
+	.byte	4
+	.ascii	"DUMP"
+DUMP:
+	.word	code_ENTER
+#                    fdb       base,at,tor,hex     ; save radix, set hex
+#                    fdb       dolit,16,slash      ; change count to lines
+#                    fdb       tor                 ; start count down loop
+#dump1               fdb       crr,dolit,16,ddup,dmp  ; display numeric
+#                    fdb       rot,rot
+#                    fdb       space,space,utype   ; display printable characters
+#                    fdb       nufq,inver          ; user control
+#                    fdb       qbran,dump2
+#                    fdb       donxt,dump1         ; loop till done
+#                    fdb       bran,dump3
+#dump2               fdb       rfrom,drop          ; cleanup loop stack, early exit
+#dump3               fdb       drop,rfrom,base,store  ; restore radix
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* .s    ( ... -- ... ) - display the contents of the data stack. */
+word_DOTS:
+	.word	word_DUMP
+	.byte	2
+	.ascii	".S"
+DOTS:
+	.word	code_ENTER
+#                    fdb       crr,depth           ; stack depth
+#                    fdb       tor                 ; start count down loop
+#                    fdb       bran,dots2          ; skip first pass
+#dots1               fdb       rat,pick,dot        ; index stack, display contents
+#dots2               fdb       donxt,dots1         ; loop till done
+#                    fdb       dotqp
+#                    fcb       4
+#                    fcc       ' <sp '             ; extra space for align
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* !csp ( -- ) - save stack pointer in csp for error checking. */
+word_CSPSTORE:
+	.word	word_DOTS
+	.byte	4
+	.ascii	"!CSP"
+CSPSTORE:
+	.word	code_ENTER
+	.word	SPLOAD
+	.word	IMM,CSPP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ?csp ( -- ) - abort if stack pointer differs from that saved in csp. */
+word_CSPCHECK:
+	.word	word_CSPSTORE
+	.byte	4
+	.ascii	"?CSP"
+CSPCHECK:
+	.word	code_ENTER
+	.word	SPLOAD
+	.word	IMM,CSPP
+	.word	LOAD
+	.word	XOR
+	.word	ABORTZ
+	.byte	6
+	.ascii	"stack!"
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* words     ( -- ) - display the names in the context vocabulary. */
+word_WORDS:
+	.word	word_CSPCHECK
+	.byte	5
+	.ascii	"WORDS"
+WORDS:
+	.word	code_ENTER
+#                    fdb       crr,cntxt,at        ; only in context
+#wors1               fdb       at,qdup             ; ?at end of list
+#                    fdb       qbran,wors2
+#                    fdb       dup,space,dotid     ; display a name
+#                    fdb       cellm,nufq          ; user control
+#                    fdb       qbran,wors1
+#                    fdb       drop
+#wors2:
+	.word	RETURN
 
 /*===========================================================================*/
 /* Boot */
@@ -2703,7 +2902,7 @@ LITTERAL:
 /* ( -- u ) */
 	.section .dic
 word_VER:
-	.word	word_LITTERAL
+	.word	word_WORDS
 	.byte	3
 	.ascii	"VER"
 VER:
