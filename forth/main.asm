@@ -1332,20 +1332,15 @@ csame2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ccompare (cstr cstr -- flag ) - return 0 if match */
+/* internal_ccompare (cstra cstrb lena lenb -- flag ) - return 0 if match */
+/* Internal comparison code for both CCOMPARE and NAMECOMPARE.
+   TODO rewrite the full chain of words ISNAME,FIND,TOKEN,WORD to
+   work with direct (buf,len) pairs instead of counted strings. The goal is to avoid
+   the useless copy made by PACK$ */
 	.section .dic
-word_CCOMPARE:
-	.word	word_CSAME
-	.byte	8
-	.ascii	"CCOMPARE"
-CCOMPARE:
+internal_compare:
 	.word	code_ENTER
-
 	/*Compare lengths. not equal? not same strings.*/
-	.word	OVER		/*cstra cstrb cstra*/
-	.word	CLOAD		/*cstra cstrb lena*/
-	.word	OVER		/*cstra cstrb lena cstrb*/
-	.word	CLOAD		/*cstra cstrb lena lenb*/
 	.word	SUB		/*cstra cstrb (lena-lenb)*/
 	.word	DUP		/*cstra cstrb lendiff lendiff*/
 	.word	TOR		/*cstra cstrb lendiff | R: lendiff*/
@@ -1366,6 +1361,45 @@ ccoeq:
 	.word	CSAME		/*result */
 	.word	RETURN
 
+
+/*---------------------------------------------------------------------------*/
+/* ccompare (cstr cstr -- flag ) - return 0 if match */
+/* Generic version of string compare that does not mask the length bits */
+	.section .dic
+word_CCOMPARE:
+	.word	word_CSAME
+	.byte	8
+	.ascii	"CCOMPARE"
+CCOMPARE:
+	.word	code_ENTER
+	.word	OVER		/*cstra cstrb cstra*/
+	.word	CLOAD		/*cstra cstrb lena*/
+	.word	OVER		/*cstra cstrb lena cstrb*/
+	.word	CLOAD		/*cstra cstrb lena lenb*/
+	.word	internal_compare
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* namecompare (cstr cstr -- flag ) - return 0 if match */
+/* Specific version of string compare that masks the length bits so the IMM and COMP bits are discarded */
+	.section .dic
+word_NAMECOMPARE:
+	.word	word_CCOMPARE
+	.byte	11
+	.ascii	"NAMECOMPARE"
+NAMECOMPARE:
+	.word	code_ENTER
+	.word	OVER		/*cstra cstrb cstra*/
+	.word	CLOAD		/*cstra cstrb lena*/
+	.word	IMM, 0x3F
+	.word	AND
+	.word	OVER		/*cstra cstrb lena cstrb*/
+	.word	CLOAD		/*cstra cstrb lena lenb*/
+	.word	IMM, 0x3F
+	.word	AND
+	.word	internal_compare
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /*   compare     ( buf1 len1 buf2 len2 -- flag ) */
 /*   compare strings up to the length of the shorter string. zero if match */
@@ -1374,6 +1408,8 @@ ccoeq:
 /*---------------------------------------------------------------------------*/
 /* dostr Common code from inline string extraction. MUST BE used by another word,
    since the string is searched in the previous-previous entry */
+	.section .dic
+/* NO NAME */
 DOSTR:
 	.word	code_ENTER
 	.word	RFROM
@@ -1406,7 +1442,7 @@ IMMSTR:
    in the context defined by <# and #> */
 	.section .dic
 word_PAD:
-	.word	word_CCOMPARE
+	.word	word_NAMECOMPARE
 	.byte	3
 	.ascii	"PAD"
 PAD:
@@ -2200,7 +2236,7 @@ found1:
 	.word	CELLP		/*cstr nameptr | R:prev */
 	
 	.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
-	.word	CCOMPARE	/*cstr nameptr equal_flag | R: prev*/
+	.word	NAMECOMPARE	/*cstr nameptr equal_flag | R: prev*/
 	.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
 
 	/* Strings are different */
