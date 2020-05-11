@@ -101,8 +101,8 @@ def findsymname(addr):
 
     return "None@%04X" % addr
 
-def parse_pstring(buf,off):
-    strlen = buf[off]
+def parse_pstring(buf,off,mask=0xFF):
+    strlen = buf[off] & mask
     off += 1
     s = ""
     for i in range(strlen):
@@ -156,8 +156,8 @@ while ptr < off+length:
         print("prev=%04X" % lnk, findsymname(lnk) )
 
         print("[%04X] " % (ptr+base), end='')
-        name = parse_pstring(cnt,ptr)
-        print("name=%s" % name)
+        name = parse_pstring(cnt,ptr,0x3F)
+        print("name=%s" % name, "flags=%02X" % (cnt[ptr] & 0xC0))
         ptr += 1+len(name)
 
     else:

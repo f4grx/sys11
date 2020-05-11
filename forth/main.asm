@@ -2640,48 +2640,245 @@ SCOMPQ:
 
 /*---------------------------------------------------------------------------*/
 /* FOR */
+	.section .dic
+word_FOR:
+	.word	word_SCOMPQ
+	.byte	3 + WORD_COMPILEONLY
+	.ascii	"FOR"
+FOR:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* BEGIN */
+	.section .dic
+word_BEGIN:
+	.word	word_FOR
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"BEGIN"
+BEGIN:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* NEXT */
+	.section .dic
+word_NEXT:
+	.word	word_BEGIN
+	.byte	4 + WORD_COMPILEONLY
+	.ascii	"NEXT"
+NXT:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* UNTIL */
+	.section .dic
+word_UNTIL:
+	.word	word_NEXT
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"UNTIL"
+UNTIL:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* AGAIN */
+	.section .dic
+word_AGAIN:
+	.word	word_UNTIL
+	.byte	5
+	.ascii	"AGAIN"
+AGAIN:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* IF */
+	.section .dic
+word_IF:
+	.word	word_AGAIN
+	.byte	2 + WORD_COMPILEONLY
+	.ascii	"IF"
+IF:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* AHEAD */
+	.section .dic
+word_AHEAD:
+	.word	word_IF
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"AHEAD"
+AHEAD:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* REPEAT */
+	.section .dic
+word_REPEAT:
+	.word	word_AHEAD
+	.byte	6 + WORD_COMPILEONLY
+	.ascii	"REPEAT"
+REPEAT:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* THEN */
+	.section .dic
+word_THEN:
+	.word	word_REPEAT
+	.byte	4 + WORD_COMPILEONLY
+	.ascii	"THEN"
+THEN:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* AFT */
+	.section .dic
+word_AFT:
+	.word	word_THEN
+	.byte	3 + WORD_COMPILEONLY
+	.ascii	"AFT"
+AFT:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ELSE */
+	.section .dic
+word_ELSE:
+	.word	word_AFT
+	.byte	4 + WORD_COMPILEONLY
+	.ascii	"ELSE"
+ELSE:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* WHILE */
+	.section .dic
+word_WHILE:
+	.word	word_ELSE
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"WHILE"
+WHILE:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ABORT" */
+	.section .dic
+word_ABORTQ:
+	.word	word_WHILE
+	.byte	6 + WORD_COMPILEONLY
+	.ascii	"ABORT\""
+ABORTQ:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* $" */
+	.section .dic
+word_SQ:
+	.word	word_ABORTQ
+	.byte	2
+	.ascii	"$\""
+SQ:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ." */
+	.section .dic
+word_DOTQ:
+	.word	word_SQ
+	.byte	2 + WORD_COMPILEONLY
+	.ascii	".\""
+DOTQ:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ?UNIQUE */
+	.section .dic
+word_UNIQUE:
+	.word	word_DOTQ
+	.byte	7 + WORD_COMPILEONLY
+	.ascii	"?UNIQUE"
+UNIQUE:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* $,N */
+	.section .dic
+word_SCOMN:
+	.word	word_UNIQUE
+	.byte	3 + WORD_COMPILEONLY
+	.ascii	"$,N"
+SCOMN:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* : */
+	.section .dic
+word_COLON:
+	.word	word_SCOMN
+	.byte	1
+	.ascii	":"
+COLON:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* ; */
+	.section .dic
+word_SEMICOL:
+	.word	word_COLON
+	.byte	1 + WORD_COMPILEONLY
+	.ascii	";"
+SEMICOL:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* IMMEDIATE */
+	.section .dic
+word_IMMEDIATE:
+	.word	word_SEMICOL
+	.byte	9
+	.ascii	"IMMEDIATE"
+IMMEDIATE:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* CREATE */
+	.section .dic
+word_CREATE:
+	.word	word_IMMEDIATE
+	.byte	6
+	.ascii	"CREATE"
+CREATE:
+	.word	code_ENTER
+	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* VARIABLE */
+	.section .dic
+word_VARIABLE:
+	.word	word_CREATE
+	.byte	8
+	.ascii	"VARIABLE"
+VARIABLE:
+	.word	code_ENTER
+	.word	RETURN
 
 /*===========================================================================*/
 /* Shell */
@@ -2691,7 +2888,7 @@ SCOMPQ:
 /* PROMPT */
 	.section .dic
 word_PROMPT:
-	.word	word_LITTERAL
+	.word	word_VARIABLE
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
