@@ -759,19 +759,29 @@ code_EMIT:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
+/* ?key ( -- c t | f ) - return input character and true, or a false if no input. */
 	.section .dic
-word_KEY:
+word_QKEY:
 	.word	word_EMIT
 	.byte	3
-	.ascii	"KEY"
-KEY:
-	.word	code_KEY
+	.ascii	"?KEY"
+QKEY:
+	.word	code_QKEY
 
 	.text
-code_KEY:
-	brclr	*SCSR #SCSR_RDRF, code_KEY
+code_QKEY:
+	brclr	*SCSR #SCSR_RDRF, nokey
 	ldab	*SCDR
 	clra
+	pshb
+	psha
+	/* Push the TRUE flag */
+	coma		/* Turn 00 into FF */
+	tab		/* copy FF from A to B, now we have FFFF in D, which is TRUE */
+	bra	PUSHD
+nokey:
+	clra
+	clrb
 	bra	PUSHD
 
 /*===========================================================================*/
@@ -789,8 +799,41 @@ code_KEY:
 
 /*---------------------------------------------------------------------------*/
 	.section .dic
-word_SPZERO:
+word_KEY:
+	.word	word_QKEY
+	.byte	3
+	.ascii	"KEY"
+KEY:
+	.word	code_ENTER
+key1:
+	.word	QKEY
+	.word	BRANCHZ,key1
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* nuf? ( -- t ) - return false if no input, else pause and if cr return true. */
+	.section .dic
+word_NUFQ:
 	.word	word_KEY
+	.byte	4
+	.ascii	"NUF?"
+NUFQ:
+	.word	code_ENTER
+	.word	QKEY
+	.word	DUP
+	.word	BRANCHZ, nufq1
+	.word	DDROP
+	.word	KEY
+	.word	IMM,0x0D
+	.word	EQUAL
+nufq1:
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_SPZERO:
+	.word	word_NUFQ
 	.byte	3
 	.ascii	"SP0"
 SPZERO:
@@ -811,6 +854,7 @@ RPZERO:
 
 /*---------------------------------------------------------------------------*/
 /*   depth     ( -- n )  return the depth of the data stack. */
+	.section .dic
 word_DEPTH:
 	.word	word_RPZERO
 	.byte	5
@@ -819,6 +863,20 @@ DEPTH:
 	.word	code_ENTER
 	.word	SPLOAD,SPZERO,SWAP,SUB
 	.word	IMM,2,SLASH
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* pick ( ... +n -- ... w ) - copy the nth stack item to tos. */
+	.section .dic
+word_PICK:
+	.word	word_DEPTH
+	.byte	4
+	.ascii	"PICK"
+PICK:
+	.word	code_ENTER
+	.word	IMM,1,PLUS,CELLS
+	.word	IMM,1,PLUS
+	.word	SPLOAD,PLUS,LOAD
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -838,7 +896,7 @@ noexec:
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
-	.word	word_DEPTH
+	.word	word_PICK
 	.byte	4
 	.ascii	"2DUP"
 DDUP:
@@ -1194,10 +1252,43 @@ less1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* max ( n n -- n ) - return the greater of two top stack items. */
+word_MAX:
+	.word	word_LESS
+	.byte	3
+	.ascii	"MAX"
+MAX:
+	.word	code_ENTER
+	.word	DDUP
+	.word	LESS
+	.word	BRANCHZ,max1
+	.word	SWAP
+max1:
+	.word	DROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* min ( n n -- n ) - return the smaller of two top stack items. */
+word_MIN:
+	.word	word_MAX
+	.byte	3
+	.ascii	"MIN"
+MIN:
+	.word	code_ENTER
+	.word	DDUP
+	.word	SWAP
+	.word	LESS
+	.word	BRANCHZ,min1
+	.word	SWAP
+min1:
+	.word	DROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* ( u ul uh -- ul <= u < uh ) */
 	.section .dic
 word_WITHIN:
-	.word	word_LESS
+	.word	word_MIN
 	.byte	6
 	.ascii	"WITHIN"
 WITHIN:
@@ -1617,6 +1708,33 @@ STR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* u.r ( u +n -- ) - display an unsigned integer in n column, right justified. */
+	.section .dic
+word_UDOTR:
+	.word	word_STR
+	.byte	3
+	.ascii	"U.R"
+UDOTR:
+	.word	code_ENTER
+	.word	TOR,BDIGS,DIGS,EDIGS
+	.word	RFROM,OVER,SUB
+	.word	SPACES,TYPE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* .r ( n +n -- ) - display an integer in a field of n columns, right justified. */
+	.section .dic
+word_DOTR:
+	.word	word_UDOTR
+	.byte	2
+	.ascii	".R"
+DOTR:
+	.word	code_ENTER
+	.word	TOR,STR,RFROM,OVER,SUB
+	.word	SPACES,TYPE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /*   u.    ( u -- ) - display an unsigned integer in free format. */
 	.section .dic
 word_UDOT:
@@ -1901,6 +2019,26 @@ SPACE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* Emit a blank char */
+	.section .dic
+word_SPACES:
+	.word	word_SPACE
+	.byte	6
+	.ascii	"SPACES"
+SPACES:
+	.word	code_ENTER
+	.word	IMM,0
+	.word	MAX
+	.word	TOR
+	.word	BRANCH,spcend
+spcloop:
+	.word	SPACE
+spcend:
+	.word	JNZD,spcloop
+spcdone:
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* Emit a carriage return */
 	.section .dic
 word_CR:
@@ -2047,6 +2185,20 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 	.word	DROP		/* remove buf from stack */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+word_TCHAR:
+	.word	word_TYPE
+	.byte	5
+	.ascii	">CHAR"
+TCHAR:
+	.word	code_ENTER
+	.word	IMM,0x7F,AND,DUP /* mask msb */
+	.word	IMM,127,BL,WITHIN	/* check for printable */
+	.word	BRANCHZ,tcha1		/* branch if printable */
+	.word	DROP,IMM,'_'		/* literal underscore */
+tcha1:
+	.word	RETURN
+
 /*===========================================================================*/
 /* Parsing */
 /*===========================================================================*/
@@ -2055,7 +2207,7 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 /* (buf buflen delim -- buf len deltabuf) skip spaces, find word that ends at delim*/
 	.section .dic
 word_LPARSE:
-	.word	word_TYPE
+	.word	word_TCHAR
 	.byte	5
 	.ascii	"parse"
 LPARSE:
@@ -3048,25 +3200,67 @@ QUIT1:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* dump ( a u -- ) - dump u bytes from a, in a formatted manner. */
-word_DUMP:
+/* _type ( b u -- ) - display a string. filter non-printing characters. */
+	.section .dic
+word_UTYPE:
 	.word	word_QUIT
+	.byte	5
+	.ascii	"_TYPE"
+UTYPE:
+	.word	code_ENTER
+	.word	TOR			/* start count down loop */
+	.word	BRANCH,utyp2		/* skip first pass */
+utyp1:
+	.word	DUP,CLOAD,TCHAR,EMIT	/* display only printable */
+	.word	IMM,1,PLUS		/* increment address */
+utyp2:
+	.word	JNZD,utyp1		/* loop till done */
+	.word	DROP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* dm+ ( a u -- a ) - dump u bytes from , leaving a+u on the stack. */
+	.section .dic
+word_DMP:
+	.word	word_UTYPE
+	.byte	3
+	.ascii	"dm+"
+DMP:
+	.word	code_ENTER
+	.word	OVER,IMM,4,UDOTR	/* display address */
+	.word	SPACE,TOR		/* start count down loop */
+	.word	BRANCH,pdum2		/* skip first pass */
+pdum1:
+	.word	DUP,CLOAD,IMM,3,UDOTR	/* display numeric data */
+	.word	IMM,1,PLUS		/* increment address */
+pdum2:
+	.word	JNZD,pdum1		/* loop till done */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* dump ( a u -- ) - dump u bytes from a, in a formatted manner. */
+	.section .dic
+word_DUMP:
+	.word	word_DMP
 	.byte	4
 	.ascii	"DUMP"
 DUMP:
 	.word	code_ENTER
-#                    fdb       base,at,tor,hex     ; save radix, set hex
-#                    fdb       dolit,16,slash      ; change count to lines
-#                    fdb       tor                 ; start count down loop
-#dump1               fdb       crr,dolit,16,ddup,dmp  ; display numeric
-#                    fdb       rot,rot
-#                    fdb       space,space,utype   ; display printable characters
-#                    fdb       nufq,inver          ; user control
-#                    fdb       qbran,dump2
-#                    fdb       donxt,dump1         ; loop till done
-#                    fdb       bran,dump3
-#dump2               fdb       rfrom,drop          ; cleanup loop stack, early exit
-#dump3               fdb       drop,rfrom,base,store  ; restore radix
+	.word	BASE,LOAD,TOR,HEX	/* save radix, set hex */
+	.word	IMM,16,SLASH		/* change count to lines*/
+	.word	TOR			/* start count down loop */
+dump1:
+	.word	CR,IMM,16,DDUP,DMP
+	.word	ROT,ROT
+	.word	SPACE,SPACE,UTYPE	/* display printable characters */
+	.word	NUFQ,NOT		/* user control */
+	.word	BRANCHZ,dump2
+	.word	JNZD,dump1		/* loop till done */
+	.word	BRANCH,dump3
+dump2:
+	.word	RFROM,DROP		/* cleanup loop stack, early exit */
+dump3:
+	.word	DROP,RFROM,BASE,STORE	/* restore radix */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3077,14 +3271,17 @@ word_DOTS:
 	.ascii	".S"
 DOTS:
 	.word	code_ENTER
-#                    fdb       crr,depth           ; stack depth
-#                    fdb       tor                 ; start count down loop
-#                    fdb       bran,dots2          ; skip first pass
-#dots1               fdb       rat,pick,dot        ; index stack, display contents
-#dots2               fdb       donxt,dots1         ; loop till done
-#                    fdb       dotqp
-#                    fcb       4
-#                    fcc       ' <sp '             ; extra space for align
+	.word	CR,DEPTH	/* stack depth */
+	.word	TOR		/* start count down loop */
+	.word	BRANCH,dots2	/* skip first pass */
+dots1:
+	.word	RLOAD,PICK,DOT
+dots2:
+	.word	JNZD,dots1	/* loop till done */
+	.word	IMMSTR
+	.byte	4
+	.ascii	" <sp"
+	.word	COUNT,TYPE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
