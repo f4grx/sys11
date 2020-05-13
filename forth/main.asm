@@ -3015,7 +3015,21 @@ COLON:
 	.word	IMM,LASTP
 	.word	LOAD		/* Load pointer to last name */
 	.word	COMMA		/* save prev address */
-	.word	TOKEN		/* save name string at HERE */
+	.word	TOKEN		/* cstr | save name string at HERE */
+	.word	DUP		/* cstr cstr*/
+	.word	ISNAME		/* cstr code name | name 0*/
+	.word	BRANCHZ,col2	/* cstr code | name */
+	/* not zero: name exists */
+	.word	IMMSTR
+	.byte	7
+	.ascii	"  redef"
+	.word	COUNT,TYPE
+col2:
+	.word	DROP		/* cstr */
+	.word	DUP		/* cstr cstr */
+	.word	CLOAD		/* cstr len */
+	.word	CHARP		/* cstr len+1 */
+	.word	HERE,PLUS,IMM,HEREP,STORE
 	.word	IMM,code_ENTER	/* save code to execute the definition */
 	.word	COMMA
 	.word	COMPIL		/* Enter compilation mode */
