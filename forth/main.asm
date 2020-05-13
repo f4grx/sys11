@@ -763,7 +763,7 @@ code_EMIT:
 	.section .dic
 word_QKEY:
 	.word	word_EMIT
-	.byte	3
+	.byte	4
 	.ascii	"?KEY"
 QKEY:
 	.word	code_QKEY
@@ -1694,7 +1694,7 @@ sign1:
 word_STR:
 	.word	word_SIGN
 	.byte	3
-	.ascii	"str"
+	.ascii	"STR"
 STR:
 	.word	code_ENTER
 	.word	DUP		/* n n */
@@ -1738,7 +1738,7 @@ DOTR:
 /*   u.    ( u -- ) - display an unsigned integer in free format. */
 	.section .dic
 word_UDOT:
-	.word	word_STR
+	.word	word_DOTR
 	.byte	2
 	.ascii	"U."
 UDOT:
@@ -2042,7 +2042,7 @@ spcdone:
 /* Emit a carriage return */
 	.section .dic
 word_CR:
-	.word	word_SPACE
+	.word	word_SPACES
 	.byte	2
 	.ascii	"CR"
 CR:
@@ -3033,7 +3033,7 @@ OVERT:
 /* ; ( -- ) - terminate a colon definition.*/
 	.section .dic
 word_SEMICOL:
-	.word	word_COLON
+	.word	word_OVERT
 	.byte	1 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	";"
 SEMICOL:
