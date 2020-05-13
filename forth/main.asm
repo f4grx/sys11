@@ -2392,37 +2392,42 @@ FIND:
 	/*compare cstr to current name stored at voc*/
 ;This version is used if the prev link is stored before the name
 found1:
-	.word	DUP		/*cstr voc voc */
-	.word	LOAD		/*cstr voc prev */
-	.word	TOR		/*cstr voc | R:prev */
-	.word	CELLP		/*cstr nameptr | R:prev */
+	.word	DUP		/*reqcstr voc voc */
+	.word	LOAD		/*reqcstr voc prev */
+	.word	TOR		/*reqcstr voc | R:prev */
+	.word	CELLP		/*reqcstr nameptr | R:prev */
 	
-	.word	DDUP		/*cstr nameptr cstr nameptr | R:prev */
-	.word	NAMECOMPARE	/*cstr nameptr equal_flag | R: prev*/
-	.word	BRANCHZ,found	/*cstr nameptr jump if equal | R:prev */
+	.word	DDUP		/*reqcstr nameptr cstr nameptr | R:prev */
+	.word	NAMECOMPARE	/*reqcstr nameptr equal_flag | R: prev*/
+	.word	BRANCHZ,found	/*reqcstr nameptr jump if equal | R:prev */
 
 	/* Strings are different */
-	.word	DROP		/*cstr | R: prev*/
-	.word	RFROM		/*cstr prev */
-	.word	DUP		/*cstr prev prev*/
-	.word	BRANCHZ,noprev	/*cstr prev, jmp if prev null*/
+	.word	DROP		/*reqcstr | R: prev*/
+	.word	RFROM		/*reqcstr prev */
+	.word	DUP		/*reqcstr prev prev*/
+	.word	BRANCHZ,noprev	/*reqcstr prev, jmp if prev null*/
 
 	/* previous is not null, look at prev word */
-	.word	BRANCH,found1
+	.word	BRANCH,found1	/*reqstr prev*/
 
 	/* no previous word */
 noprev:
-	.word	DROP		/*cstr */
-	.word	IMM,0		/*cstr false */
+	.word	DROP		/*reqcstr */
+	.word	IMM,0		/*reqcstr false */
 	.word	RETURN
 found:
-	.word	RFROM		/*cstr nameptr prev */
-	.word	DROP		/*cstr nameptr */
-	.word	DUP		/*cstr nameptr nameptr */
-	.word	CLOAD		/*cstr nameptr namelen */
-	.word	CHARP		/*cstr nameptr namelen+1 */
-	.word	PLUS		/*cstr codeptr */
-	.word	SWAP		/*codeptr cstr , as required by spec*/
+	.word	RFROM		/*reqcstr nameptr prev */
+	.word	DROP		/*reqcstr nameptr */
+	.word	SWAP		/*nameptr reqcstr */
+	.word	DROP		/*nameptr */
+	.word	DUP		/*nameptr nameptr */
+	.word	DUP		/*nameptr nameptr nameptr */
+	.word	CLOAD		/*nameptr nameptr namelen+FLAGS */
+	.word	IMM,WORD_LENMASK/*nameptr nameptr namelen+flags 0x3F */
+	.word	AND		/*nameptr nameptr namelen */
+	.word	CHARP		/*nameptr nameptr namelen+1 */
+	.word	PLUS		/*nameptr codeptr */
+	.word	SWAP		/*reqcodeptr nameptr , as required by spec*/
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
