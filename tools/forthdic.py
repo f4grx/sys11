@@ -170,17 +170,19 @@ while ptr < off+length:
         print("[%04X] " % (ptr+base), end='')
         name = parse_pstring(cnt,ptr,0x3F)
         print("name=%s" % name, "flags=%02X" % (cnt[ptr] & 0xC0))
+        ptr += 1+len(name)
+        internalname = findsymname(ptr+base).decode()
         if dot:
             words.write(name.encode())
             words.write(b"\n")
-        ptr += 1+len(name)
 
     else:
         #Unnamed word (only used in compiling structures)
         has_header = True #restore behaviour for next word
         print()
         print("[%04X] " % (ptr+base), end='')
-        print("Unnamed word (%s)" % findsymname(ptr+base))
+        internalname = findsymname(ptr+base).decode()
+        print("Unnamed word (%s)" % internalname)
 
     print("[%04X] " % (ptr+base), end='')
     code = struct.Struct(">H").unpack_from(cnt, ptr)
@@ -190,7 +192,7 @@ while ptr < off+length:
 
     if code != adrenter:
         if dot:
-            graph.write(("\"%s\" [shape=box]\n"%name).encode())
+            graph.write(("\"%s\" [shape=box]\n"%internalname).encode())
         continue
 
     #we have a wordlist. display words
@@ -208,7 +210,7 @@ while ptr < off+length:
         wordname = findsymname(word).decode()
         print("    %04X" % word, wordname)
         if dot and not(prevname=='BRANCH' or prevname=='BRANCHZ' or prevname=='JNZD'):
-            edge = "\"%s\" -> \"%s\""%(name.replace("\"","\\\""),wordname.replace("\"","\\\""))
+            edge = "\"%s\" -> \"%s\""%(internalname,wordname)
             gr[edge] = True
         ptr += 2
         prevname = wordname
