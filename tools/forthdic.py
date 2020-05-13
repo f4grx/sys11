@@ -49,8 +49,14 @@ class ElfSymbolEntryb(ElfSymbolEntry):
 
 #------------------------------------------------------------------------------
 
+dot = False
 try:
-    elf = elffile.open(sys.argv[1])
+    src = sys.argv[1]
+    if src == '-dot':
+        dot = True
+        src = sys.argv[2]
+    elf = elffile.open(src)
+
 except Exception as e:
     print("ERROR : Could not open input file '", file_input,"'")
     print(e)
@@ -138,6 +144,12 @@ for i in range(length):
     if i%16==15: print()
 print()
 
+if dot:
+    words = open("words.txt", "wb")
+    graph = open("words.gv", "wb")
+    graph.write(b"strict digraph words {\n")
+    gr = dict()
+
 ptr  = off
 has_header = True
 while ptr < off+length:
@@ -158,6 +170,9 @@ while ptr < off+length:
         print("[%04X] " % (ptr+base), end='')
         name = parse_pstring(cnt,ptr,0x3F)
         print("name=%s" % name, "flags=%02X" % (cnt[ptr] & 0xC0))
+        if dot:
+            words.write(name.encode())
+            words.write(b"\n")
         ptr += 1+len(name)
 
     else:
@@ -174,10 +189,13 @@ while ptr < off+length:
     print("  code=%04X" % code, findsymname(code) )
 
     if code != adrenter:
+        if dot:
+            graph.write(("\"%s\" [shape=box]\n"%name).encode())
         continue
 
     #we have a wordlist. display words
     word = 0
+    prevname = ""
     while (ptr+base) < dicend:
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         if word == wordstart:
@@ -187,8 +205,13 @@ while ptr < off+length:
             break
 
         print("[%04X] " % (ptr+base), end='')
-        print("    %04X" % word, findsymname(word))
+        wordname = findsymname(word).decode()
+        print("    %04X" % word, wordname)
+        if dot and not(prevname=='BRANCH' or prevname=='BRANCHZ' or prevname=='JNZD'):
+            edge = "\"%s\" -> \"%s\""%(name.replace("\"","\\\""),wordname.replace("\"","\\\""))
+            gr[edge] = True
         ptr += 2
+        prevname = wordname
 
         if word == adrimm:
             print("[%04X] " % (ptr+base), end='')
@@ -204,4 +227,12 @@ while ptr < off+length:
             strlen = len(immstr)
             ptr += 1 + strlen
             print("    (len=",strlen,") '",immstr,"'", sep='' )
+
+if dot:
+    words.close()
+    for x in gr:
+        graph.write(x.encode())
+        graph.write(b"\n")
+    graph.write(b"}\n")
+    graph.close()
 
