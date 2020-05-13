@@ -209,7 +209,7 @@ while ptr < off+length:
         print("[%04X] " % (ptr+base), end='')
         wordname = findsymname(word).decode()
         print("    %04X" % word, wordname)
-        if dot and not(prevname=='BRANCH' or prevname=='BRANCHZ' or prevname=='JNZD') and not(wordname=='RETURN' or wordname=='IMM' or wordname=='BRANCH'):
+        if dot and not(prevname=='BRANCH' or prevname=='BRANCHZ' or prevname=='JNZD') and not(wordname=='RETURN' or wordname=='IMM' or wordname=='BRANCH' or wordname=='BRANCHZ'):
             edge = "\"%s\" -> \"%s\""%(internalname,wordname)
             gr[edge] = True
         ptr += 2
