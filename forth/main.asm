@@ -2646,13 +2646,15 @@ word_DOCOMPILE:
 DOCOMPILE:
 	.word	code_ENTER
 	.word	ISNAME		/*code name || cstr false */
-	.word	DUPNZ
-	.word	BRANCHZ,donumc
+	.word	DUPNZ		/*code name name || cstr false */
+	.word	BRANCHZ,donumc	/*code name || cstr */
 				/*code cstr*/
 	/* Read the word name length to get the options */
-#;                   fdb       at,dolit,IMMED,and  ; ?immediate
-#                    fdb       cat,dolit,IMMED,and ; ?immediate
-#                    fdb       qbran,scom1
+	.word	CLOAD		/*code namelen+flags */
+	.word	IMM,WORD_IMMEDIATE	/* code namelen+flags 0x80 */
+	.word	AND			/* code word_is_immediate */
+	.word	BRANCHZ,notimm		/* code */
+
 	/* Word is immediate -> execute */
 	.word	EXECUTE
 	.word	RETURN
@@ -3088,12 +3090,20 @@ word_PROMPT:
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
+	/* Test if we are in compilation mode */
 	.word	code_ENTER
+	.word	IMM,BEHAP
+	.word	LOAD
+	.word	IMM,DOINTERPRET
+	.word	EQUAL			/* returns 1 if behaviour is currently interpretation */
+	.word	BRANCHZ,compilmode	/* equal returns zero: jump to compilation behaviour (just cr)*/
+	/* No: interpretation: show OK */
 	.word	IMMSTR
 	.byte	4
 	.ascii	"  ok"
 	.word	COUNT
 	.word	TYPE
+compilmode:
 	.word	CR
 	.word	RETURN
 
