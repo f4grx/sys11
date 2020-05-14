@@ -146,6 +146,7 @@
 IP:	.word	0	/* Instruction pointer */
 HEREP:	.word	0	/* Pointer to HERE, the address of next free byte in dic/data space */
 LASTP:	.word	0	/* Pointer to the last defined word entry */
+CURDP:	.word	0	/* Pointer to the word currently being defined. Stored in word : */
 BASEP:	.word	0	/* Value of the base used for number parsing */
 HOLDP:	.word	0	/* Pointer used for numeric output */
 BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
@@ -3012,14 +3013,20 @@ word_COLON:
 	.ascii	":"
 COLON:
 	.word	code_ENTER
+	/* Store a pointer to the current definition */
+	.word	HERE
+	.word	IMM,CURDP
+	.word	STORE
+	/* Store the pointer to the previous definition in the prev link */	
 	.word	IMM,LASTP
 	.word	LOAD		/* Load pointer to last name */
 	.word	COMMA		/* save prev address */
+	/* Parse word name and store at HERE */
 	.word	TOKEN		/* cstr | save name string at HERE */
 	.word	DUP		/* cstr cstr*/
 	.word	ISNAME		/* cstr code name | name 0*/
 	.word	BRANCHZ,col2	/* cstr code | name */
-	/* not zero: name exists */
+	/* not zero: name exists, warn user */
 	.word	IMMSTR
 	.byte	7
 	.ascii	"  redef"
@@ -3029,7 +3036,7 @@ col2:
 	.word	DUP		/* cstr cstr */
 	.word	CLOAD		/* cstr len */
 	.word	CHARP		/* cstr len+1 */
-	.word	HERE,PLUS,IMM,HEREP,STORE
+	.word	HERE,PLUS,IMM,HEREP,STORE	/* Update HERE after the word name */
 	.word	IMM,code_ENTER	/* save code to execute the definition */
 	.word	COMMA
 	.word	COMPIL		/* Enter compilation mode */
@@ -3043,11 +3050,11 @@ word_OVERT:
 	.ascii	"OVERT"
 OVERT:
 	.word	code_ENTER
-#	.word	LAST
-#	.word	LOAD
-#	.word	CURRENT
-#	.word	LOAD
-#	.word	STORE
+	/* Update LAST to the current def */
+	.word	IMM,CURDP
+	.word	LOAD
+	.word	IMM,LASTP
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
