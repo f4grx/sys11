@@ -3042,7 +3042,7 @@ DOTQ:
 	.section .dic
 word_UNIQUE:
 	.word	word_DOTQ
-	.byte	7 + WORD_COMPILEONLY
+	.byte	7
 	.ascii	"?UNIQUE"
 UNIQUE:
 	.word	code_ENTER
@@ -3140,20 +3140,51 @@ word_IMMEDIATE:
 IMMEDIATE:
 	.word	code_ENTER
 	.word	RETURN
+ 
+/*---------------------------------------------------------------------------*/
+/* dovar ( -- a ) - run time routine for variable and create. */
+/* Before DOVAR is called the return stack receives the address right after
+   the dovar word itself. This value is popped from the return stack, so when
+   returning from DOVAR with RETURN, execution is transferred not to the word
+   that called dovar, but to its parent. This means that the word that uses dovar
+   is interrupted. The parent continues to execute with the address of the word
+   that follows dovar on the stack.*/
+	.section .dic
+word_DOVAR:
+	.word	word_IMMEDIATE
+	.byte	5 + WORD_COMPILEONLY
+	.ascii	"DOVAR"
+DOVAR:
+	.word	code_ENTER
+	.word	RFROM
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* CREATE */
+/* create    ( -- ; <string> ) - compile a new array entry without allocating code space.*/
+/* CREATE is a word that returns the address of the byte just after the DOVAR word. Using
+   ALLOT after CREATE is a method to reserve memory, and the name created by CREATE would
+   push the address of this reserved memory on the stack, simulating a buffer or variable.
+   But it is interesting to replace DOVAR by some other word address, which is used to
+   implement DOES> (later) */
 	.section .dic
 word_CREATE:
-	.word	word_IMMEDIATE
+	.word	word_DOVAR
 	.byte	6
 	.ascii	"CREATE"
 CREATE:
 	.word	code_ENTER
+	.word	SNAME
+	.word	OVERT
+	.word	IMM,code_ENTER	/* save code to execute the definition */
+	.word	COMMA
+	.word	COMPILE,DOVAR
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* VARIABLE */
+/* variable  ( -- ; <string> ) - compile a new variable initialized to 0. */
+/* VARIABLE uses CREATE and follows this by a call to COMMA that stores zero
+   in the cell right after DOVAR, then increments HERE by a cell. This has the
+   effect to return the address of this cell when the name is invoked.*/
 	.section .dic
 word_VARIABLE:
 	.word	word_CREATE
@@ -3161,6 +3192,9 @@ word_VARIABLE:
 	.ascii	"VARIABLE"
 VARIABLE:
 	.word	code_ENTER
+	.word	CREATE		/* parse the name that follows in the input stream and link in in the dict*/
+	.word	IMM,0
+	.word	COMMA		/* Store a zero after create's DOVAR and increment HERE by a cell */
 	.word	RETURN
 
 /*===========================================================================*/
