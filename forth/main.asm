@@ -1505,7 +1505,7 @@ NAMECOMPARE:
 
 /*---------------------------------------------------------------------------*/
 /* dostr Common code from inline string extraction. MUST BE used by another word,
-   since the string is searched in the previous-previous entry */
+   since the string is loaded from the previous-previous entry */
 	.section .dic
 /* NO NAME */
 DOSTR:
@@ -1519,17 +1519,31 @@ DOSTR:
 	.word	SWAP
 	.word	TOR
 	.word	RETURN
+
 /*---------------------------------------------------------------------------*/
 /* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
 	.section .dic
-word_STRQP:
+word_IMMSTR:
 	.word	word_NAMECOMPARE
 	.byte	5 + WORD_COMPILEONLY
 	.ascii	"str\"|"
-/* NO NAME */
 IMMSTR:
 	.word	code_ENTER
 	.word	DOSTR
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* SHOWSTR */
+	.section .dic
+word_SHOWSTR:
+	.word	word_IMMSTR
+	.byte	3 + WORD_COMPILEONLY
+	.ascii	".\"|"
+SHOWSTR:
+	.word	code_ENTER
+	.word	DOSTR
+	.word	COUNT
+	.word	TYPE
 	.word	RETURN
 
 /*===========================================================================*/
@@ -1544,7 +1558,7 @@ IMMSTR:
    in the context defined by <# and #> */
 	.section .dic
 word_PAD:
-	.word	word_STRQP
+	.word	word_SHOWSTR
 	.byte	3
 	.ascii	"PAD"
 PAD:
@@ -2570,16 +2584,16 @@ ABORT:
 /*---------------------------------------------------------------------------*/
 /* abort"    ( f -- ) run time routine of abort" . abort with a message. */
 	.section .dic
-word_ABORTZ:
+word_ABORTNZ:
 	.word	word_ABORT
 	.byte	6 + WORD_COMPILEONLY
 	.ascii	"abort\""
-ABORTZ:
+ABORTNZ:
 	.word	code_ENTER
 	.word	BRANCHZ,abor1
 	.word	DOSTR
 	.word	THROW
-abor1:	/* Cancel abort */
+abor1:	/* Cancel abort if TOS was zero*/
 	.word	DOSTR
 	.word	DROP
 	.word	RETURN
@@ -2592,7 +2606,7 @@ abor1:	/* Cancel abort */
 /* Set the system state to interpretation */
 	.section .dic
 word_INTERP:
-	.word	word_ABORTZ
+	.word	word_ABORTNZ
 	.byte	1 + WORD_IMMEDIATE
 	.ascii	"["
 INTERP:
@@ -2612,9 +2626,17 @@ word_DOINTERPRET:
 DOINTERPRET:
 	.word	code_ENTER
 	.word	ISNAME		/*code name || cstr false */
+	.word	DUPNZ		/*code name name || cstr false */
 	.word	BRANCHZ,donumi	/* if not name then jump */
-
 	/*Name is found */
+	/* Read the word name length to get the options */
+	.word	CLOAD		/*code namelen+flags */
+	.word	IMM,WORD_COMPILEONLY	/* code namelen+flags 0x40 */
+	.word	AND			/* code word_is_compile_only */
+	.word	ABORTNZ
+	.byte	12
+	.ascii	"compile only"
+	/* name is not compile only (abortnz did not trigger) */
 	.word	EXECUTE
 	.word	RETURN
 
@@ -2624,6 +2646,7 @@ donumi:	/* No word was found, attempt to parse as number, then push */
 	.word	RETURN
 notfoundi:
 	.word	THROW	/* Throw the failed name as exception, to be caught in QUIT */
+componly:
 
 /*===========================================================================*/
 /* Compiler */
@@ -2797,9 +2820,11 @@ SCOMPQ:
 	.word	IMM,'"'
 	.word	WORD		/* Clever! Use HERE as storage temporary, cstring is already put at the right place! */
 	/* Compute the new value for HERE */
-	.word	COUNT
-	.word	PLUS
+	.word	CLOAD
+	.word	CHARP
 	.word	HERE
+	.word	PLUS
+	.word	IMM,HEREP
 	.word	STORE
 	.word	RETURN
 
@@ -2979,32 +3004,37 @@ WHILE:
 	.section .dic
 word_ABORTQ:
 	.word	word_WHILE
-	.byte	6 + WORD_COMPILEONLY
+	.byte	6 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"ABORT\""
 ABORTQ:
 	.word	code_ENTER
+	.word	COMPILE,ABORTNZ
+	.word	SCOMPQ
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* $" */
+/* $" ( -- ; <string> ) - compile an inline string literal. */
 	.section .dic
-word_SQ:
+word_STRQ:
 	.word	word_ABORTQ
-	.byte	2
+	.byte	2 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"$\""
-SQ:
+STRQ:
 	.word	code_ENTER
+	.word	COMPILE,IMMSTR
+	.word	SCOMPQ
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ." */
-	.section .dic
+/* ." ( -- ; <string> ) compile an inline string literal to be typed out at run time. */
 word_DOTQ:
-	.word	word_SQ
-	.byte	2 + WORD_COMPILEONLY
+	.word	word_STRQ
+	.byte	2 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	".\""
 DOTQ:
 	.word	code_ENTER
+	.word	COMPILE,SHOWSTR
+	.word	SCOMPQ
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3021,35 +3051,11 @@ UNIQUE:
 /*---------------------------------------------------------------------------*/
 /* $,N ( na -- ) - build a new dictionary name using the string at na. */
 	.section .dic
-word_NAME:
+word_SNAME:
 	.word	word_UNIQUE
-	.byte	3 + WORD_COMPILEONLY
+	.byte	3
 	.ascii	"$,N"
 SNAME:
-	.word	code_ENTER
-#                    fdb       dup,cat             ; ?null input
-#                   fdb       qbran,snam1
-#                    fdb       uniqu               ; ?redefinition
-#                    fdb       dup,last,store      ; save na for vocab link
-#                    fdb       here,algnd,swap     ; align code address
-#                    fdb       cellm               ; link address
-#                    fdb       crrnt,at,at,over,store
-#                    fdb       cellm,dup,np,store  ; adjust name pointer
-#                    fdb       store,exit          ; save code pointer
-#snam1               fdb       strqp
-#                    fcb       5
-#                    fcc       ' name'             ; null input
-#                    fdb       throw
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* : ( -- ; <string> ) - start a new colon definition using next word as its name. */
-	.section .dic
-word_COLON:
-	.word	word_NAME
-	.byte	1
-	.ascii	":"
-COLON:
 	.word	code_ENTER
 	/* Store a pointer to the current definition */
 	.word	HERE
@@ -3063,18 +3069,33 @@ COLON:
 	.word	TOKEN		/* cstr | save name string at HERE */
 	.word	DUP		/* cstr cstr*/
 	.word	ISNAME		/* cstr code name | name 0*/
-	.word	BRANCHZ,col2	/* cstr code | name */
+	.word	BRANCHZ,sn2	/* cstr code | name */
 	/* not zero: name exists, warn user */
-	.word	IMMSTR
+	.word	SHOWSTR
 	.byte	7
 	.ascii	"  redef"
-	.word	COUNT,TYPE
-col2:
+sn2:
+	/* goto end of token */
 	.word	DROP		/* cstr */
 	.word	DUP		/* cstr cstr */
 	.word	CLOAD		/* cstr len */
 	.word	CHARP		/* cstr len+1 */
-	.word	HERE,PLUS,IMM,HEREP,STORE	/* Update HERE after the word name */
+	.word	HERE
+	.word	PLUS
+	.word	IMM,HEREP
+	.word	STORE	/* Update HERE after the word name */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* : ( -- ; <string> ) - start a new colon definition using next word as its name. */
+	.section .dic
+word_COLON:
+	.word	word_SNAME
+	.byte	1
+	.ascii	":"
+COLON:
+	.word	code_ENTER
+	.word	SNAME
 	.word	IMM,code_ENTER	/* save code to execute the definition */
 	.word	COMMA
 	.word	COMPIL		/* Enter compilation mode */
@@ -3162,11 +3183,9 @@ PROMPT:
 	.word	EQUAL			/* returns 1 if behaviour is currently interpretation */
 	.word	BRANCHZ,compilmode	/* equal returns zero: jump to compilation behaviour (just cr)*/
 	/* No: interpretation: show OK */
-	.word	IMMSTR
+	.word	SHOWSTR
 	.byte	4
 	.ascii	"  ok"
-	.word	COUNT
-	.word	TYPE
 compilmode:
 	.word	CR
 	.word	RETURN
@@ -3182,9 +3201,9 @@ QSTACK:
 	.word	code_ENTER
 	.word	DEPTH
 	.word	ZLESS
-	.word	ABORTZ
-	.byte	11
-	.ascii	" underflow!"
+	.word	ABORTNZ
+	.byte	10
+	.ascii	"underflow!"
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3260,10 +3279,9 @@ QUIT1:
 
 	/* CATCH caught an error, DUPNZ left the error that was thrown on the stack */
 	/* TODO CONSOLE reinstall console (setup IO vectors for console, in case IO was happening from another device) */
-	.word	IMMSTR
+	.word	SHOWSTR
 	.byte	7
 	.ascii	"  err: "
-	.word	COUNT,TYPE	/* Display error msg prefix */
 	.word	COUNT,TYPE	/* Display error message from throw */
 	.word	CR
 	/* TODO PRESET reinit data stack to top */
@@ -3352,10 +3370,9 @@ dots1:
 	.word	RLOAD,PICK,DOT
 dots2:
 	.word	JNZD,dots1	/* loop till done */
-	.word	IMMSTR
+	.word	SHOWSTR
 	.byte	4
 	.ascii	" <sp"
-	.word	COUNT,TYPE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3383,7 +3400,7 @@ CSPCHECK:
 	.word	IMM,CSPP
 	.word	LOAD
 	.word	XOR
-	.word	ABORTZ
+	.word	ABORTNZ
 	.byte	6
 	.ascii	"stack!"
 	.word	RETURN
@@ -3432,10 +3449,9 @@ word_hi:
 hi:
 	.word	code_ENTER
 	.word	CR
-	.word	IMMSTR
+	.word	SHOWSTR
 	.byte	16
 	.ascii	"sys11 forth ver "
-	.word	COUNT,TYPE
 	.word	BASE,LOAD,TOR
 	.word	HEX,VER,BDIGS,DIG,DIG,IMM,'.',HOLD,DIG,EDIGS,TYPE
 	.word	RFROM,BASE,STORE

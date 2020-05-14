@@ -121,13 +121,15 @@ if rodata == None:
     print("No dic found")
     sys.exit(0)
 
-dicstart = findsymaddr(b"__DEBUG__DICSTART__")
-dicend = findsymaddr(b"__DEBUG__DICEND__")
-adrenter = findsymaddr(b"code_ENTER")
-adrexit  = findsymaddr(b"RETURN")
-adrimm   = findsymaddr(b"IMM")
-adrimmstr= findsymaddr(b"IMMSTR")
-adrabortz= findsymaddr(b"ABORTZ")
+dicstart  = findsymaddr(b"__DEBUG__DICSTART__")
+dicend    = findsymaddr(b"__DEBUG__DICEND__")
+adrenter  = findsymaddr(b"code_ENTER")
+adrexit   = findsymaddr(b"RETURN")
+adrimm    = findsymaddr(b"IMM")
+adrimmstr = findsymaddr(b"IMMSTR")
+adrshowstr= findsymaddr(b"SHOWSTR")
+adrabortnz= findsymaddr(b"ABORTNZ")
+adrcompile= findsymaddr(b"COMPILE")
 
 print("ENTER=%04X EXIT=%04X IMM=%04X IMMSTR=%04X" % (adrenter,adrexit,adrimm,adrimmstr))
 print("start=%04X end=%04X" % (dicstart,dicend))
@@ -198,6 +200,7 @@ while ptr < off+length:
     #we have a wordlist. display words
     word = 0
     prevname = ""
+    prev = 0
     while (ptr+base) < dicend:
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
         if word == wordstart:
@@ -223,12 +226,14 @@ while ptr < off+length:
                 print("    %04X" % imm, findsymname(imm) )
             else:
                 print("    %04X" % imm )
-        elif (word == adrimmstr) or (word==adrabortz):
+        elif ((word == adrimmstr) or (word==adrabortnz) or (word==adrshowstr)) and (prev!=adrcompile):
             print("[%04X] " % (ptr+base), end='')
             immstr = parse_pstring(cnt,ptr)
             strlen = len(immstr)
             ptr += 1 + strlen
             print("    (len=",strlen,") '",immstr,"'", sep='' )
+
+        prev = word
 
 if dot:
     words.close()
