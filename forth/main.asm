@@ -2782,8 +2782,7 @@ word_LITTERAL:
 	.ascii	"LITTERAL"
 LITTERAL:
 	.word	code_ENTER
-	.word	COMPILE
-	.word	IMM
+	.word	COMPILE,IMM
 	.word	COMMA
 	.word	RETURN
 
@@ -2805,135 +2804,174 @@ SCOMPQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* FOR */
+/* for ( -- a ) - start a for-next loop structure in a colon definition. */
+/* This word pushes the current address on the data stack for later jump back*/
 	.section .dic
 word_FOR:
 	.word	word_SCOMPQ
-	.byte	3 + WORD_COMPILEONLY
+	.byte	3 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"FOR"
 FOR:
 	.word	code_ENTER
+	.word	COMPILE,TOR
+	.word	HERE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* BEGIN */
+/* begin ( -- a ) - start an infinite or indefinite loop structure. */
+/* This word pushes the current address on the data stack for later jump back*/
+
 	.section .dic
 word_BEGIN:
 	.word	word_FOR
-	.byte	5 + WORD_COMPILEONLY
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"BEGIN"
 BEGIN:
 	.word	code_ENTER
+	.word	HERE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* NEXT */
+/* next ( a -- ) - terminate a for-next loop structure. */
+/* This word USES the loop-start address that was pushed on the stack by FOR */
 	.section .dic
 word_NEXT:
 	.word	word_BEGIN
-	.byte	4 + WORD_COMPILEONLY
+	.byte	4 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"NEXT"
 NXT:
 	.word	code_ENTER
+	.word	COMPILE,JNZD
+	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* UNTIL */
+/* until ( a -- ) - terminate a begin-until indefinite loop structure. */
+/* This word USES the loop-start address that was pushed on the stack by BEGIN */
 	.section .dic
 word_UNTIL:
 	.word	word_NEXT
-	.byte	5 + WORD_COMPILEONLY
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"UNTIL"
 UNTIL:
 	.word	code_ENTER
+	.word	COMPILE,BRANCHZ
+	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* AGAIN */
+/* again ( a -- ) - terminate a begin-again infinite loop structure. */
+/* This word USES the loop-start address that was pushed on the stack by BEGIN */
 	.section .dic
 word_AGAIN:
 	.word	word_UNTIL
-	.byte	5
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"AGAIN"
 AGAIN:
 	.word	code_ENTER
+	.word	COMPILE,BRANCH
+	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* IF */
+/* if ( -- a ) - begin a conditional branch structure. */
+/* This word pushes the address where the forward jump address will have to be stored by THEN or ELSE */
 	.section .dic
 word_IF:
 	.word	word_AGAIN
-	.byte	2 + WORD_COMPILEONLY
+	.byte	2 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"IF"
 IF:
 	.word	code_ENTER
+	.word	COMPILE,BRANCHZ
+	.word	HERE			/* Push the address of the forward ref on the stack */
+	.word	IMM,0,COMMA		/* Reserve a cell to subsequent definition by THEN */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* AHEAD */
-	.section .dic
+/* ahead ( -- a ) - compile a forward branch instruction. */
+section .dic
 word_AHEAD:
 	.word	word_IF
-	.byte	5 + WORD_COMPILEONLY
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"AHEAD"
 AHEAD:
 	.word	code_ENTER
+	.word	COMPILE,BRANCH
+	.word	HERE
+	.word	IMM,0
+	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* REPEAT */
+/* repeat ( a a -- ) - terminate a begin-while-repeat indefinite loop. */
 	.section .dic
 word_REPEAT:
 	.word	word_AHEAD
-	.byte	6 + WORD_COMPILEONLY
+	.byte	6 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"REPEAT"
 REPEAT:
 	.word	code_ENTER
+	.word	AGAIN
+	.word	HERE
+	.word	SWAP
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* THEN */
+/* then ( a -- ) - terminate a conditional branch structure. */
 	.section .dic
 word_THEN:
 	.word	word_REPEAT
-	.byte	4 + WORD_COMPILEONLY
+	.byte	4 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"THEN"
 THEN:
 	.word	code_ENTER
+	.word	HERE
+	.word	SWAP
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* AFT */
+/* aft ( a -- a a ) - jump to then in a for-aft-then-next loop the first time through. */
 	.section .dic
 word_AFT:
 	.word	word_THEN
-	.byte	3 + WORD_COMPILEONLY
+	.byte	3 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"AFT"
 AFT:
 	.word	code_ENTER
+	.word	DROP
+	.word	AHEAD
+	.word	BEGIN
+	.word	SWAP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ELSE */
+/* else ( a -- a ) - start the false clause in an if-else-then structure. */
 	.section .dic
 word_ELSE:
 	.word	word_AFT
-	.byte	4 + WORD_COMPILEONLY
+	.byte	4 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"ELSE"
 ELSE:
 	.word	code_ENTER
+	.word	AHEAD
+	.word	SWAP
+	.word	THEN
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* WHILE */
+/* while ( a -- a a ) - conditional branch out of a begin-while-repeat loop. */
 	.section .dic
 word_WHILE:
 	.word	word_ELSE
-	.byte	5 + WORD_COMPILEONLY
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"WHILE"
 WHILE:
 	.word	code_ENTER
+	.word	IF
+	.word	SWAP
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
