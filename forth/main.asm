@@ -153,6 +153,7 @@ HOLDP:	.word	0	/* Pointer used for numeric output */
 BEHAP:  .word   0       /* Pointer to word implementing the current behaviour: compile/interpret */
 HANDP:	.word	0	/* Exception handler pointer */
 CURDP:	.word	0	/* Pointer to the word currently being defined. Stored in word : */
+LSTCRP:	.word	0	/* Pointer to the last created action word (used by DOES>) */
 CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 	/* Input text buffering */
@@ -3211,6 +3212,11 @@ CREATE:
 	.word	OVERT
 	.word	IMM,code_ENTER	/* save code to execute the definition */
 	.word	COMMA
+	/* Store the current address so DOES can replace the DOVAR if called. */
+	.word	HERE
+	.word	IMM,LSTCRP
+	.word	STORE
+	/* Now emit the DOVAR, this word can be replaced later by DOES>*/
 	.word	COMPILE,DOVAR
 	.word	RETURN
 
@@ -3231,6 +3237,145 @@ VARIABLE:
 	.word	COMMA		/* Store a zero after create's DOVAR and increment HERE by a cell */
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* DOES> The magic word that changes the behaviour of CREATE with custom code */
+/* When a word is created with CREATE NAME, the structure assembled at HERE is:
+   .word	LAST
+   .byte	NAME_LENGTH
+   .ascii	NAME
+   .word	code_ENTER
+   .word	DOVAR
+
+CREATE in interpretation mode
+
+When executed, this word RFROM the return address of DOVAR towards the created name.
+This is in fact the address of the word that follows DOVAR, which is the address of
+the datafield for the word. DOVAR then executes a RETURN, that will not end the
+execution of DOVAR (since the return address was pulled) but will instead end the
+execution of the CREATEd word.
+When CREATE is executed, HERE also points to the address after the DOVAR containing cell.
+
+An allocation word that increments HERE can then be used to create a data field after the
+DOVAR word, that can be used for data storage.
+
+CREATE in compilation mode
+
+It is possible to compile a colon definition that uses CREATE. When such a definition is
+executed, it will parse the next TOKEN from the input buffer and use that for CREATE. This
+is what is used by VARIABLE:
+: VARIABLE CREATE 0 , ;
+
+When used like this:
+VARIABLE LEN
+The execution of variable will call CREATE, create will parse LEN and create a definition.
+After this, zero is pushed on the stack and stored at HERE, then HERE in incremented by a cell.
+This is a defining word: It creates a new word.
+When LEN is executed, the DOVAR word of CREATE will be executed, and that will push the address
+of the datafield on the stack. LEN can then be used with @ and ! to hold a value.
+
+CREATE in compilation mode with appended DOES>
+
+At execution of the colon definition that contains create/does, 
+1 - CREATE will parse the input buffer and create a definition, then execute any allocation word that follows.
+2 - DOES> will start compiling a new unnamed executable word (by compiling a code_ENTER) and replace the DOVAR word in the newly CREATEd definition by the address of the code_ENTER that was just stored.
+
+This is easy because one can just save the address of the DOVAR word before leaving create.
+The following words are compiled right next after DOES>, so this creates an unnamed word that will be executed by the newly CREATEd definition.
+
+Summary
+DOES> is an immediate word. when found in a colon definition (compilation state) the following happens:
+-compiles a STORE of the next next address
+-compile a RETURN
+(this is the address that was stored in create's DOVAR
+-prepare a new unnamed word (compile code_ENTER)
+-compile the words that follow DOES>
+
+when a colon definition that contains DOES is executed
+-create and the allocation words up to DOES are executed
+-STORE of the unnamed code that follows is stored in created DOVAR
+-done
+
+when the word defined by create and modified by DOES is executed
+-code that was installed by DOES> is executed
+-(TODO) data field of created definition is pushed
+-user words after DOES are executed
+
+Example for assembler:
+ : INHERENT          ( Defines the name of the class)
+     CREATE          ( this will create an instance)
+         C,          ( store the parameter for each instance)
+     DOES>           ( this is the class' common action)
+         C@          ( get each instance's parameter)
+         C,          ( the assembly action, as above)
+     ;               ( End of definition)
+
+ HEX
+ 12  INHERENT NOP,   ( Defines an instance NOP, of class INHERENT, with parameter 12H.)
+
+sys11 forth ver 1.00
+: INH CREATE C, DOES> C@ C, ;  ok
+42 INH NOP  ok
+$100 64 DUMP
+ 100  F2 9C  3 49 4E 48 E0 2B EF FD ED D1 E1 57  1 1A  r__INH`+o}mQaW__
+ 110  E1 57  0 54 E1 9B E1 8E E1 55 E0 2B E1 A9 E1 A2  aW_Ta_a_aU`+a)a"
+ 120  ED D1 E1 55  1  0  3 4E 4F 50 E0 2B  1 1A 26  4  mQaU___NOP`+__&_
+ 130  44 55 4D 50 50 4D 41 4C  1 2D  4 50 4C 4F 50 E0  DUMPPMAL_-_PLOP`
+ 140  2B EF EE  5 41  0 2E 31 34 31  0 33 31 2E 30 30  +on_A_.141_31.00  ok
+
+100	F29C	PREV
+102	3	LEN
+103	INH	NAME
+106	E02B	code_ENTER
+108	EFFD	CREATE
+10A	EDD1	C,
+10C	E157	IMM
+10E	011A
+110	E157	IMM
+112	0054	LASTCRP
+114	E19B	LOAD
+116	E18E	STORE
+118	E155	RETURN
+------------------------------- start of action
+11A	E02B	code_ENTER
+11C	E1A9	RFROM
+11E	E1A2	C@
+120	EDD1	C,
+122	E155	RETURN
+------------------------------- end of action
+124	0100
+126	3
+127	NOP
+12A	E02B	code_ENTER
+12C	011A 	action_for_INH
+12E	26 	data zone for NOP
+
+*/
+word_DOES:
+	.word	word_VARIABLE
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
+	.ascii	"DOES>"
+DOES:
+	.word	code_ENTER
+	/* When called, we are compiling a word.*/
+	/* Now, we have to define a new unnamed word. The address
+	of the unnamed word is HERE. this value must be stored in place of
+	the DOVAR that was defined by the previous CREATE*/
+	.word	COMPILE,IMM
+	.word	HERE
+	.word	IMM,6,CELLS,PLUS	/* Compute the address of the code that replaces DOVAR in the created def */
+	.word	COMMA
+	.word	COMPILE,IMM
+	.word	COMPILE,LSTCRP	/* The cell pointed by this address contains the address of the DOVAR for the last CREATE */
+	.word	COMPILE,LOAD	/* Get the address that contains DOVAR */
+	.word	COMPILE,STORE		/* This actually stores the SAME code pointer (after the definition end) in each created instance. */
+	/* The code executed by the definition stops here. Next compiled words will be the DOES action. */
+	.word	COMPILE, RETURN
+
+	/*Start the code that will be executed by the CREATEd definition */
+	.word	COMPILE,code_ENTER
+	.word	COMPILE,RFROM	/* Just before executing the DOES action, we compile code that acts like the original DOVAR to get the CREATEd data field */
+	.word	RETURN		/* DOES> has finished preparing the mem. next compiled words are added. */
+
 /*===========================================================================*/
 /* Shell */
 /*===========================================================================*/
@@ -3239,7 +3384,7 @@ VARIABLE:
 /* PROMPT */
 	.section .dic
 word_PROMPT:
-	.word	word_VARIABLE
+	.word	word_DOES
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
