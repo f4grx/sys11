@@ -146,11 +146,13 @@
 IP:	.word	0	/* Instruction pointer */
 HEREP:	.word	0	/* Pointer to HERE, the address of next free byte in dic/data space */
 LASTP:	.word	0	/* Pointer to the last defined word entry */
-CURDP:	.word	0	/* Pointer to the word currently being defined. Stored in word : */
+TXVEC:	.word	0	/* Pointer to the word implementing EMIT */
+RXVEC:	.word	0	/* Pointer to the word implementing ?KEY */
 BASEP:	.word	0	/* Value of the base used for number parsing */
 HOLDP:	.word	0	/* Pointer used for numeric output */
-BEHAP:  .word   0       /* Pointer to word that implements the current behaviour: compile/interpret */
+BEHAP:  .word   0       /* Pointer to word implementing the current behaviour: compile/interpret */
 HANDP:	.word	0	/* Exception handler pointer */
+CURDP:	.word	0	/* Pointer to the word currently being defined. Stored in word : */
 CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 	/* Input text buffering */
@@ -185,12 +187,7 @@ _start:
 	clra
 	staa	INIT+0x1000
 
-	/* Init serial port */
-
-	ldaa	#0x30
-	staa	*BAUD
-	ldaa	#0x0C
-	staa	*SCCR2
+	/* Init serial port -> done in hi via IOINIT */
 
 	ldx	#word_BOOT
 	stx	*LASTP
@@ -354,10 +351,66 @@ code_JNZD:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+	.section .dic
+word_IOINIT:
+	.word	0
+	.byte	6
+	.ascii	"IOINIT"
+IOINIT:
+	.word	code_IOINIT
+	.text
+code_IOINIT:
+	ldaa	#0x30
+	staa	*BAUD
+	ldaa	#0x0C
+	staa	*SCCR2
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_IOTX:
+	.word	word_IOINIT
+	.byte	5
+	.ascii	"IOTX!"
+IOTX:
+	.word	code_IOTX
+	.text
+code_IOTX:
+	pula
+	pulb
+.Ltx:
+	brclr	*SCSR #SCSR_TDRE, .Ltx
+	stab	*SCDR
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_IORX:
+	.word	word_IOTX
+	.byte	5
+	.ascii	"?IORX"
+IORX:
+	.word	code_IORX
+	.text
+code_IORX:
+	clra
+	brclr	*SCSR #SCSR_RDRF, norx
+	ldab	*SCDR
+	pshb
+	psha
+	/* Push the TRUE flag */
+	coma		/* Turn 00 into FF */
+	tab		/* copy FF from A to B, now we have FFFF in D, which is TRUE */
+	bra	PUSHD
+norx:
+	clrb
+	bra	PUSHD
+
+/*---------------------------------------------------------------------------*/
 /* Execute the code whose address is on the stack */
 	.section .dic
 word_EXECUTE:
-	.word	0
+	.word	word_IORX
 	.byte	7
 	.ascii	"EXECUTE"
 EXECUTE:
@@ -367,6 +420,7 @@ EXECUTE:
 code_EXECUTE:
 	pulx		/* Retrieve a word address from stack. This address contains a code pointer */
 	bra	doEXECUTE
+
 
 /*---------------------------------------------------------------------------*/
 /* Store a cell at address (d a -- ) */
@@ -738,54 +792,6 @@ code_ZLESS:
 	bra	PUSHD
 
 /*===========================================================================*/
-/* Native IO */
-/*===========================================================================*/
-
-/*---------------------------------------------------------------------------*/
-	.section .dic
-word_EMIT:
-	.word	word_ZLESS
-	.byte	4
-	.ascii	"EMIT"
-EMIT:
-	.word	code_EMIT
-
-	.text
-code_EMIT:
-	pula
-	pulb
-.Lemit2:
-	brclr	*SCSR #SCSR_TDRE, .Lemit2
-	stab	*SCDR
-	bra	NEXT
-
-/*---------------------------------------------------------------------------*/
-/* ?key ( -- c t | f ) - return input character and true, or a false if no input. */
-	.section .dic
-word_QKEY:
-	.word	word_EMIT
-	.byte	4
-	.ascii	"?KEY"
-QKEY:
-	.word	code_QKEY
-
-	.text
-code_QKEY:
-	brclr	*SCSR #SCSR_RDRF, nokey
-	ldab	*SCDR
-	clra
-	pshb
-	psha
-	/* Push the TRUE flag */
-	coma		/* Turn 00 into FF */
-	tab		/* copy FF from A to B, now we have FFFF in D, which is TRUE */
-	bra	PUSHD
-nokey:
-	clra
-	clrb
-	bra	PUSHD
-
-/*===========================================================================*/
 /* Other forth words implemented in forth.
  * These words are pre-compiled lists, they are all executed by code_ENTER.
  * The following words can only be pointers to cells containing references to
@@ -797,6 +803,47 @@ nokey:
 /*===========================================================================*/
 /* Basic ops */
 /*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
+	.section .dic
+word_LOADEXEC:
+	.word	word_ZLESS
+	.byte	5
+	.ascii	"@EXEC"
+LOADEXEC:
+	.word	code_ENTER	/* ptr */
+	.word	LOAD		/* word */
+	.word	DUP		/* word word */
+	.word	BRANCHZ, noexec /* word, exit if null */
+	.word	EXECUTE		/* Execute the loaded forth word.*/
+noexec:
+	.word	RETURN		/* Nothing is stored. just return. */
+
+/*---------------------------------------------------------------------------*/
+	.section .dic
+word_EMIT:
+	.word	word_LOADEXEC
+	.byte	4
+	.ascii	"EMIT"
+EMIT:
+	.word	code_ENTER
+	.word	IMM,TXVEC
+	.word	LOADEXEC
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ?key ( -- c t | f ) - return input character and true, or a false if no input. */
+	.section .dic
+word_QKEY:
+	.word	word_EMIT
+	.byte	4
+	.ascii	"?KEY"
+QKEY:
+	.word	code_ENTER
+	.word	IMM,RXVEC
+	.word	LOADEXEC
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 	.section .dic
@@ -879,19 +926,6 @@ PICK:
 	.word	IMM,1,PLUS
 	.word	SPLOAD,PLUS,LOAD
 	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
-	.section .dic
-/* NO NAME */
-LOADEXEC:
-	.word	code_ENTER	/* ptr */
-	.word	LOAD		/* word */
-	.word	DUP		/* word word */
-	.word	BRANCHZ, noexec /* word, exit if null */
-	.word	EXECUTE		/* Execute the loaded forth word*/
-noexec:
-	.word	RETURN		/* Nothing is stored. just return. */
 
 /*---------------------------------------------------------------------------*/
 /* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
@@ -3285,10 +3319,26 @@ QUERY:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* Make IO vectors point at the default serial implementations */
+word_CONSOLE:
+	.word	word_QUERY
+	.byte	7
+	.ascii	"CONSOLE"
+CONSOLE:
+	.word	code_ENTER
+	.word	IMM, IOTX
+	.word	IMM, TXVEC
+	.word	STORE
+	.word	IMM, IORX
+	.word	IMM, RXVEC
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 	.section .dic
 word_QUIT:
-	.word	word_QUERY
+	.word	word_CONSOLE
 	.byte	4
 	.ascii	"QUIT"
 QUIT:
@@ -3312,7 +3362,7 @@ QUIT1:
 	.word	BRANCHZ, QUIT1	/* Consume catch return code. If thats zero, no error, loop again */
 
 	/* CATCH caught an error, DUPNZ left the error that was thrown on the stack */
-	/* TODO CONSOLE reinstall console (setup IO vectors for console, in case IO was happening from another device) */
+	.word	CONSOLE
 	.word	SHOWSTR
 	.byte	7
 	.ascii	"  err: "
@@ -3482,6 +3532,8 @@ word_hi:
 	.ascii	"hi"
 hi:
 	.word	code_ENTER
+	.word	IOINIT
+	.word	CONSOLE
 	.word	CR
 	.word	SHOWSTR
 	.byte	16

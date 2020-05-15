@@ -1,3 +1,6 @@
+IOINIT
+IOTX!
+?IORX
 EXECUTE
 !
 C!
@@ -20,6 +23,7 @@ XOR
 AND
 OR
 0<
+@EXEC
 EMIT
 ?KEY
 KEY
@@ -148,6 +152,7 @@ PROMPT
 ?STACK
 eval
 QUERY
+CONSOLE
 QUIT
 _TYPE
 dm+
