@@ -3103,8 +3103,8 @@ SNAME:
 	/* Parse word name and store at HERE */
 	.word	TOKEN		/* cstr | save name string at HERE */
 	.word	DUP		/* cstr cstr*/
-	.word	ISNAME		/* cstr code name | name 0*/
-	.word	BRANCHZ,sn2	/* cstr code | name */
+	.word	ISNAME		/* cstr code name | cstr name 0*/
+	.word	BRANCHZ,sn2	/* cstr code | cstr name */
 	/* not zero: name exists, warn user */
 	.word	SHOWSTR
 	.byte	7
@@ -3112,13 +3112,12 @@ SNAME:
 sn2:
 	/* goto end of token */
 	.word	DROP		/* cstr */
-	.word	DUP		/* cstr cstr */
-	.word	CLOAD		/* cstr len */
-	.word	CHARP		/* cstr len+1 */
-	.word	HERE
-	.word	PLUS
-	.word	IMM,HEREP
-	.word	STORE	/* Update HERE after the word name */
+	.word	CLOAD		/* len */
+	.word	CHARP		/* len+1 */
+	.word	HERE		/* len+1 here */
+	.word	PLUS		/* here_after_str */
+	.word	IMM,HEREP	/* here_after_str herep */
+	.word	STORE		/* -- Update HERE after the word name */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3677,8 +3676,6 @@ word_hi:
 	.ascii	"hi"
 hi:
 	.word	code_ENTER
-	.word	IOINIT
-	.word	CONSOLE
 	.word	CR
 	.word	SHOWSTR
 	.byte	16
@@ -3699,6 +3696,8 @@ word_BOOT:
 BOOT:
 	.word	code_ENTER
 BOOT1:
+	.word	IOINIT
+	.word	CONSOLE
 	.word	hi		/* Show a startup banner */
 	.word	DECIMAL		/* Setup environment */
 

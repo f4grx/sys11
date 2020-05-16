@@ -171,9 +171,9 @@ while ptr < off+length:
 
         print("[%04X] " % (ptr+base), end='')
         name = parse_pstring(cnt,ptr,0x3F)
-        print("name=%s" % name, "flags=%02X" % (cnt[ptr] & 0xC0))
         ptr += 1+len(name)
         internalname = findsymname(ptr+base).decode()
+        print("name=%s" % name, "(%s)" % internalname, "flags=%02X" % (cnt[ptr] & 0xC0))
         if dot:
             words.write(name.encode())
             words.write(b"\n")
@@ -203,9 +203,9 @@ while ptr < off+length:
     prev = 0
     while (ptr+base) < dicend:
         word = struct.Struct(">H").unpack_from(cnt, ptr)[0]
-        if word == wordstart:
+        if word == wordstart and prev != adrcompile:
             break #we found the PREV link of the next word
-        if word == adrenter:
+        if word == adrenter and prev != adrcompile:
             has_header = False #next word does not have a header
             break
 
