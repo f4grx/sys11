@@ -45,9 +45,9 @@ BusConn
 22 | nXIRQ
 23 | +5V
 24 | nRST
-25 | 
+25 | AS
 
-DIN 41612 rack
+DIN 41612 rack based on STEbus
 GND       |a 1 c|  GND
 5V        |  2  |  5V
 D0        |  3  |  D1

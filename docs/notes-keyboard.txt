@@ -27,7 +27,7 @@ Full ascii possible except NUL and 1Ch..1Fh
 05  ENQ     | CTRL-E
 06  ACK     | CTRL-F
 07  BEL     | CTRL-G
-08  BS      | SYM-0
+08  BS      | SYM-0 / CTRL-H
 09  HT      | CTRL-I
 0A  LF      | SHIFT-ENTER
 0B  VT      | CTRL-K

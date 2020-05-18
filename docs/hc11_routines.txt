@@ -6,30 +6,112 @@ MULU_16_16: PSHD               ; The HC11 has an 8-bit CPU, and so cannot deal w
            LDAB  $07,SP       ; the stack space where the two operands once occupied.
            MUL                ; This routine doesn't need any static variables, but it
            STD   $02,SP       ; does use 10 bytes of stack space, including the call to
+
            LDAA  $09,SP       ; the sub, and all parameter passing. A call to this sub
            LDAB  $06,SP       ; would look like this:
            MUL                ; LDD   Operand1    ; I used D to illustrate, but this should
            ADDB  $02,SP       ; PSHD              ; also work using an index register, or a
            ADCA  #0           ; LDD   Operand2    ; MOVW instruction. Placing values on the
            STD   $01,SP       ; PSHD              ; stack before the call is passing factors.
+
            LDAA  $08,SP       ; JSR   MULU_16_16  ; Call the sub.
            LDAB  $07,SP       ; PULD              ; Most significant word of product.
            MUL                ; PULD              ; Least significant word of product.
            ADDB  $02,SP       
            ADCA  $01,SP       ; READ THIS DAMMIT! You MUST re-adjust the stack after calling 
            STD   $01,SP       ; MULU_16_16 even if you aren't interested in the result.
+
            LDAA  $08,SP       ; What's more, you MUST PLACE four bytes on the stack before
            LDAB  $06,SP       ; calling MULU_16_16. If you do not do either of these things,
            MUL                ; your program will get a nice surprise when you try to RTS
            ADDB  $01,SP       ; next. Remember, this function modifies values on the stack
            ADCA  #0           ; that were placed there BEFORE the return address from the JSR
            STD   $00,SP       ; that called it. 
+
            PULD               ; Destroy the stack space we created at the beginning of this 
            STD   $04,SP       ; sub.
            PULD
            STD   $04,SP
            RTS
 
+    .section .dic
+word_UMSTAR:
+    .word   PREV
+    .byte   3
+    .ascii  "UM*"
+UMSTAR:
+    .word   code_UMSTAR
+    .text
+code_UMSTAR:
+    /* Multiplication input: 2 16-bit cells on TOS */
+    tsx
+    /* At this point the operands are at 0,X and 2,X */
+       These can be accessed bytewise in A and B to be used immediately in MUL. */
+       The result for MUL is in D. Accumulations are needed, we use a 4 byte pTEMP */
+       Data layout:
+     @X +0 +1 +2 +3
+        AH AL BH BL
+       Mul algorithm:
+             AH AL
+      x      BH BL
+      ------------
+             AL BL
+          AH BL
+          AL BH
+       AH BH
+      ------------
+       hi(AHBH) , lo(AHBH) + hi(ALBH) + hi(AHBL) , lo(ALBH) + lo(AHBL) + hi(ALBL) , L(ALBL)
+       
+      We will compute right to left.
+      */
+      
+    /* pre-clear the zone that will only be accessed by additions */
+    clra
+    clrb
+    std   *(pTEMP)
+
+    /* low bytes */
+    ldaa    1,X         /* AL */
+    ldab    3,X         /* BL */
+    mul                 /* ALBL in D */
+    std     *(pTEMP+2)
+
+    /* first middle pair */
+    ldaa    0,x         /* AH */
+    ldab    3,x         /* BL */
+    mul                 /* AHBL in D */
+    addd    *(pTEMP+1)
+    std     *(pTEMP+1)
+    bcc     step3
+    /* carry set -> propagate */
+    inc     pTemp
+step3:
+    /* second middle pair */
+    ldaa  1,x           /* AL */
+    ldab  2,x           /* BH */
+    mul                 /* ALBH in D */
+    addd    *(pTEMP+1)
+    std     *(pTEMP+1)
+    bcc     step4
+    /* carry set -> propagate */
+    inc     pTemp
+step4:
+    /* high pair */
+    ldaa  0,x           /* AH */
+    ldab  2,x           /* BH */
+    mul                 /* AHBH in D */
+    addd    *pTEMP
+    std     *(pTEMP+1)
+    /* done, store result as a dual cell value, high word pushed first.
+       We just replace the two cells at TOS */
+    ldd     *pTemp
+    std     2,X
+    ldd     *(pTemp+2)
+    std     0,X
+
+    bra     NEXT
+
+    /* Should be 59 bytes */
 
 http://test.dankohn.info/~myhome/projects/68HC11/AXIOM_HC11/Source/Users%20Group/
 
