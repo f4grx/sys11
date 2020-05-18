@@ -829,8 +829,11 @@ void hc11_core_clock(struct hc11_core *core)
                 break;
 
               case OP_MUL_INH   : /*C*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                tmp =  (core->regs.d & 0xFF);
+                tmp *= (core->regs.d >> 8);
+                core->regs.flags.C = (tmp >> 7) & 1;
+                core->regs.d = tmp;
+                log_msg(SYS_CORE, CORE_INST, "MUL\n");
                 break;
 
               case OP06_TAP_INH  : /*SXHINZVC*/

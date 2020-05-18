@@ -131,7 +131,8 @@
 	/* Forth memory map */
 	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) */
 	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
-	.equ	USE_RTS, 1
+	.equ	USE_RTS, 1		/* slightly smaller code using RTS to opcode jmp */
+	.equ	USE_MUL, 1		/* use HC11 multiplier instead of eforth UM* routine */
 
 	/* Forth config */
 	.equ	TIB_LEN, 80
@@ -158,7 +159,7 @@ CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 	/* Input text buffering */
 
-pTEMP:	.word	0	/* Temp variable used in LPARSE */
+pTEMP:	.long	0	/* Temp variable used in LPARSE and UM* */
 INN:	.word	0	/* Parse position in the input buffer */
 NTIB:	.word	0	/* Number of characters in current line */
 TIB:	.space	TIB_LEN	/* Input buffer */
@@ -319,7 +320,7 @@ code_BRANCHZ:
 	stx	*IP	/* Make IP look at next word after branch address */
 
 	pulx		/* Get flag */
-	cpx	#0x0000 /* TODO make it more efficient */
+	cpx	#0x0000 /* TODO make it more efficient  - not certain if possible */
 	beq	qbranch1
 	bra	NEXT	/* Not zero */
 
@@ -328,20 +329,20 @@ qbranch1: /* Pulled value was zero, do the branch */
 	bra	NEXT2
 
 /*---------------------------------------------------------------------------*/
-/* Pull a value from R stack. Decrement and push, jump if zero */
+/* Pull a value from R stack. If zero, skip, else decrement and jump to inline target */
 	.section .rodata
 JNZD:
 	.word	code_JNZD
 	.text
 code_JNZD:
 	ldd	2,y		/* get counter on return stack */
-	beq	.Lbranch	/* branch if loop is done (index is zero) */
+	beq	.Lbranch	/* index is zero -> loop is complete */
 	subd	#1		/* no, bump the counter */
 	std	2,y		/* and replace on stack */
-	bra	code_BRANCH	/* branch to target using existing code */
+	bra	code_BRANCH	/* branch to target using existing code that load target from next word */
 .Lbranch:
-	iny
-	iny			/* done, burn counter from stack */
+	ldab	#2		/* Remove counter from return stack. code efficiency similar to aby,aby */
+	aby
 	ldx	*IP		/* get the IP */
 	inx
 	inx			/* and get addr past branch target */
@@ -352,6 +353,7 @@ code_JNZD:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* ( -- ) init HC11 SCI */
 	.section .dic
 word_IOINIT:
 	.word	0
@@ -361,13 +363,15 @@ IOINIT:
 	.word	code_IOINIT
 	.text
 code_IOINIT:
-	ldaa	#0x30
+	ldaa	#0x30	/* 9600 bauds at 8 MHz */
 	staa	*BAUD
 	ldaa	#0x0C
 	staa	*SCCR2
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
+/* ( txbyte -- ) - Transmit byte on HC11 SCI */
+
 	.section .dic
 word_IOTX:
 	.word	word_IOINIT
@@ -385,6 +389,7 @@ code_IOTX:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
+/* ( -- rxbyte TRUE | FALSE ) - Receive byte from HC11 SCI */
 	.section .dic
 word_IORX:
 	.word	word_IOTX
@@ -395,16 +400,16 @@ IORX:
 	.text
 code_IORX:
 	clra
-	brclr	*SCSR #SCSR_RDRF, norx
+	brclr	*SCSR #SCSR_RDRF, norx	/* RX buffer not full: skip to return FALSE */
 	ldab	*SCDR
 	pshb
 	psha
 	/* Push the TRUE flag */
-	coma		/* Turn 00 into FF */
+	coma		/* Turn 00 into FF in just one byte! */
 	tab		/* copy FF from A to B, now we have FFFF in D, which is TRUE */
 	bra	PUSHD
 norx:
-	clrb
+	clrb		/* Finish FALSE cell */
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
@@ -1065,6 +1070,94 @@ word_UMSTAR:
 	.byte	3
 	.ascii	"UM*"
 UMSTAR:
+.if USE_MUL
+	.word	code_UMSTAR
+	.text
+code_UMSTAR:
+    /* Multiplication input: 2 16-bit cells on TOS */
+    tsx
+    /* At this point the operands are at 0,X and 2,X
+       These can be accessed bytewise in A and B to be used immediately in MUL.
+       The result for MUL is in D. Accumulations are needed, we use a 4 byte pTEMP
+       Data layout:
+     @X +0 +1 +2 +3
+        AH AL BH BL
+       Mul algorithm:
+             AH AL
+      x      BH BL
+      ------------
+             AL BL
+          AH BL
+          AL BH
+       AH BH
+      ------------
+       hi(AHBH) , lo(AHBH) + hi(ALBH) + hi(AHBL) , lo(ALBH) + lo(AHBL) + hi(ALBL) , L(ALBL)
+
+$1234 x $5678
+ 12 34
+ 56 78
+
+34 x 78 = 0x00001860
+34 x 56 = 0x00117800
+--------------------
+sum       0x00119060
+12 x 78 = 0x00087000
+--------------------
+sum       0x001a0060
+12 x 56 = 0x060c0000
+--------------------
+sum       0x06260060
+
+      We will compute right to left.
+      */
+
+    /* pre-clear the zone that will only be accessed by additions */
+    clra
+    clrb
+    std   *(pTEMP)
+
+    /* low bytes */
+    ldaa    1,X         /* AL */
+    ldab    3,X         /* BL */
+    mul                 /* ALBL in D */
+    std     *(pTEMP+2)
+
+    /* first middle pair */
+    ldaa    0,x         /* AH */
+    ldab    3,x         /* BL */
+    mul                 /* AHBL in D */
+    addd    *(pTEMP+1)
+    std     *(pTEMP+1)
+    bcc     step3
+    /* carry set -> propagate */
+    inc     pTEMP
+step3:
+    /* second middle pair */
+    ldaa  1,x           /* AL */
+    ldab  2,x           /* BH */
+    mul                 /* ALBH in D */
+    addd    *(pTEMP+1)
+    std     *(pTEMP+1)
+    bcc     step4
+    /* carry set -> propagate */
+    inc     pTEMP
+step4:
+    /* high pair */
+    ldaa  0,x           /* AH */
+    ldab  2,x           /* BH */
+    mul                 /* AHBH in D */
+    addd    *pTEMP
+    std     *pTEMP
+    /* done, store result as a dual cell value, high word pushed first.
+       We just replace the two cells at TOS */
+    ldd     *pTEMP
+    std     0,X
+    ldd     *(pTEMP+2)
+    std     2,X
+
+    bra     NEXT
+
+.else
 	.word	code_ENTER
 	.word	IMM,0,SWAP,IMM,15,TOR
 umst1:	.word	DUP,UPLUS,TOR,TOR
@@ -1074,6 +1167,7 @@ umst1:	.word	DUP,UPLUS,TOR,TOR
 umst2:	.word	JNZD,umst1
 	.word	ROT,DROP
 	.word	RETURN
+.endif
 
 /*---------------------------------------------------------------------------*/
 /*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
