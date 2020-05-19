@@ -265,8 +265,12 @@ code_ENTER:
 	bra	NEXT2		/* Manage next opcode address */
 
 /*---------------------------------------------------------------------------*/
-/* Exit ends the execution of a word. The previous IP is on the return stack, so we pull it */
+/* CORE 6.1.1380 EXIT ( -- ) End the execution of a word. The previous IP is on the return stack, so we pull it. */
 	.section .rodata
+word_RETURN:
+    .word   0
+    .byte   4
+    .ascii  "EXIT"
 RETURN:
 	.word	code_RETURN
 	.text
@@ -358,7 +362,7 @@ code_JNZD:
 /* PROPRIETARY ( -- ) init HC11 SCI */
 	.section .dic
 word_IOINIT:
-	.word	0
+	.word	word_RETURN
 	.byte	6
 	.ascii	"IOINIT"
 IOINIT:
@@ -607,7 +611,7 @@ code_RPSTORE:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* DUP ( u -- u u ) */
+/* CORE 6.1.1290 DUP ( u -- u u ) */
 	.section .dic
 word_DUP:
 	.word	word_RPSTORE
@@ -623,7 +627,7 @@ code_DUP:
 	bra	PUSHD		/* This will push top of stack again */
 
 /*---------------------------------------------------------------------------*/
-/* ( u1 u2 -- u1 u2 u1 ) */
+/* CORE 6.1.1990 OVER ( u1 u2 -- u1 u2 u1 ) */
 	.section .dic
 word_OVER:
 	.word	word_DUP
@@ -639,7 +643,7 @@ code_OVER:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* SWAP ( u v -- v u ) */
+/* CORE 6.1.2260 SWAP ( u v -- v u ) */
 	.section .dic
 word_SWAP:
 	.word	word_OVER
@@ -657,7 +661,7 @@ code_SWAP:
 	bra	PUSHD		/* This will push top of stack again */
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- ) */
+/* CORE 6.1.1260 DROP ( u -- ) */
 	.section .dic
 word_DROP:
 	.word	word_SWAP
@@ -676,7 +680,7 @@ code_DROP:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u+v cy ) */
+/* PROPRIETARY UM+ ( u v -- u+v cy ) - Add two cells, return sum and carry flag */
 	.section .dic
 word_UPLUS:
 	.word	word_DROP
@@ -698,7 +702,7 @@ code_UPLUS:
 	bra	PUSHD	/* Push second return item and do next word */
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u+v ) : + UM+ DROP ; */
+/* CORE 6.1.0120 + ( u v -- u+v ) - Add two cells */
 /* We do a native version for speed */
 	.section .dic
 word_PLUS:
@@ -718,7 +722,7 @@ code_PLUS:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u^v ) */
+/* CORE 6.1.2490 XOR ( u v -- u^v ) */
 	.section .dic
 word_XOR:
 	.word	word_PLUS
@@ -738,7 +742,7 @@ code_XOR:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u&v ) */
+/* CORE 6.1.0720 AND ( u v -- u&v ) */
 	.section .dic
 word_AND:
 	.word	word_XOR
@@ -758,7 +762,7 @@ code_AND:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u|v ) */
+/* CORE 6.1.1980 OR ( u v -- u|v ) */
 	.section .dic
 word_OR:
 	.word	word_AND
@@ -778,7 +782,7 @@ code_OR:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- u<0 ) push true if pull negative */
+/* CORE 6.1.0250 0< ( u -- u<0 ) push true if pull negative */
 	.section .dic
 word_ZLESS:
 	.word	word_OR
@@ -813,7 +817,7 @@ code_ZLESS:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/*( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
+/* PROPRIETARY ( wordptr -- ) Execute the forth word whose address is stored in the passed pointer */
 	.section .dic
 word_LOADEXEC:
 	.word	word_ZLESS
@@ -829,6 +833,7 @@ noexec:
 	.word	RETURN		/* Nothing is stored. just return. */
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.1320 EMIT ( c -- ) - Write char on output device */
 	.section .dic
 word_EMIT:
 	.word	word_LOADEXEC
@@ -841,7 +846,7 @@ EMIT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ?key ( -- c t | f ) - return input character and true, or a false if no input. */
+/* FACILITY 10.6.1.1755 ?KEY ( -- c t | f ) - return input character and true, or a false if no input. */
 	.section .dic
 word_QKEY:
 	.word	word_EMIT
@@ -854,6 +859,7 @@ QKEY:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.1750 KEY ( -- c ) - wait for a character on input device and return it */
 	.section .dic
 word_KEY:
 	.word	word_QKEY
@@ -867,7 +873,7 @@ key1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* nuf? ( -- t ) - return false if no input, else pause and if cr return true. */
+/* PROPRIETARY nuf? ( -- t ) - return false if no input, else pause and if cr return true. */
 	.section .dic
 word_NUFQ:
 	.word	word_KEY
@@ -887,6 +893,7 @@ nufq1:
 
 
 /*---------------------------------------------------------------------------*/
+/* PROPRIETARY SP0 ( -- a) - initial value of parameter stack pointer */
 	.section .dic
 word_SPZERO:
 	.word	word_NUFQ
@@ -898,6 +905,7 @@ SPZERO:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* PROPRIETARY SP0 ( -- a) - initial value of return stack pointer */
 	.section .dic
 word_RPZERO:
 	.word	word_SPZERO
@@ -909,7 +917,7 @@ RPZERO:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   depth     ( -- n )  return the depth of the data stack. */
+/* CORE 6.1.1200 DEPTH ( -- n )  return the depth of the data stack. */
 	.section .dic
 word_DEPTH:
 	.word	word_RPZERO
@@ -922,7 +930,7 @@ DEPTH:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* pick ( ... +n -- ... w ) - copy the nth stack item to tos. */
+/* CORE_EXT 6.2.2030 PICK ( ... +n -- ... w ) - copy the nth stack item to tos. */
 	.section .dic
 word_PICK:
 	.word	word_DEPTH
@@ -936,7 +944,7 @@ PICK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* DDUP ( u1 u2 -- u1 u2 u1 u2 ) */
+/* CORE 6.1.0380 2DUP ( u1 u2 -- u1 u2 u1 u2 ) */
 	.section .dic
 word_DDUP:
 	.word	word_PICK
@@ -949,7 +957,7 @@ DDUP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( x x -- ) */
+/* CORE 6.1.0370 2DROP ( x x -- ) */
 	.section .dic
 word_DDROP:
 	.word	word_DDUP
@@ -962,7 +970,7 @@ DDROP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* DUPNZ ( u -- u u if u NOT zero ) */
+/* CORE 6.1.0630 ?DUP ( u -- u u if u NOT zero ) */
 	.section .dic
 word_DUPNZ:
 	.word	word_DDROP
@@ -977,7 +985,7 @@ DUPNZ2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ROT ( a b c -- b c a ) */
+/* CORE 6.1.2160 ROT ( a b c -- b c a ) */
 	.section .dic
 word_ROT:
 	.word	word_DUPNZ
@@ -996,11 +1004,12 @@ ROT:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.1720 INVERT ( n -- n ) - invert all bits */
 	.section .dic
 word_NOT:
 	.word	word_ROT
-	.byte	3
-	.ascii	"NOT"
+	.byte	6
+	.ascii	"INVERT"
 NOT:
 	.word	code_ENTER
 	.word	IMM, 0xFFFF
@@ -1008,7 +1017,7 @@ NOT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- (-u) ) NEGATE: Twos complement */
+/* CORE 6.1.1910 NEGATE ( n -- -n ) - Twos complement */
 	.section .dic
 word_NEGATE:
 	.word	word_NOT
@@ -1022,7 +1031,7 @@ NEGATE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( d -- (-d) ) DNEGATE: Twos complement */
+/* DOUBLE 8.6.1.1230 DNEGATE ( d -- -d ) - Twos complement */
 	.section .dic
 word_DNEGATE:
 	.word	word_NEGATE
@@ -1036,7 +1045,7 @@ DNEGATE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( a b -- a-b ) - could be assembly to improve performance a bit */
+/* CORE 6.1.0160 - ( a b -- a-b ) - could be assembly to improve performance a bit */
 	.section .dic
 word_SUB:
 	.word word_DNEGATE
@@ -1049,6 +1058,7 @@ SUB:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.0690 ABS ( n -- |n| ) - absolute value */
 	.section .dic
 word_ABS:
 	.word	word_SUB
@@ -1064,8 +1074,7 @@ abspos:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*( u v -- uvlo uvhi ) - long 16x32 multiplication */
-/*TODO native implementation since hc11 has a multiplier */
+/* CORE 6.1.2360 UM* ( u v -- uvlo uvhi ) - long 16x32 multiplication */
 	.section .dic
 word_UMSTAR:
 	.word	word_ABS
@@ -1172,7 +1181,7 @@ umst2:	.word	JNZD,umst1
 .endif
 
 /*---------------------------------------------------------------------------*/
-/*( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
+/* CORE 6.1.0090 * ( u v -- u*v ) - short 16x16 multiplication with result same size as operands. we just drop half of the result bits */
 	.section .dic
 word_STAR:
 	.word	word_UMSTAR
@@ -1185,7 +1194,7 @@ STAR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*  m*    ( n n -- d ) signed multiply. return double product. */
+/* CORE 6.1.1810 M* ( n n -- d ) signed multiply. return double product. */
 word_MSTAR:
 	.word	word_STAR
 	.byte	2
@@ -1201,7 +1210,7 @@ msta1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   um/mod    ( udl udh u -- ur uq ) 32/16 division and modulo */
+/* CORE 6.1.2370 UM/MOD ( udl udh u -- ur uq ) - 32/16 division and modulo */
 /*TODO native implementation since hc11 has a divider*/
 	.section .dic
 word_UMMOD:
@@ -1235,7 +1244,8 @@ quotient is zero -> total quotient will be on 16 bits, good, else error
 	.word	code_UMMOD
 	.text
 code_UMMOD:
-
+    bra	NEXT2
+    
 .else
 	.word	code_ENTER
 	.word	DDUP
@@ -1268,13 +1278,13 @@ umm4:
 .endif
 
 /*---------------------------------------------------------------------------*/
-/* m/mod     ( d n -- r q ) signed floored divide of double by single. return mod and quotient. */
-word_MSMOD:
+/* CORE 6.1.1561 FM/MOD ( d n -- r q ) - signed floored divide of double by single. return mod and quotient. */
+word_FMSMOD:
 	.section .dic
 	.word	word_UMMOD
-	.byte	5
-	.ascii	"M/MOD"
-MSMOD:
+	.byte	6
+	.ascii	"FM/MOD"
+FMSMOD:
 	.word	code_ENTER
 	.word	DUP,ZLESS,DUP,TOR
 	.word	BRANCHZ,mmod1
@@ -1292,9 +1302,9 @@ mmod3:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* /mod ( n n -- r q ) signed divide. return mod and quotient. */
+/* CORE 6.1.0240 /MOD ( n n -- r q ) signed divide. return mod and quotient. */
 word_SLMOD:
-	.word	word_MSMOD
+	.word	word_FMSMOD
 	.byte	4
 	.ascii	"/MOD"
 SLMOD:
@@ -1302,11 +1312,11 @@ SLMOD:
 	.word	OVER
 	.word	ZLESS
 	.word	SWAP
-	.word	MSMOD
+	.word	FMSMOD
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* mod       ( n n -- r ) signed divide. return mod only. */
+/* CORE 6.1.1890 MOD ( n n -- r ) signed divide. return mod only. */
 word_MOD:
 	.word	word_SLMOD
 	.byte	3
@@ -1318,7 +1328,7 @@ MOD:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* /     ( n n -- q ) signed divide. return quotient only. */
+/* CORE 6.1.0230 / ( n n -- q ) signed divide. return quotient only. */
 word_SLASH:
 	.word	word_MOD
 	.byte	1
@@ -1331,7 +1341,7 @@ SLASH:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- u+2 ) */
+/* CORE 6.1.0880 CELL+ ( u -- u+2 ) */
 	.section .dic
 word_CELLP:
 	.word	word_SLASH
@@ -1344,7 +1354,7 @@ CELLP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- u+1 ) */
+/* CORE 6.1.0897 CHAR+ ( u -- u+1 ) */
 	.section .dic
 word_CHARP:
 	.word	word_CELLP
@@ -1357,7 +1367,7 @@ CHARP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u -- u*2 ) - compute bytes required to store u cells */
+/* CORE 6.1.0890 CELLS ( u -- u*2 ) - compute bytes required to store u cells */
 	.section .dic
 word_CELLS:
 	.word	word_CHARP
@@ -1370,7 +1380,7 @@ CELLS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u v -- u<v ) unsigned compare of top two items. */
+/* CORE 6.1.2340 U< ( u v -- u<v ) unsigned compare of top two items. */
 	.section .dic
 word_ULESS:
 	.word	word_CELLS
@@ -1392,7 +1402,7 @@ ULESS1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( n1 n2 -- t ) - signed compare of top two items. */
+/* CORE 6.1.0480 < ( n1 n2 -- t ) - signed compare of top two items. */
 	.section .dic
 word_LESS:
 	.word	word_ULESS
@@ -1413,7 +1423,7 @@ less1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* max ( n n -- n ) - return the greater of two top stack items. */
+/* CORE 6.1.1870 MAX ( n n -- n ) - return the greater of two top stack items. */
 word_MAX:
 	.word	word_LESS
 	.byte	3
@@ -1429,7 +1439,7 @@ max1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* min ( n n -- n ) - return the smaller of two top stack items. */
+/* CORE 6.1.1880 MIN ( n n -- n ) - return the smaller of two top stack items. */
 word_MIN:
 	.word	word_MAX
 	.byte	3
@@ -1446,7 +1456,7 @@ min1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( u ul uh -- ul <= u < uh ) */
+/* CORE_EXT 6.2.2440 WITHIN ( u ul uh -- ul <= u < uh ) */
 	.section .dic
 word_WITHIN:
 	.word	word_MIN
@@ -1463,11 +1473,11 @@ WITHIN:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( w w -- t ) equality flag FFFF if both value are the same (xor would return zero for equality)*/
+/* CORE 6.1.0530 = ( w w -- t ) equality flag FFFF if both value are the same (xor would return zero for equality)*/
 word_EQUAL:
 	.word	word_WITHIN
-	.byte	5
-	.ascii	"EQUAL"
+	.byte	1
+	.ascii	"="
 EQUAL:
 	.word	code_ENTER
 	.word	XOR
@@ -1483,7 +1493,7 @@ equtrue:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* COUNT ( cstradr -- bufadr len ) Return the buf addr and len of a pointed counted string */
+/* CORE 6.1.0980 COUNT ( cstradr -- bufadr len ) Return the buf addr and len of a pointed counted string */
 	.section .dic
 word_COUNT:
 	.word	word_EQUAL
@@ -1499,7 +1509,7 @@ COUNT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*(src dest count --) */
+/* STRING 17.6.1.0910 CMOVE (src dest count --) - memcpy */
 	.section .dic
 word_CMOVE:
 	.word	word_COUNT
@@ -1526,7 +1536,7 @@ cmov2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (buf len dest -- dest) Create a counted string in dest from len chars at buf */
+/* PROPRIETARY (buf len dest -- dest) Create a counted string in dest from len chars at buf */
 	.section .dic
 word_PACKS:
 	.word	word_CMOVE
@@ -1548,7 +1558,7 @@ PACKS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* csame (ptra ptrb len -- flag ) - compare strings on len bytes */
+/* PROPRIETARY csame (ptra ptrb len -- flag ) - compare strings on len bytes */
 	.section .dic
 word_CSAME:
 	.word	word_PACKS
@@ -1659,12 +1669,12 @@ NAMECOMPARE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   compare     ( buf1 len1 buf2 len2 -- flag ) */
+/*   STRING 17.6.1.0935 COMPARE ( buf1 len1 buf2 len2 -- flag ) */
 /*   compare strings up to the length of the shorter string. zero if match */
 /* TODO */
 
 /*---------------------------------------------------------------------------*/
-/* dostr Common code from inline string extraction. MUST BE used by another word,
+/* INTERNAL DOSTR Common code from inline string extraction. MUST BE used by another word,
    since the string is loaded from the previous-previous entry */
 	.section .dic
 /* NO NAME */
@@ -1681,24 +1691,20 @@ DOSTR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* IMMSTR ( -- adr ) Push the address of an inline counted string that follows this word */
+/* INTERNAL IMMSTR ( -- adr )
+ * This is a runtime-only routine. It is compiled by S" but not accessible otherwise.
+ */
 	.section .dic
-word_IMMSTR:
-	.word	word_NAMECOMPARE
-	.byte	5 + WORD_COMPILEONLY
-	.ascii	"str\"|"
 IMMSTR:
 	.word	code_ENTER
 	.word	DOSTR
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* SHOWSTR */
+/* INTERNAL SHOWSTR 
+ * This is a runtime-only routine. It is compiled by ." but not accessible otherwise.
+ */
 	.section .dic
-word_SHOWSTR:
-	.word	word_IMMSTR
-	.byte	3 + WORD_COMPILEONLY
-	.ascii	".\"|"
 SHOWSTR:
 	.word	code_ENTER
 	.word	DOSTR
@@ -1711,14 +1717,14 @@ SHOWSTR:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/*   pad       ( -- a ) - return the address of a temporary buffer. */
+/* CORE_EXT 6.2.2000 PAD ( -- a ) - return the address of a temporary buffer. */
 /* Note: this returns the END of a 80 byte buffer right after the current colon definition.
    The buffer is filled in reverse using a div/mod by base algorithm.
    No overflow because numeric output is never overlapping compilation. PAD is always used
    in the context defined by <# and #> */
 	.section .dic
 word_PAD:
-	.word	word_SHOWSTR
+	.word	word_NAMECOMPARE
 	.byte	3
 	.ascii	"PAD"
 PAD:
@@ -1730,7 +1736,7 @@ PAD:
 
 
 /*---------------------------------------------------------------------------*/
-/**/
+/*CORE 6.1.0490 <# ( -- ) */
 	.section .dic
 word_BDIGS:
 	.word	word_PAD
@@ -1744,7 +1750,7 @@ BDIGS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*  #>    ( w -- b u ) - prepare the output string to be type'd. */
+/*  CORE 6.1.0040 #> ( w -- b u ) - prepare the output string to be type'd. */
 	.section .dic
 word_EDIGS:
 	.word	word_BDIGS
@@ -1761,7 +1767,7 @@ EDIGS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*  hold ( c -- ) - insert a character into the numeric output string. Storage is predecremented. */
+/* CORE 6.1.1670 HOLD ( c -- ) - insert a character into the numeric output string. Storage is predecremented. */
 	.section .dic
 word_HOLD:
 	.word	word_EDIGS
@@ -1780,7 +1786,7 @@ HOLD:
 	.word	RETURN
 	
 /*---------------------------------------------------------------------------*/
-/* digit ( u -- c ) - convert digit u to a character.*/
+/* PROPRIETARY DIGIT ( u -- c ) - convert digit u to a character.*/
 	.section .dic
 word_DIGIT:
 	.word	word_HOLD
@@ -1799,7 +1805,7 @@ DIGIT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* extract ( n base -- n c ) - extract the least significant digit from n. */
+/* PROPRIETARY EXTRACT ( n base -- n c ) - extract the least significant digit from n. */
 	.section .dic
 word_EXTRACT:
 	.word	word_DIGIT
@@ -1815,7 +1821,7 @@ EXTRACT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* # ( u -- u ) - extract one digit from u and append the digit to output string. */
+/* CORE 6.1.0030 # ( u -- u ) - extract one digit from u and append the digit to output string. */
 	.section .dic
 word_DIG:
 	.word	word_EXTRACT
@@ -1830,7 +1836,7 @@ DIG:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* #s ( u -- 0 ) - convert u until all digits are added to the output string. */
+/* CORE 6.1.0050 #S ( u -- 0 ) - convert u until all digits are added to the output string. */
 	.section .dic
 word_DIGS:
 	.word	word_DIG
@@ -1847,7 +1853,7 @@ digs2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* sign ( n -- ) - add a minus sign to the numeric output string. */
+/* CORE 6.1.2210 SIGN ( n -- ) - add a minus sign to the numeric output string. */
 	.section .dic
 word_SIGN:
 	.word	word_DIGS
@@ -1864,7 +1870,7 @@ sign1:
 
 
 /*---------------------------------------------------------------------------*/
-/*   str       ( n -- b u ) - convert a signed integer to a numeric string. */
+/* PROPRIETARY STR       ( n -- b u ) - convert a signed integer to a numeric string. */
 	.section .dic
 word_STR:
 	.word	word_SIGN
@@ -1883,7 +1889,7 @@ STR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* u.r ( u +n -- ) - display an unsigned integer in n column, right justified. */
+/* CORE_EXT 6.2.2330 U.R ( u +n -- ) - display an unsigned integer in n column, right justified. */
 	.section .dic
 word_UDOTR:
 	.word	word_STR
@@ -1897,7 +1903,7 @@ UDOTR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* .r ( n +n -- ) - display an integer in a field of n columns, right justified. */
+/* CORE 6.2.0210 .R ( n +n -- ) - display an integer in a field of n columns, right justified. */
 	.section .dic
 word_DOTR:
 	.word	word_UDOTR
@@ -1910,7 +1916,7 @@ DOTR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   u.    ( u -- ) - display an unsigned integer in free format. */
+/* CORE 6.1.2320 U. ( u -- ) - display an unsigned integer in free format. */
 	.section .dic
 word_UDOT:
 	.word	word_DOTR
@@ -1926,7 +1932,7 @@ UDOT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   .     ( w -- ) display an integer in free format, preceeded by a space. */
+/* CORE 6.1.0180 . ( w -- ) display an integer in free format, preceeded by a space. */
 	.section .dic
 word_DOT:
 	.word	word_UDOT
@@ -1954,6 +1960,7 @@ dot1:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.0750 BASE ( -- a ) - push address of current numeric base */
 	.section .dic
 word_BASE:
 	.word	word_DOT
@@ -1965,6 +1972,7 @@ BASE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE_EXT 6.2.1660 HEX ( -- ) */
 	.section .dic
 word_HEX:
 	.word	word_BASE
@@ -1978,6 +1986,7 @@ HEX:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.1170 DECIMAL ( -- ) */
 	.section .dic
 word_DECIMAL:
 	.word	word_HEX
@@ -1991,7 +2000,7 @@ DECIMAL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( c base -- u t ) convert ascii to digit with success flag*/
+/* INTERNAL DIGIT? ( c base -- u t ) convert ascii to digit with success flag*/
 	.section .dic
 word_DIGITQ:
 	.word	word_DECIMAL
@@ -2024,7 +2033,8 @@ dgtq1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*   number?   ( cstr -- n t | a f ) - convert a number counted string to integer. push a flag on tos. */
+/* PROPRIETARY NUMBER? ( cstr -- n t | a f ) - convert a number counted string to integer. push a flag on tos. */
+/* F2012 instead requires CORE 6.1.0570 >NUMBER (ud1 c-addr u1 -- ud2 c-addr2 u2) */
 	.section .dic
 word_NUMBERQ:
 	.word	word_DIGITQ
@@ -2125,7 +2135,7 @@ numq6:	/* Process String End	  cstr 0 strbuf | R:base is_negative */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Push the address of the next free byte ( -- a) */
+/* CORE 6.1.1650 HERE ( -- a) Push the address of the next free byte */
 word_HERE:
 	.word	word_NUMBERQ
 	.byte	4
@@ -2137,7 +2147,7 @@ HERE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (val adr -- ) add val to the contents of adr */
+/* CORE 6.1.0130 +! (val adr -- ) add val to the contents of adr */
 	.section .dic
 word_PLUS_STORE:
 	.word	word_HERE
@@ -2158,6 +2168,7 @@ PLUS_STORE:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* PROPRIETARY BS ( -- 8 ) */
 	.section .dic
 word_BS:
 	.word	word_PLUS_STORE
@@ -2169,7 +2180,7 @@ BS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- 32 ) */
+/* CORE 6.1.0770 BL ( -- 32 ) */
 	.section .dic
 word_BL:
 	.word	word_BS
@@ -2181,7 +2192,7 @@ BL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Emit a blank char */
+/* CORE 6.1.2220 SPACE ( -- ) Emit a blank char */
 	.section .dic
 word_SPACE:
 	.word	word_BL
@@ -2194,7 +2205,7 @@ SPACE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Emit a blank char */
+/* CORE 6.1.2230 SPACES ( n -- ) Emit blank chars */
 	.section .dic
 word_SPACES:
 	.word	word_SPACE
@@ -2214,7 +2225,7 @@ spcdone:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Emit a carriage return */
+/* CORE 6.1.0990 CR ( -- ) Emit a carriage return */
 	.section .dic
 word_CR:
 	.word	word_SPACES
@@ -2229,7 +2240,7 @@ CR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
+/* PROPRIETARY ( buf bufend ptr -- buf bufend ptr  )  if ptr == buf */
 /* ( buf bufend ptr -- buf bufend ptr-1)  if ptr  > buf */
 /* Do a backspace: if not a bufstart, remove char from buf, then back, space, back */
 	.section .dic
@@ -2260,8 +2271,7 @@ bksp1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( buf bufend ptr c -- buf bufend (ptr+1) ) accumulate character in buffer - no bounds checking */
-
+/* PROPRIETARY TAP ( buf bufend ptr c -- buf bufend (ptr+1) ) accumulate character in buffer - no bounds checking */
 	.section .dic
 word_TAP:
 	.word	word_BKSP
@@ -2278,9 +2288,9 @@ TAP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (buf bufend ptr c -- buf bufend ptr) */
+/* PROPRIETARY TTAP (buf bufend ptr c -- buf bufend ptr) */
 	.section .dic
-word_TTAP: /* should be vectorable */
+word_TTAP:
 	.word	word_TAP
 	.byte	4
 	.ascii	"TTAP"
@@ -2306,8 +2316,9 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
 
 
 /*---------------------------------------------------------------------------*/
-/* ( buf len -- buf count) Read up to len or EOL into buf.
+/* PROPRIETARY ACCEPT ( buf len -- buf count) Read up to len or EOL into buf.
    Return buf and char count */
+/* TODO change to ( buf len -- count ) to comply with F2012 CORE 6.1.0695 */
 	.section .dic
 word_ACCEPT:
 	.word	word_TTAP
@@ -2340,7 +2351,7 @@ ACCEPT4:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( buf len --) Emit len chars starting at buf. */
+/* CORE 6.1.2310 TYPE ( buf len -- ) Emit len chars starting at buf. */
 	.section .dic
 word_TYPE:
 	.word	word_ACCEPT
@@ -2361,6 +2372,7 @@ type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/*PROPRIETARY >CHAR ( char -- char ) - filter non printable chars */
 word_TCHAR:
 	.word	word_TYPE
 	.byte	5
@@ -2379,7 +2391,7 @@ tcha1:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* (buf buflen delim -- buf len deltabuf) skip spaces, find word that ends at delim*/
+/* PROPRIETARY (buf buflen delim -- buf len deltabuf) skip spaces, find word that ends at delim*/
 	.section .dic
 word_LPARSE:
 	.word	word_TCHAR
@@ -2388,7 +2400,7 @@ word_LPARSE:
 LPARSE:
 	.word	code_ENTER	/**/
 	.word	IMM,pTEMP	/*buf buflen delim &TEMP */
-	.word	STORE		/*buf buflen */
+	.word	STORE		/*buf buflen - TEMP contains delim */
 
 	.word	OVER		/*buf buflen bufinit */
 	.word	TOR		/*buf buflen | R: bufinit */
@@ -2479,7 +2491,7 @@ pars8:	/* Empty buffer case */	/*buf 0 | R:bufinit */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (delim -- buf len) parse TIB at current pos and return delim spaced word */
+/* CORE_EXT 6.2.2008 PARSE (delim "ccc<delim>" -- buf len) parse TIB at current pos and return delim spaced word */
 	.section .dic
 word_PARSE:
 	.word	word_LPARSE
@@ -2508,10 +2520,58 @@ PARSE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (Parse-word')' -- ) Display a string */
+/* CORE_EXT 6.2.2020 PARSE-NAME ( "<spaces>name<space>" -- c-addr u ) TODO */
+/* Goal is to avoid the use of PACKS that unnecessarily copies the string.
+   As a consequence, this method also
+   - avoids polluting HERE to save the compiled string
+   - avoids the need for NAMECOMPARE and internal_compare
+   However this is usually not a problem since the PACKed string is put in the
+   right place to create new colon definitions.
+*/
+
+/* WORD and TOKEN. Create a counted string at HERE, which
+   is used as temp memory. HERE pointer is not modified so each parsed word
+   is stored at the same address (in unused data space). If an executed or
+   compiled word manipulates HERE, then it is no problem: the user data will
+   overwrite the word that was parsed and the next word will be stored a bit
+   farther. It does not matter since this buffer is only used to FIND the code
+   pointer for this word, usually. Another advantage of storing the word at
+   HERE is that it helps compiling new word definitions! */
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.2450 WORD (delim "<delims>ccc,delim>" -- cs) */
+/* Exceptional F2012 incompatibility: 6.1.2450 originally skip initial DELIMITERS
+   while this implementation only skips initial SPACES only. */
+	.section .dic
+word_WORD:
+	.word	word_PARSE
+	.byte	4
+	.ascii	"WORD"
+WORD:
+	.word	code_ENTER
+	.word	PARSE		/*buf len*/
+	.word	HERE		/*buf len dest*/
+	.word	PACKS		/*dest*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* PROPRIETARY TOKEN ( -- cs) */
+	.section .dic
+word_TOKEN:
+	.word	word_WORD
+	.byte	5
+	.ascii	"TOKEN"
+TOKEN:
+	.word	code_ENTER
+	.word	BL
+	.word	WORD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* PROPRIETARY (Parse-word')' -- ) Display a string while compiling. Could be removed to save mem. */
 	.section .dic
 word_DOTPAR:
-	.word	word_PARSE
+	.word	word_TOKEN
 	.byte	2 + WORD_IMMEDIATE
 	.ascii	".("
 DOTPAR:
@@ -2522,7 +2582,7 @@ DOTPAR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (Parse-word')' -- ) Inline comment, nop */
+/* CORE 6.1.0080 ( ("ccc)" -- ) Inline comment, nop */
 	.section .dic
 word_PAR:
 	.word	word_DOTPAR
@@ -2536,7 +2596,7 @@ PAR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Line comment , discard the rest of the input buffer */
+/* CORE_EXT 6.2.2535 \ ( -- ) Line comment , discard the rest of the input buffer */
 	.section .dic
 word_BSLASH:
 	.word	word_PAR
@@ -2555,7 +2615,11 @@ BSLASH:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* find ( cstr voc -- codeadr cstr | cstr f ) */
+/* PROPRIETARY find ( cstr voc -- codeadr cstr | cstr f ) */
+/* TODO : rename */
+/* TODO : extend to return 1 for immediates and -1 for not immediate */
+/* TODO : Do not find compile-only words if not in interpretation state */
+
 /* Search a name in a vocabulary (pointer to last entry of a chain). */
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 	.section .dic
@@ -2607,47 +2671,15 @@ found:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* WORD and TOKEN. Create a counted string at HERE, which
-   is used as temp memory. HERE pointer is not modified so each parsed word
-   is stored at the same address. If an executed or compiled word manipulates HERE,
-   then it is no problem: the user data will overwrite the word that was parsed and
-   the next word will be stored a bit farther. It does not matter since this buffer
-   is only used to FIND the code pointer for this word, usually.
-   Another advantage of storing the word at HERE is that it helps compiling new
-   word definitions! */
-/*(delim -- cs)*/
-	.section .dic
-word_WORD:
-	.word	word_FIND
-	.byte	4
-	.ascii	"WORD"
-WORD:
-	.word	code_ENTER
-	.word	PARSE		/*buf len*/
-	.word	HERE		/*buf len dest*/
-	.word	PACKS		/*dest*/
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* ( -- cs) */
-	.section .dic
-word_TOKEN:
-	.word	word_WORD
-	.byte	5
-	.ascii	"TOKEN"
-TOKEN:
-	.word	code_ENTER
-	.word	BL
-	.word	WORD
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
+/* PROPRIETARY ISNAME ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
+/* TODO CHANGE TO CORE 6.1.1550 FIND and update semantics */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
+/* TODO : extend to return 1 for immediates and -1 for not immediate */
+/* TODO : Do not find compile-only words if not in interpretation state */
 
 	.section .dic
 word_ISNAME:
-	.word	word_TOKEN
+	.word	word_FIND
 	.byte	5
 	.ascii	"NAME?"
 ISNAME:
@@ -2662,7 +2694,8 @@ ISNAME:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-	.section .dic
+/* PROPRIETARY HANDLER ( -- a ) Return address of current exception handler */
+    .section .dic
 word_HANDLER:
 	.word	word_ISNAME
 	.byte	7
@@ -2673,7 +2706,8 @@ HANDLER:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( xt -- err#\0 ) setup frame to handle errors thrown while executing xt */
+/* PROPRIETARY CATCH ( xt -- err#\0 ) setup frame to handle errors thrown while executing xt */
+/* TODO make it use int codes instead of strings to comply with EXCEPTION 9.6.1.0875 */
 	.section .dic
 word_CATCH:
 	.word	word_HANDLER
@@ -2703,7 +2737,8 @@ CATCH:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( err# -- err# ) return from the encapsulating catch with an error code */
+/* PROPRIETARY THROW  ( err# -- err# ) return from the encapsulating catch with an error code */
+/* TODO make it use int codes to comply with EXCEPTION 9.6.1.2275 */
 	.section .dic
 word_THROW:
 	.word	word_CATCH
@@ -2729,7 +2764,8 @@ THROW:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) Jump to quit */
+/* CORE 6.1.0670 ABORT ( -- ) Jump to quit */
+/* TODO use int codes to comply with EXCEPTION_EXT 9.6.2.0670 */
 	.section .dic
 word_ABORT:
 	.word	word_THROW
@@ -2743,7 +2779,7 @@ ABORT:
 	.word	THROW
 
 /*---------------------------------------------------------------------------*/
-/* abort"    ( f -- ) run time routine of abort" . abort with a message. */
+/* PROPRIETARY ABORT" ( f -- ) run time routine of abort" . abort with a message. */
 	.section .dic
 word_ABORTNZ:
 	.word	word_ABORT
@@ -2764,7 +2800,8 @@ abor1:	/* Cancel abort if TOS was zero*/
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Set the system state to interpretation */
+/* PROPRIETARY Set the system state to interpretation */
+/* TODO use STATE instead and comply with CORE 6.1.2500 */
 	.section .dic
 word_INTERP:
 	.word	word_ABORTNZ
@@ -2778,7 +2815,8 @@ INTERP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( a -- ) */
+/* PROPRIETARY $INTERPRET ( a -- ) */
+/* TODO use STATE instead and merge with $COMPILE as EVAL */
 	.section .dic
 word_DOINTERPRET:
 	.word	word_INTERP
@@ -2815,6 +2853,7 @@ componly:
 
 /*---------------------------------------------------------------------------*/
 /* Set the system state to compilation */
+/* TODO use STATE instead and comply with CORE 6.1.2540 */
 	.section .dic
 word_COMPIL:
 	.word	word_DOINTERPRET
@@ -2828,7 +2867,8 @@ COMPIL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* $compile  ( a -- ) - compile next word to code dictionary as a token or literal. */
+/* PROPRIETARY $COMPILE ( a -- ) - compile next word to code dictionary as a token or literal. */
+/* TODO use STATE instead and merge with $COMPILE as EVAL */
 word_DOCOMPILE:
 	.word	word_COMPIL
 	.byte	8
@@ -2863,7 +2903,7 @@ notfoundc:
 	.word	THROW
 
 /*---------------------------------------------------------------------------*/
-/* CORE 6.1.0070 ' ( <spaces>name -- ca ) - search context vocabularies for the next word in input stream. */
+/* CORE 6.1.0070 ' ( "<spaces>name" -- ca ) - search context vocabularies for the next word in input stream. */
 	.section .dic
 word_TICK:
 	.word	word_DOCOMPILE
@@ -2879,7 +2919,7 @@ tick1:
 	.word	THROW
 
 /*---------------------------------------------------------------------------*/
-/*  allot     ( n -- ) - allocate n bytes to the code dictionary. */
+/* CORE 6.1.0710 ALLOT ( n -- ) - allocate n bytes to the code dictionary. */
 	.section .dic
 word_ALLOT:
 	.word	word_TICK
@@ -2892,7 +2932,7 @@ ALLOT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
+/* CORE 6.1.0150 , (u -- ) Pop a word and save it HERE, then make HERE point to the next cell */
 	.section .dic
 word_COMMA:
 	.word	word_ALLOT
@@ -2909,7 +2949,7 @@ COMMA:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next char */
+/* CORE 6.1.0860 C, (u -- ) Pop a word and the LSB char it HERE, then make HERE point to the next char */
 	.section .dic
 word_CCOMMA:
 	.word	word_COMMA
@@ -2926,24 +2966,25 @@ CCOMMA:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* [compile] ( -- ; <string> ) - compile the next immediate word into code dictionary. */
+/* POSTPONE ( "<spaces>ccc<space>" -- ) - compile the next immediate word into code dictionary. */
 	.section .dic
-word_BRCOMPILE:
+word_POSTPONE:
 	.word	word_CCOMMA
 	.byte	9 + WORD_IMMEDIATE
 	.ascii	"[COMPILE]"
-BRCOMPILE:
+POSTPONE:
 	.word	code_ENTER
 	.word	TICK
 	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* compile   ( -- ) - compile the next address in colon list to code dictionary. */
-
+/* INTERNAL compile ( -- ) - compile the next address in colon list to code dictionary. */
+/* This is a short hand for IMM,VALUE,COMMA. Only goal is to save ROM space (one word saved per use wrt to direct IMM). */
+/* TODO rename COMPILE_IMM */
 	.section .dic
 word_COMPILE:
-	.word	word_BRCOMPILE
+	.word	word_POSTPONE
 	.byte	7 + WORD_COMPILEONLY
 	.ascii	"COMPILE"
 COMPILE:
@@ -2957,21 +2998,21 @@ COMPILE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* literal   ( w -- ) - compile tos to code dictionary as an integer literal. */
+/* CORE 6.1.1780 LITERAL ( w -- ) - compile tos to code dictionary as an integer literal. */
 
 	.section .dic
-word_LITTERAL:
+word_LITERAL:
 	.word	word_COMPILE
-	.byte	8 + WORD_IMMEDIATE
-	.ascii	"LITTERAL"
-LITTERAL:
+	.byte	7 + WORD_IMMEDIATE
+	.ascii	"LITERAL"
+LITERAL:
 	.word	code_ENTER
 	.word	COMPILE,IMM
 	.word	COMMA
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* $,"       ( -- ) - compile a literal string up to next " */
+/* PROPRIETARY $,"       ( -- ) - compile a literal string up to next " */
 word_SCOMPQ:
 	.word	word_LITTERAL
 	.byte	3
@@ -2990,7 +3031,7 @@ SCOMPQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* for ( -- a ) - start a for-next loop structure in a colon definition. */
+/* PROPRIETARY for ( -- a ) - start a for-next loop structure in a colon definition. */
 /* This word pushes the current address on the data stack for later jump back*/
 	.section .dic
 word_FOR:
@@ -3004,25 +3045,11 @@ FOR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* begin ( -- a ) - start an infinite or indefinite loop structure. */
-/* This word pushes the current address on the data stack for later jump back*/
-
-	.section .dic
-word_BEGIN:
-	.word	word_FOR
-	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
-	.ascii	"BEGIN"
-BEGIN:
-	.word	code_ENTER
-	.word	HERE
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* next ( a -- ) - terminate a for-next loop structure. */
+/* PROPRIETARY next ( a -- ) - terminate a for-next loop structure. */
 /* This word USES the loop-start address that was pushed on the stack by FOR */
 	.section .dic
 word_NEXT:
-	.word	word_BEGIN
+	.word	word_FOR
 	.byte	4 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"NEXT"
 NXT:
@@ -3032,11 +3059,41 @@ NXT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* until ( a -- ) - terminate a begin-until indefinite loop structure. */
+/* PROPRIETARY AFT ( a -- a a ) - jump to then in a for-aft-then-next loop the first time through. */
+	.section .dic
+word_AFT:
+	.word	word_NEXT
+	.byte	3 + WORD_COMPILEONLY + WORD_IMMEDIATE
+	.ascii	"AFT"
+AFT:
+	.word	code_ENTER
+	.word	DROP
+	.word	AHEAD
+	.word	BEGIN
+	.word	SWAP
+	.word	RETURN
+
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.0760 BEGIN ( -- a ) - start an infinite or indefinite loop structure. */
+/* This word pushes the current address on the data stack for later jump back*/
+
+	.section .dic
+word_BEGIN:
+	.word	word_AFT
+	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
+	.ascii	"BEGIN"
+BEGIN:
+	.word	code_ENTER
+	.word	HERE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.2390 UNTIL ( a -- ) - terminate a begin-until indefinite loop structure. */
 /* This word USES the loop-start address that was pushed on the stack by BEGIN */
 	.section .dic
 word_UNTIL:
-	.word	word_NEXT
+	.word	word_BEGIN
 	.byte	5 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"UNTIL"
 UNTIL:
@@ -3046,7 +3103,7 @@ UNTIL:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* again ( a -- ) - terminate a begin-again infinite loop structure. */
+/* CORE_EXT 6.2.0700 AGAIN ( a -- ) - terminate a begin-again infinite loop structure. */
 /* This word USES the loop-start address that was pushed on the stack by BEGIN */
 	.section .dic
 word_AGAIN:
@@ -3060,7 +3117,7 @@ AGAIN:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* if ( -- a ) - begin a conditional branch structure. */
+/* CORE 6.1.1700 IF ( -- a ) - begin a conditional branch structure. */
 /* This word pushes the address where the forward jump address will have to be stored by THEN or ELSE */
 	.section .dic
 word_IF:
@@ -3075,7 +3132,7 @@ IF:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ahead ( -- a ) - compile a forward branch instruction. */
+/* TOOLS 15.6.2.0702 AHEAD ( -- a ) - compile a forward branch instruction. */
 section .dic
 word_AHEAD:
 	.word	word_IF
@@ -3090,7 +3147,7 @@ AHEAD:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* repeat ( a a -- ) - terminate a begin-while-repeat indefinite loop. */
+/* CORE 6.1.2140 REPEAT ( a a -- ) - terminate a begin-while-repeat indefinite loop. */
 	.section .dic
 word_REPEAT:
 	.word	word_AHEAD
@@ -3105,7 +3162,7 @@ REPEAT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* then ( a -- ) - terminate a conditional branch structure. */
+/* CORE 6.1.2270 THEN ( a -- ) - terminate a conditional branch structure. */
 	.section .dic
 word_THEN:
 	.word	word_REPEAT
@@ -3119,25 +3176,10 @@ THEN:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* aft ( a -- a a ) - jump to then in a for-aft-then-next loop the first time through. */
-	.section .dic
-word_AFT:
-	.word	word_THEN
-	.byte	3 + WORD_COMPILEONLY + WORD_IMMEDIATE
-	.ascii	"AFT"
-AFT:
-	.word	code_ENTER
-	.word	DROP
-	.word	AHEAD
-	.word	BEGIN
-	.word	SWAP
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* else ( a -- a ) - start the false clause in an if-else-then structure. */
+/* CORE 6.1.1310 ELSE ( a -- a ) - start the false clause in an if-else-then structure. */
 	.section .dic
 word_ELSE:
-	.word	word_AFT
+	.word	word_THEN
 	.byte	4 + WORD_COMPILEONLY + WORD_IMMEDIATE
 	.ascii	"ELSE"
 ELSE:
@@ -3148,7 +3190,7 @@ ELSE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* while ( a -- a a ) - conditional branch out of a begin-while-repeat loop. */
+/* CORE 6.1.2430 WHILE ( a -- a a ) - conditional branch out of a begin-while-repeat loop. */
 	.section .dic
 word_WHILE:
 	.word	word_ELSE
@@ -3162,6 +3204,8 @@ WHILE:
 
 /*---------------------------------------------------------------------------*/
 /* ABORT" */
+/* Words that need a string literal after them have an immediate word for compilation and a runtime word that is actually compiled. */
+/* TODO make compliant with CORE 6.1.0680 and EXCEPTION_EXT 9.6.2.0680 */
 	.section .dic
 word_ABORTQ:
 	.word	word_WHILE
@@ -3174,12 +3218,16 @@ ABORTQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* $" ( -- ; <string> ) - compile an inline string literal. */
+/* CORE 6.1.2165 S" - compile an inline string literal. 
+   COMPILE TIME: ( "ccc<quote>" -- ) -> STRQ, executes common string litteral definition SCOMPQ
+   RUN TIME:     ( -- c-addr u )     -> IMMSTR, reads following string litteral defined by SCOMPQ
+ */
+/* Words that need a string literal after them have an immediate word for compilation and a runtime word that is actually compiled. */
 	.section .dic
 word_STRQ:
 	.word	word_ABORTQ
 	.byte	2 + WORD_COMPILEONLY + WORD_IMMEDIATE
-	.ascii	"$\""
+	.ascii	"S\""
 STRQ:
 	.word	code_ENTER
 	.word	COMPILE,IMMSTR
@@ -3187,7 +3235,11 @@ STRQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ." ( -- ; <string> ) compile an inline string literal to be typed out at run time. */
+/* CORE 6.1.0190 ." - compile an inline string literal to be typed out at run time.
+   COMPILE TIME: ( "ccc<quote>" -- ) -> DOTQ, executes common string litteral definition SCOMPQ
+   RUN TIME:     ( -- )              -> SHOWSTR, reads following string litteral defined by SCOMPQ
+ */
+/* Words that need a string literal after them have an immediate word for compilation and a runtime word that is actually compiled. */
 word_DOTQ:
 	.word	word_STRQ
 	.byte	2 + WORD_COMPILEONLY + WORD_IMMEDIATE
@@ -3199,21 +3251,10 @@ DOTQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ?UNIQUE */
-	.section .dic
-word_UNIQUE:
-	.word	word_DOTQ
-	.byte	7
-	.ascii	"?UNIQUE"
-UNIQUE:
-	.word	code_ENTER
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* $,N ( na -- ) - build a new dictionary name using the string at na. */
+/* PROPRIETARY $,N ( na -- ) - build a new dictionary name using the string at na. */
 	.section .dic
 word_SNAME:
-	.word	word_UNIQUE
+	.word	word_DOTQ
 	.byte	3
 	.ascii	"$,N"
 SNAME:
@@ -3247,7 +3288,7 @@ sn2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* : ( -- ; <string> ) - start a new colon definition using next word as its name. */
+/* CORE 6.1.0450 : ( "<spaces>ccc<space>" -- ) - start a new colon definition using next word as its name. */
 	.section .dic
 word_COLON:
 	.word	word_SNAME
@@ -3262,7 +3303,7 @@ COLON:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Link last word in current vocabulary */
+/* PROPRIETARY OVERT ( -- ) Link last word in current vocabulary */
 word_OVERT:
 	.word	word_COLON
 	.byte	5
@@ -3277,7 +3318,7 @@ OVERT:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ; ( -- ) - terminate a colon definition.*/
+/* CORE 6.1.0460 ; ( -- ) - terminate a colon definition.*/
 	.section .dic
 word_SEMICOL:
 	.word	word_OVERT
@@ -3286,12 +3327,12 @@ word_SEMICOL:
 SEMICOL:
 	.word	code_ENTER
 	.word	COMPILE,RETURN	/* Write the final RETURN */
-	.word	INTERP		/* Back to interpreter mode */
 	.word	OVERT		/* Save new LAST */
+	.word	INTERP		/* Back to interpreter mode */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* IMMEDIATE */
+/* CORE 6.1.1710 IMMEDIATE ( -- ) */
 	.section .dic
 word_IMMEDIATE:
 	.word	word_SEMICOL
@@ -3302,7 +3343,7 @@ IMMEDIATE:
 	.word	RETURN
  
 /*---------------------------------------------------------------------------*/
-/* dovar ( -- a ) - run time routine for variable and create. */
+/* INTERNAL DOVAR ( -- a ) - run time routine for variable and create. */
 /* Before DOVAR is called the return stack receives the address right after
    the dovar word itself. This value is popped from the return stack, so when
    returning from DOVAR with RETURN, execution is transferred not to the word
@@ -3310,18 +3351,14 @@ IMMEDIATE:
    is interrupted. The parent continues to execute with the address of the word
    that follows dovar on the stack.*/
 	.section .dic
-word_DOVAR:
-	.word	word_IMMEDIATE
-	.byte	5 + WORD_COMPILEONLY
-	.ascii	"DOVAR"
 DOVAR:
 	.word	code_ENTER
 	.word	RFROM
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* create    ( -- ; <string> ) - compile a new array entry without allocating code space.*/
-/* CREATE is a word that returns the address of the byte just after the DOVAR word. Using
+/* CORE 6.1.1000 CREATE ( "<spaces>ccc<space>" -- ) - compile a new array entry without allocating code space.*/
+/* CREATE returns the address of the byte just after the DOVAR word. Using
    ALLOT after CREATE is a method to reserve memory, and the name created by CREATE would
    push the address of this reserved memory on the stack, simulating a buffer or variable.
    But it is interesting to replace DOVAR by some other word address, which is used to
@@ -3346,7 +3383,7 @@ CREATE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* variable  ( -- ; <string> ) - compile a new variable initialized to 0. */
+/* CORE 6.1.2410 VARIABLE  ( -- ; <string> ) - compile a new variable initialized to 0. */
 /* VARIABLE uses CREATE and follows this by a call to COMMA that stores zero
    in the cell right after DOVAR, then increments HERE by a cell. This has the
    effect to return the address of this cell when the name is invoked.*/
@@ -3363,7 +3400,15 @@ VARIABLE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* DOES> The magic word that changes the behaviour of CREATE with custom code */
+/* CORE 6.1.1250 DOES>
+   [when a definition calls DOES>]
+   COMPILE TIME:   ( -- ) Execute the run time semantics (immediate word)
+   RUN TIME:       ( -- ) Replaces the action of the last CREATEd definition by the code that follows DOES>.
+   [when the definition that called DOES> is executed]
+   INITIATION TIME:( ... -- ... a ) Place the address of the CREATEd definition data field on the stack.
+   EXECUTION TIME: ( ... -- ... ) Execute the action that is described by the words that follow DOES>.
+ */
+/* Change the behaviour of CREATE with custom code */
 /* When a word is created with CREATE NAME, the structure assembled at HERE is:
    .word	LAST
    .byte	NAME_LENGTH
@@ -3506,7 +3551,7 @@ DOES:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* PROMPT */
+/* PROPRIETARY PROMPT ( -- ) */
 	.section .dic
 word_PROMPT:
 	.word	word_DOES
@@ -3529,7 +3574,7 @@ compilmode:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/*  ?stack    ( -- ) abort if the data stack underflows. */
+/* PROPRIETARY ?STACK ( -- ) abort if the data stack underflows. */
 	.section .dic
 word_QSTACK:
 	.word	word_PROMPT
@@ -3545,8 +3590,8 @@ QSTACK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) evaluate all words in input buffer. Each word is interpreted or */
-/* compiled according to current behaviour */
+/* PROPRIETARY eval ( -- ) evaluate all words in input buffer. Each word is interpreted or compiled according to current behaviour */
+/* TODO extend this to remove BEHAP vectoring and act according to the value of STATE. */
 	.section .dic
 word_EVAL:
 	.word	word_QSTACK
@@ -3569,31 +3614,9 @@ eval2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) accept input stream to terminal input buffer. */
-	.section .dic
-word_QUERY:
-	.word	word_EVAL
-	.byte	5
-	.ascii	"QUERY"
-QUERY:
-	.word	code_ENTER
-	.word	IMM, TIBP
-	.word	LOAD
-	.word	IMM, STIBP
-	.word	LOAD
-	.word	ACCEPT
-
-	/* Save the length of the received buffer */
-	.word	IMM, NTIBP
-	.word	STORE
-	.word	DROP
-
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
-/* Reset the input buffer to its default storage and size. */
+/* PROPRIETARY HAND ( -- ) Reset the input buffer to its default storage and size. */
 word_HAND:
-	.word	word_QUERY
+	.word	word_EVAL
 	.byte	4
 	.ascii	"HAND"
 HAND:
@@ -3607,7 +3630,7 @@ HAND:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Make IO vectors point at the default serial implementations */
+/* PROPRIETARY CONSOLE ( -- ) Make IO vectors point at the default serial implementations */
 word_CONSOLE:
 	.word	word_HAND
 	.byte	7
@@ -3624,8 +3647,9 @@ CONSOLE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* Main forth interactive interpreter loop */
-	.section .dic
+/* CORE 6.1.2050 QUIT ( -- ) Main forth interactive interpreter loop */
+/* TODO check compliance with F2012 */
+    .section .dic
 word_QUIT:
 	.word	word_CONSOLE
 	.byte	4
@@ -3637,8 +3661,17 @@ QUIT0:
 
 QUIT1:
 	/* Load the terminal input buffer */
-	.word	QUERY
+	.word	IMM, TIBP
+	.word	LOAD
+	.word	IMM, STIBP
+	.word	LOAD
+	.word	ACCEPT
 
+	/* Save the length of the received buffer */
+	.word	IMM, NTIBP
+	.word	STORE
+	.word	DROP /* TODO change accept to be F2012 compliant and avoid this DROP */
+    
 	/* Reset input buffer pointer to start of buffer */
 	.word	IMM,0
 	.word	IMM,INN
@@ -3665,7 +3698,7 @@ QUIT1:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* _type ( b u -- ) - display a string. filter non-printing characters. */
+/* PROPRIETARY _type ( b u -- ) - display a string. filter non-printing characters. */
 	.section .dic
 word_UTYPE:
 	.word	word_QUIT
@@ -3684,7 +3717,7 @@ utyp2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* dm+ ( a u -- a ) - dump u bytes from , leaving a+u on the stack. */
+/* PROPRIETARY dm+ ( a u -- a ) - dump u bytes from , leaving a+u on the stack. */
 	.section .dic
 word_DMP:
 	.word	word_UTYPE
@@ -3703,7 +3736,7 @@ pdum2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* dump ( a u -- ) - dump u bytes from a, in a formatted manner. */
+/* TOOLS 15.6.1.1280 DUMP ( a u -- ) - dump u bytes from a, in a formatted manner. */
 	.section .dic
 word_DUMP:
 	.word	word_DMP
@@ -3729,7 +3762,7 @@ dump3:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* .s    ( ... -- ... ) - display the contents of the data stack. */
+/* TOOLS 15.6.1.0220 .S ( -- ) - display the contents of the data stack. */
 word_DOTS:
 	.word	word_DUMP
 	.byte	2
@@ -3749,7 +3782,7 @@ dots2:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* !csp ( -- ) - save stack pointer in csp for error checking. */
+/* PROPRIETARY !csp ( -- ) - save stack pointer in csp for error checking. */
 word_CSPSTORE:
 	.word	word_DOTS
 	.byte	4
@@ -3762,7 +3795,7 @@ CSPSTORE:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ?csp ( -- ) - abort if stack pointer differs from that saved in csp. */
+/* PROPRIETARY ?csp ( -- ) - abort if stack pointer differs from that saved in csp. */
 word_CSPCHECK:
 	.word	word_CSPSTORE
 	.byte	4
@@ -3779,7 +3812,7 @@ CSPCHECK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* words     ( -- ) - display the names in the context vocabulary. */
+/* TOOLS 15.6.1.2465 WORDS ( -- ) - display the names in the context vocabulary. */
 word_WORDS:
 	.word	word_CSPCHECK
 	.byte	5
@@ -3801,7 +3834,7 @@ WORDS:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* ( -- u ) */
+/* PROPRIETARY VER ( -- u ) */
 	.section .dic
 word_VER:
 	.word	word_WORDS
@@ -3813,7 +3846,7 @@ VER:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) */
+/* PROPRIETARY hi ( -- ) */
 	.section .dic
 word_hi:
 	.word	word_VER
@@ -3843,8 +3876,8 @@ BOOT:
 BOOT1:
 	.word	IOINIT
 	.word	CONSOLE
-	.word	hi		/* Show a startup banner */
 	.word	DECIMAL		/* Setup environment */
+	.word	hi		/* Show a startup banner */
 
 	.word	QUIT
 
