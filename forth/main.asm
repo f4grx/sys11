@@ -131,11 +131,12 @@
 	/* Forth memory map */
 	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) */
 	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
-	.equ	USE_RTS, 1		/* slightly smaller code using RTS to opcode jmp */
-	.equ	USE_MUL, 1		/* use HC11 multiplier instead of eforth UM* routine */
 
 	/* Forth config */
 	.equ	TIB_LEN, 80
+	.equ	USE_RTS, 1		/* slightly smaller code using RTS to opcode jmp */
+	.equ	USE_MUL, 1		/* use HC11 multiplier instead of eforth UM* routine */
+	.equ	USE_DIV, 0		/* use HC11 divider instead of eforth UM/MOD routine */
 
 	/* Word flags - added to length, so word length is encoded on 6 bits*/
 	.equ	WORD_IMMEDIATE   , 0x80
@@ -161,9 +162,10 @@ CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 pTEMP:	.long	0	/* Temp variable used in LPARSE and UM* */
 INN:	.word	0	/* Parse position in the input buffer */
-NTIB:	.word	0	/* Number of characters in current line */
-TIB:	.space	TIB_LEN	/* Input buffer */
-
+TIBBUF:	.space	TIB_LEN	/* Default Input buffer */
+NTIBP:	.word	0	/* Number of received characters in current line */
+STIBP:	.word	0	/* Size of the tib */
+TIBP:   .word	0	/* Address of the actual input buffer, to allow switching to other buffers */
 
 
 /*===========================================================================*/
@@ -353,7 +355,7 @@ code_JNZD:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* ( -- ) init HC11 SCI */
+/* PROPRIETARY ( -- ) init HC11 SCI */
 	.section .dic
 word_IOINIT:
 	.word	0
@@ -370,8 +372,7 @@ code_IOINIT:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* ( txbyte -- ) - Transmit byte on HC11 SCI */
-
+/* PROPRIETARY ( txbyte -- ) - Transmit byte on HC11 SCI */
 	.section .dic
 word_IOTX:
 	.word	word_IOINIT
@@ -389,7 +390,7 @@ code_IOTX:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* ( -- rxbyte TRUE | FALSE ) - Receive byte from HC11 SCI */
+/* PROPRIETARY ( -- rxbyte TRUE | FALSE ) - Receive byte from HC11 SCI */
 	.section .dic
 word_IORX:
 	.word	word_IOTX
@@ -413,7 +414,7 @@ norx:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* Execute the code whose address is on the stack */
+/* CORE 6.1.1370 (... ca -- ...) Execute the word whose address is on the stack */
 	.section .dic
 word_EXECUTE:
 	.word	word_IORX
@@ -429,7 +430,7 @@ code_EXECUTE:
 
 
 /*---------------------------------------------------------------------------*/
-/* Store a cell at address (d a -- ) */
+/* CORE 6.1.0010 (d a -- ) Store a cell at address*/
 	.section .dic
 word_STORE:
 	.word	word_EXECUTE
@@ -447,7 +448,7 @@ code_STORE:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* Store a char at address (c a -- ) */
+/* CORE 6.1.0850 (c a -- ) Store a char at address */
 	.section .dic
 word_CSTORE:
 	.word	word_STORE
@@ -465,7 +466,7 @@ code_CSTORE:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* Load a cell at given address (a -- d) */
+/* CORE 6.1.0650 (a -- d) Load a cell at given address*/
 	.section .dic
 word_LOAD:
 	.word	word_CSTORE
@@ -481,7 +482,7 @@ code_LOAD:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* Load a cell at given address (a -- d) */
+/* CORE 6.1.0870 (a -- d) Load a cell at given address*/
 	.section .dic
 word_CLOAD:
 	.word	word_LOAD
@@ -498,7 +499,7 @@ code_CLOAD:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* R> ( -- x ) ( R: x -- ) */
+/* CORE 6.1.2060 R> ( -- x ) ( R: x -- ) */
 	.section .dic
 word_RFROM:
 	.word word_CLOAD
@@ -515,7 +516,7 @@ code_RFROM:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
-/* >R ( -- x ) ( R: x -- ) */
+/* CORE 6.1.0580 >R ( -- x ) ( R: x -- ) */
 	.section .dic
 word_TOR:
 	.word	word_RFROM
@@ -534,12 +535,12 @@ code_TOR:
 	bra	NEXT
 
 /*---------------------------------------------------------------------------*/
-/* @R ( -- x ) ( R: x -- x ) */
+/* CORE 6.1.2070 R@ ( -- x ) ( R: x -- x ) */
 	.section .dic
 word_RLOAD:
 	.word	word_TOR
 	.byte	2
-	.ascii	"@R"
+	.ascii	"R@"
 RLOAD:
 	.word	code_RLOAD
 
@@ -549,6 +550,7 @@ code_RLOAD:
 	bra	PUSHD
 
 /*---------------------------------------------------------------------------*/
+/* PROPRIETARY */
 	.section .dic
 word_SPLOAD:
 	.word	word_RLOAD
@@ -1207,6 +1209,34 @@ word_UMMOD:
 	.byte	6
 	.ascii	"UM/MOD"
 UMMOD:
+.if USE_DIV
+/* Native implementation of UM/MOD using HC11 divider.
+   HC11 divides 16 by 16 to produce a 16-bit quotient and remainder.
+   We need to extend that to a 32/16 divide.
+   after tsx, the numbers are at these offsets:
+   0 uL
+   1 uH
+   2 udhL
+   3 udhH
+   4 udlL
+   5 udlH
+
+Example: divide:
+0x12345678 = 0x5678 * 0x35E5 + 0x2520
+ 305419896 =  22136 *  13797 +   9504
+
+12345678 / 5678
+First start with the left part
+12340000 / 5678
+quotient is zero -> total quotient will be on 16 bits, good, else error
+12340000 / 5678 -> 0000
+
+*/
+	.word	code_UMMOD
+	.text
+code_UMMOD:
+
+.else
 	.word	code_ENTER
 	.word	DDUP
 	.word	ULESS
@@ -1235,6 +1265,7 @@ umm4:
 	.word	DROP,DDROP
 	.word	IMM,-1,DUP		/* overflow, return max*/
 	.word	RETURN
+.endif
 
 /*---------------------------------------------------------------------------*/
 /* m/mod     ( d n -- r q ) signed floored divide of double by single. return mod and quotient. */
@@ -2458,12 +2489,13 @@ PARSE:
 	.word	code_ENTER
 	/* Compute current input buffer pointer */
 	.word	TOR		/* -- | R: delim*/
-	.word	IMM, TIB	/* tib */
+	.word	IMM, TIBP	/* &tib */
+	.word	LOAD		/* tib */
 	.word	IMM, INN	/* tib &done_count */
 	.word	LOAD		/* tib done_count */
 	.word	PLUS		/* buf */
 	/* Compute remaining count */
-	.word	IMM,NTIB	/* buf &ntib */
+	.word	IMM,NTIBP	/* buf &ntib */
 	.word	LOAD		/* buf ntib */
 	.word	IMM, INN	/* buf ntib &done_count */
 	.word	LOAD		/* buf ntib done_count */
@@ -2512,7 +2544,7 @@ word_BSLASH:
 	.ascii	"\\"
 BSLASH:
 	.word	code_ENTER
-	.word	IMM, NTIB
+	.word	IMM, NTIBP
 	.word	LOAD
 	.word	IMM, INN
 	.word	STORE
@@ -2831,7 +2863,7 @@ notfoundc:
 	.word	THROW
 
 /*---------------------------------------------------------------------------*/
-/* '     ( -- ca ) - search context vocabularies for the next word in input stream. */
+/* CORE 6.1.0070 ' ( <spaces>name -- ca ) - search context vocabularies for the next word in input stream. */
 	.section .dic
 word_TICK:
 	.word	word_DOCOMPILE
@@ -3545,21 +3577,39 @@ word_QUERY:
 	.ascii	"QUERY"
 QUERY:
 	.word	code_ENTER
-	.word	IMM, TIB
-	.word	IMM, TIB_LEN
+	.word	IMM, TIBP
+	.word	LOAD
+	.word	IMM, STIBP
+	.word	LOAD
 	.word	ACCEPT
 
 	/* Save the length of the received buffer */
-	.word	IMM, NTIB
+	.word	IMM, NTIBP
 	.word	STORE
 	.word	DROP
 
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* Reset the input buffer to its default storage and size. */
+word_HAND:
+	.word	word_QUERY
+	.byte	4
+	.ascii	"HAND"
+HAND:
+	.word	code_ENTER
+	.word	IMM, TIB_LEN
+	.word	IMM, STIBP
+	.word	STORE
+	.word	IMM, TIBBUF
+	.word	IMM, TIBP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* Make IO vectors point at the default serial implementations */
 word_CONSOLE:
-	.word	word_QUERY
+	.word	word_HAND
 	.byte	7
 	.ascii	"CONSOLE"
 CONSOLE:
@@ -3570,6 +3620,7 @@ CONSOLE:
 	.word	IMM, IORX
 	.word	IMM, RXVEC
 	.word	STORE
+	.word	HAND
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
