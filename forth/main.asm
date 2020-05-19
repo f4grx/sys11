@@ -1636,7 +1636,7 @@ csame2:
 /*---------------------------------------------------------------------------*/
 /* internal_ccompare (cstra cstrb lena lenb -- flag ) - return 0 if match */
 /* Internal comparison code for both CCOMPARE and NAMECOMPARE.
-   TODO rewrite the full chain of words ISNAME,FIND,TOKEN,WORD to
+   TODO rewrite the full chain of words FINDONE,FIND,TOKEN,WORD to
    work with direct (buf,len) pairs instead of counted strings. The goal is to avoid
    the useless copy made by PACK$ */
 	.section .dic
@@ -2629,11 +2629,11 @@ BSLASH:
 /* Search a name in a vocabulary (pointer to last entry of a chain). */
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 	.section .dic
-word_FIND:
+word_FINDONE:
 	.word	word_BSLASH
-	.byte	4
-	.ascii	"FIND"
-FIND:
+	.byte	7
+	.ascii	"FINDONE"
+FINDONE:
 	.word	code_ENTER
 	/*compare cstr to current name stored at voc*/
 ;This version is used if the prev link is stored before the name
@@ -2677,22 +2677,22 @@ found:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY ISNAME ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
+/* PROPRIETARY FIND ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
 /* TODO CHANGE TO CORE 6.1.1550 FIND and update semantics */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
 /* TODO : extend to return 1 for immediates and -1 for not immediate */
 /* TODO : Do not find compile-only words if not in interpretation state */
 
 	.section .dic
-word_ISNAME:
-	.word	word_FIND
-	.byte	5
-	.ascii	"NAME?"
-ISNAME:
+word_FIND:
+	.word	word_FINDONE
+	.byte	4
+	.ascii	"FIND"
+FIND:
 	.word	code_ENTER
 	.word	IMM,LASTP	/*cstr [pointer containing the address of the last word] */
 	.word	LOAD		/*cstr voc[address of last word entry] */
-	.word	FIND		/*code name [if found] || cstr 0 [if not found] */
+	.word	FINDONE		/*code name [if found] || cstr 0 [if not found] */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -2703,7 +2703,7 @@ ISNAME:
 /* PROPRIETARY HANDLER ( -- a ) Return address of current exception handler */
     .section .dic
 word_HANDLER:
-	.word	word_ISNAME
+	.word	word_FIND
 	.byte	7
 	.ascii	"HANDLER"
 HANDLER:
@@ -2857,7 +2857,7 @@ word_DOINTERPRET:
 	.ascii	"$INTERPRET"
 DOINTERPRET:
 	.word	code_ENTER
-	.word	ISNAME		/*code name || cstr false */
+	.word	FIND		/*code name || cstr false */
 	.word	DUPNZ		/*code name name || cstr false */
 	.word	BRANCHZ,donumi	/* if not name then jump */
 	/*Name is found */
@@ -2893,7 +2893,7 @@ word_DOCOMPILE:
 	.ascii	"$COMPILE"
 DOCOMPILE:
 	.word	code_ENTER
-	.word	ISNAME		/*code name || cstr false */
+	.word	FIND		/*code name || cstr false */
 	.word	DUPNZ		/*code name name || cstr false */
 	.word	BRANCHZ,donumc	/*code name || cstr */
 				/*code cstr*/
@@ -2930,7 +2930,7 @@ word_TICK:
 TICK:
 	.word	code_ENTER
 	.word	TOKEN
-	.word	ISNAME
+	.word	FIND
 	.word	BRANCHZ,tick1
 	.word	RETURN
 tick1:
@@ -3288,7 +3288,7 @@ SNAME:
 	/* Parse word name and store at HERE */
 	.word	TOKEN		/* cstr | save name string at HERE */
 	.word	DUP		/* cstr cstr*/
-	.word	ISNAME		/* cstr code name | cstr name 0*/
+	.word	FIND		/* cstr code name | cstr name 0*/
 	.word	BRANCHZ,sn2	/* cstr code | cstr name */
 	/* not zero: name exists, warn user */
 	.word	SHOWSTR
