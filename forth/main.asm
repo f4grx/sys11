@@ -933,8 +933,8 @@ word_PICK:
 	.ascii	"PICK"
 PICK:
 	.word	code_ENTER
-	.word	IMM,1,PLUS,CELLS
-	.word	IMM,1,PLUS
+	.word	INC,CELLS
+	.word	INC
 	.word	SPLOAD,PLUS,LOAD
 	.word	RETURN
 
@@ -1258,7 +1258,7 @@ umm1:
 	.word	RFROM,RLOAD,SWAP,TOR
 	.word	UPLUS,RFROM,OR
 	.word	BRANCHZ,umm2
-	.word	TOR,DROP,IMM,1,PLUS,RFROM
+	.word	TOR,DROP,INC,RFROM
 	.word	BRANCH,umm3
 umm2:
 	.word	DROP
@@ -1362,10 +1362,35 @@ CHARP:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.0290 1+ (n -- n) */
+	.section .dic
+word_INC:
+	.word	word_CHARP
+	.byte	2
+	.ascii	"1+"
+INC:
+	.word	code_ENTER
+	.word	IMM,1
+	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.0300 1- (n -- n) */
+	.section .dic
+word_DEC:
+	.word	word_INC
+	.byte	2
+	.ascii	"1-"
+DEC:
+	.word	IMM,-1
+	.word	PLUS
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* CORE 6.1.0890 CELLS ( u -- u*2 ) - compute bytes required to store u cells */
 	.section .dic
 word_CELLS:
-	.word	word_CHARP
+	.word	word_DEC
 	.byte	5
 	.ascii "CELLS"
 CELLS:
@@ -1375,10 +1400,27 @@ CELLS:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
+/* CORE 6.1.0130 +! (val adr -- ) add val to the contents of adr */
+	.section .dic
+word_PLUS_STORE:
+	.word	word_CELLS
+	.byte	2
+	.ascii	"+!"
+PLUS_STORE:
+	.word	code_ENTER
+	.word	SWAP		/* adr val */
+	.word	OVER		/* adr val adr */
+	.word	LOAD		/* adr val *adr */
+	.word	PLUS		/* adr val+*adr */
+	.word	SWAP		/* val+*adr adr */
+	.word	STORE		/*empty*/
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* CORE 6.1.2340 U< ( u v -- u<v ) unsigned compare of top two items. */
 	.section .dic
 word_ULESS:
-	.word	word_CELLS
+	.word	word_PLUS_STORE
 	.byte	2
 	.ascii	"U<"
 ULESS:
@@ -1497,8 +1539,7 @@ word_COUNT:
 COUNT:
 	.word	code_ENTER
 	.word	DUP		/* cstradr cstradr */
-	.word	IMM,1		/* cstradr cstradr 1*/
-	.word	PLUS		/* cstradr bufadr */
+	.word	CHARP		/* cstradr cstradr+1*/
 	.word	SWAP		/* bufadr cstradr */
 	.word	CLOAD		/* bufadr len */
 	.word	RETURN
@@ -1520,11 +1561,9 @@ cmov1:
 	.word	CLOAD		/*src data | R: count dest*/
 	.word	RLOAD		/*src data dest | R: count dest*/
 	.word	CSTORE		/*src | R: count dest*/
-	.word	IMM,1		/*src 1 | R: count dest*/
-	.word	PLUS		/*src+1 | R: count dest*/
+	.word	CHARP		/*src+1 | R: count dest*/
 	.word	RFROM		/*src+1 dest | R: count */
-	.word	IMM,1		/*src+1 dest 1 | R: count*/
-	.word	PLUS		/*src+1->src dest+1->dest | R: count*/
+	.word	CHARP		/*src+1->src dest+1->dest | R: count*/
 cmov2:
 	.word	JNZD, cmov1	/*src dest | if count>0, count--, goto cmov1 */
 	.word	DDROP		/*-- R: -- */
@@ -1545,8 +1584,7 @@ PACKS:
 	.word	DDUP		/*buf len dest len dest | R: dest*/
 	.word	CSTORE		/*buf len dest | R: dest*/
 	/*Copy string after count */
-	.word	IMM,1		/*buf len dest 1 | R:dest*/
-	.word	PLUS		/*buf len (dest+1) | R:dest*/
+	.word	CHARP		/*buf len (dest+1) | R:dest*/
 	.word	SWAP		/*buf (dest+1) len | R:dest*/
 	.word	CMOVE		/*R:dest*/
 	.word	RFROM		/*dest*/
@@ -1772,8 +1810,7 @@ HOLD:
 	.word	code_ENTER
 	.word	IMM,HOLDP
 	.word	LOAD
-	.word	IMM,1
-	.word	SUB
+	.word	DEC
 	.word	DUP
 	.word	IMM,HOLDP
 	.word	STORE
@@ -2053,11 +2090,9 @@ NUMBERQ:
 	/* Equal returns 0 for FALSE (not equal). here we deal with $123 hex strings. */
 	.word	HEX		/*cstr 0 strptr strlen | R:base */
 	.word	SWAP		/*cstr 0 strlen strptr | R:base*/
-	.word	IMM,1		/*cstr 0 strlen strptr 1 | R:base*/
-	.word	PLUS		/*cstr 0 strlen strptr+1 | R:base TODO optimize CHARP or INC*/
+	.word	CHARP		/*cstr 0 strlen strptr+1 | R:base*/
 	.word	SWAP		/*cstr 0 strptr+1 strlen | R:base*/
-	.word	IMM,1		/*cstr 0 strptr+1 strlen 1 | R:base*/
-	.word	SUB		/*cstr 0 strptr+1 strlen-1 | R:base TODO optimize DEC*/
+	.word	DEC		/*cstr 0 strptr+1 strlen-1 | R:base*/
 
 numq1:	/* Buffer doesnt start with a $ sign. Check for initial minus sign. */
 	.word	OVER		/*cstr 0 strptr strlen strbuf | R: base*/
@@ -2075,8 +2110,7 @@ numq1:	/* Buffer doesnt start with a $ sign. Check for initial minus sign. */
 	.word	DUPNZ		/*cstr 0 strbuf+1 strlen-1 [strlen-1 if not zero] | R:base -1_if_negative*/
 	.word	BRANCHZ,numq6	/*jump to end if new len is zero*/
 
-	.word	IMM,1		/*cstr 0 strptr strlen 1 | R:base -1_if_negative*/
-	.word	SUB		/*cstr 0 strptr strlen-1 (for JNZD) | R:base -1_if_negative*/
+	.word	DEC		/*cstr 0 strptr strlen-1 (for JNZD) | R:base -1_if_negative*/
 	.word	TOR		/*cstr 0 strptr | R:base -1_if_negative strlen-1*/
 
 numq2:
@@ -2094,8 +2128,7 @@ numq2:
 	.word	STAR
 	.word	PLUS
 	.word	RFROM
-	.word	IMM,1
-	.word	PLUS
+	.word	INC
 	.word	JNZD,numq2
 
 	.word	RLOAD
@@ -2141,23 +2174,6 @@ HERE:
 	.word	LOAD		/* (HERE) */ 
 	.word	RETURN
 
-/*---------------------------------------------------------------------------*/
-/* CORE 6.1.0130 +! (val adr -- ) add val to the contents of adr */
-	.section .dic
-word_PLUS_STORE:
-	.word	word_HERE
-	.byte	2
-	.ascii	"+!"
-PLUS_STORE:
-	.word	code_ENTER
-	.word	SWAP		/* adr val */
-	.word	OVER		/* adr val adr */
-	.word	LOAD		/* adr val *adr */
-	.word	PLUS		/* adr val+*adr */
-	.word	SWAP		/* val+*adr adr */
-	.word	STORE		/*empty*/
-	.word	RETURN
-
 /*===========================================================================*/
 /* Terminal */
 /*===========================================================================*/
@@ -2166,7 +2182,7 @@ PLUS_STORE:
 /* PROPRIETARY BS ( -- 8 ) */
 	.section .dic
 word_BS:
-	.word	word_PLUS_STORE
+	.word	word_HERE
 	.byte	2
 	.ascii	"BS"
 BS:
@@ -2278,8 +2294,7 @@ TAP:
 	.word	EMIT	/* buf bufend ptr c | shoud be vectored to allow disable echo */
 	.word	OVER	/* buf bufend ptr c ptr */
 	.word	CSTORE	/* buf bufend ptr */
-	.word	IMM,1	/* buf bufend ptr 1 */
-	.word	PLUS	/* buf bufend (ptr+1) */
+	.word	CHARP	/* buf bufend (ptr+1) */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2360,8 +2375,7 @@ type1:
 	.word	DUP		/* buf buf | R: len */
 	.word	CLOAD		/* buf char | R: len */
 	.word	EMIT		/* buf */
-	.word	IMM,1		/* buf 1 */
-	.word	PLUS		/* buf+1 */
+	.word	CHARP		/* buf+1 */
 type2:	.word	JNZD,type1	/* if @R (==len) > 0 then manage next char */
 	.word	DROP		/* remove buf from stack */
 	.word	RETURN
@@ -2403,8 +2417,7 @@ LPARSE:
 	.word	BRANCHZ,pars8	/*buf buflen | R:bufinit if(buflen==0) goto pars8 */
 
 	/* Buflen not zero */
-	.word	IMM,1		/*buf len 1 | R:bufinit*/
-	.word	SUB		/*buf len-1 | R:bufinit*/
+	.word	DEC		/*buf len-1 | R:bufinit*/
 	.word	IMM,pTEMP	/*buf len-1 &TEMP | R:bufinit*/
 	.word	LOAD		/*buf len-1 delim | R:bufinit*/
 	.word	BL		/*buf len-1 delim blank | R:bufinit*/
@@ -2456,8 +2469,7 @@ pars4:	/* scan for delimiter, beginning of a for loop */
 
 pars5:	/* delim is blank */
 	.word	BRANCHZ,pars6	/*buf buf if(delim<curchar) then goto par6 */
-	.word	IMM,1		/*buf buf 1*/
-	.word	PLUS		/*buf (buf+1)*/
+	.word	CHARP		/*buf (buf+1)*/
 	.word	JNZD,pars4	/*buf (buf+1) and loop to pars4 if (len-1)>0*/
 	.word	DUP		/*buf (buf+1) (buf+1)*/
 	.word	TOR		/*buf (buf+1) | R:(buf+1)*/
@@ -2467,8 +2479,7 @@ pars6:	/*delim<curchar*/
 	.word	RFROM
 	.word	DROP
 	.word	DUP
-	.word	IMM,1
-	.word	PLUS
+	.word	CHARP
 	.word	TOR
 
 pars7:
@@ -3720,7 +3731,7 @@ UTYPE:
 	.word	BRANCH,utyp2		/* skip first pass */
 utyp1:
 	.word	DUP,CLOAD,TCHAR,EMIT	/* display only printable */
-	.word	IMM,1,PLUS		/* increment address */
+	.word	CHARP			/* increment address */
 utyp2:
 	.word	JNZD,utyp1		/* loop till done */
 	.word	DROP
@@ -3740,7 +3751,7 @@ DMP:
 	.word	BRANCH,pdum2		/* skip first pass */
 pdum1:
 	.word	DUP,CLOAD,IMM,3,UDOTR	/* display numeric data */
-	.word	IMM,1,PLUS		/* increment address */
+	.word	INC			/* increment address */
 pdum2:
 	.word	JNZD,pdum1		/* loop till done */
 	.word	RETURN
