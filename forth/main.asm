@@ -33,12 +33,7 @@
    IP   - The instruction pointer. Points to the next instruction to execute.
    HEREP - pointer to the next free byte in the Data Space
    LASTP - pointer to the last definition. Initialized to the last builtin word definition.
-   BEHAP - pointer containing the word routine that will manage the parsed tokens. Either INTERP or COMPILE.
-           This word routine is called with a word pointer on the parameter stack.
-           BEHAP is changed to EXECUTE when executing the immediate word [
-           BEHAP is changed to COMPILE when executing the immediate word ]
-           COMPILE appends the word pointer on the parameter stack to the current definition
-           EXECUTE executes the word by "calling" it.
+   STATP - pointer containing 0x0000 when interpreting and 0xFFFF when compiling.
    BASE - Contains the value of the current number conversion base
    
    Dictionary and Data space
@@ -152,7 +147,7 @@ TXVEC:	.word	0	/* Pointer to the word implementing EMIT */
 RXVEC:	.word	0	/* Pointer to the word implementing ?KEY */
 BASEP:	.word	0	/* Value of the base used for number parsing */
 HOLDP:	.word	0	/* Pointer used for numeric output */
-BEHAP:  .word   0       /* Pointer to word implementing the current behaviour: compile/interpret */
+STATP:  .word   0       /* Pointer to word implementing the current behaviour: compile/interpret */
 HANDP:	.word	0	/* Exception handler pointer */
 CURDP:	.word	0	/* Pointer to the word currently being defined. Stored in word : */
 LSTCRP:	.word	0	/* Pointer to the last created action word (used by DOES>) */
@@ -2796,21 +2791,48 @@ abor1:	/* Cancel abort if TOS was zero*/
 	.word	RETURN
 
 /*===========================================================================*/
-/* Interpreter */
+/* System state (interpret/compile) */
 /*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.2250 STATE ( -- state ) - Return 0 if interpreting and -1 if compiling */
+word_STATE:
+	.word	word_ABORTNZ
+	.byte	5
+	.ascii	"STATE"
+STATE:
+	.word	code_ENTER
+	.word	IMM,STATP
+	.word	LOAD
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY Set the system state to interpretation */
 /* TODO use STATE instead and comply with CORE 6.1.2500 */
 	.section .dic
 word_INTERP:
-	.word	word_ABORTNZ
+	.word	word_STATE
 	.byte	1 + WORD_IMMEDIATE
 	.ascii	"["
 INTERP:
 	.word	code_ENTER
-	.word	IMM, DOINTERPRET
-	.word	IMM, BEHAP
+	.word	IMM,0
+	.word	IMM,STATP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* Set the system state to compilation */
+/* TODO use STATE instead and comply with CORE 6.1.2540 */
+	.section .dic
+word_COMPIL:
+	.word	word_INTERP
+	.byte	1 + WORD_IMMEDIATE
+	.ascii	"]"
+COMPIL:
+	.word	code_ENTER
+	.word	IMM,0xFFFF
+	.word	IMM,STATP
 	.word	STORE
 	.word	RETURN
 
@@ -2819,7 +2841,7 @@ INTERP:
 /* TODO use STATE instead and merge with $COMPILE as EVAL */
 	.section .dic
 word_DOINTERPRET:
-	.word	word_INTERP
+	.word	word_COMPIL
 	.byte	10
 	.ascii	"$INTERPRET"
 DOINTERPRET:
@@ -2852,25 +2874,10 @@ componly:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* Set the system state to compilation */
-/* TODO use STATE instead and comply with CORE 6.1.2540 */
-	.section .dic
-word_COMPIL:
-	.word	word_DOINTERPRET
-	.byte	1 + WORD_IMMEDIATE
-	.ascii	"]"
-COMPIL:
-	.word	code_ENTER
-	.word	IMM, DOCOMPILE
-	.word	IMM, BEHAP
-	.word	STORE
-	.word	RETURN
-
-/*---------------------------------------------------------------------------*/
 /* PROPRIETARY $COMPILE ( a -- ) - compile next word to code dictionary as a token or literal. */
 /* TODO use STATE instead and merge with $COMPILE as EVAL */
 word_DOCOMPILE:
-	.word	word_COMPIL
+	.word	word_DOINTERPRET
 	.byte	8
 	.ascii	"$COMPILE"
 DOCOMPILE:
@@ -3467,7 +3474,7 @@ when a colon definition that contains DOES is executed
 
 when the word defined by create and modified by DOES is executed
 -code that was installed by DOES> is executed
--(TODO) data field of created definition is pushed
+-data field of created definition is pushed
 -user words after DOES are executed
 
 Example for assembler:
@@ -3560,11 +3567,9 @@ word_PROMPT:
 PROMPT:
 	/* Test if we are in compilation mode */
 	.word	code_ENTER
-	.word	IMM,BEHAP
-	.word	LOAD
-	.word	IMM,DOINTERPRET
-	.word	EQUAL			/* returns 1 if behaviour is currently interpretation */
-	.word	BRANCHZ,compilmode	/* equal returns zero: jump to compilation behaviour (just cr)*/
+	.word	STATE
+	.word	NOT
+	.word	BRANCHZ,compilmode	/* state not zero: jump to compilation behaviour (just cr)*/
 	/* No: interpretation: show OK */
 	.word	SHOWSTR
 	.byte	4
@@ -3604,8 +3609,13 @@ eval1:
 	.word	DUP		/* tokcstr tokcstr */
 	.word	CLOAD		/* tokcstr toklen input stream empty?*/
 	.word	BRANCHZ, eval2	/* tokcstr Could not parse: finish execution of buffer */
-	.word	IMM,BEHAP	/* tokstr behap */
-	.word	LOADEXEC	/* Execute contents of behap as sub-word if not null */
+	.word	STATE		/* tokstr state */
+	.word	BRANCHZ,evinterp
+	.word	DOCOMPILE
+	.word	BRANCH,evnxt
+evinterp:
+	.word	DOINTERPRET
+evnxt:
 	.word	QSTACK		/*TODO Check stack underflow */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
