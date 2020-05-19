@@ -2896,7 +2896,7 @@ donumc:				/*cstr*/
 	.word	NUMBERQ
 	.word	BRANCHZ,notfoundc
 	/* Generate code to push the number */
-	.word	LITTERAL
+	.word	LITERAL
 	.word	RETURN
 notfoundc:
 	/* Not a word, not a number */
@@ -3014,7 +3014,7 @@ LITERAL:
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY $,"       ( -- ) - compile a literal string up to next " */
 word_SCOMPQ:
-	.word	word_LITTERAL
+	.word	word_LITERAL
 	.byte	3
 	.ascii	"$,\""
 SCOMPQ:
@@ -3365,7 +3365,7 @@ DOVAR:
    implement DOES> (later) */
 	.section .dic
 word_CREATE:
-	.word	word_DOVAR
+	.word	word_IMMEDIATE
 	.byte	6
 	.ascii	"CREATE"
 CREATE:
