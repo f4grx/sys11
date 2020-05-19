@@ -1,5 +1,196 @@
-proprietary words
+==================================================
+F2012 words
+-------------------------
+!           6.1.0010    N
+#           6.1.0030
+#>          6.1.0040
+#S          6.1.0050
+'           6.1.0070
+(           6.1.0080
+*           6.1.0090
++           6.1.0120
++!          6.1.0130
+,           6.1.0150
+-           6.1.0160
+.           6.1.0180
+."          6.1.0190
+/           6.1.0230
+/MOD        6.1.0240
+0<          6.1.0250
+2DROP       6.1.0370
+2DUP        6.1.0380
+:           6.1.0450
+;           6.1.0460
+<           6.1.0480
+<#          6.1.0490
+>R          6.1.0580    N
+?DUP        6.1.0630
+@           6.1.0650    N
+ABORT       6.1.0670        TODO EXCEPTION_EXT 9.6.2.0670 to use int codes
+ABORT"      6.1.0680        TODO EXCEPTION_EXT 9.6.2.0680 fix semantics to use int codes
+ABS         6.1.0690
+ACCEPT      6.1.0695        TODO CHECK SEMANTICS
+AGAIN       6.2.0700
+ALLOT       6.1.0710
+AND         6.1.0720    N
+BASE        6.1.0750
+BEGIN       6.1.0760
+BL          6.1.0770
+C!          6.1.0850    N
+C,          6.1.0860
+C@          6.1.0870    N
+CELL+       6.1.0880
+CELLS       6.1.0890
+CHAR+       6.1.0897
+COUNT       6.1.0980
+CR          6.1.0990
+CREATE      6.1.1000
+DECIMAL     6.1.1170
+DEPTH       6.1.1200
+DOES>       6.1.1250
+DROP        6.1.1260    N
+DUP         6.1.1290    N
+ELSE        6.1.1310
+EMIT        6.1.1320
+EXECUTE     6.1.1370    N
+HERE        6.1.1650
+HOLD        6.1.1670
+IF          6.1.1700
+IMMEDIATE   6.1.1710
+KEY         6.1.1750
+M*          6.1.1810
+MAX         6.1.1870
+MIN         6.1.1880
+MOD         6.1.1890
+NEGATE      6.1.1910
+OR          6.1.1980    N
+OVER        6.1.1990    N
+QUIT        6.1.2050        TO BE CHECKED FOR COMPLIANCE
+R>          6.1.2060    N
+R@          6.1.2070    N
+REPEAT      6.1.2140
+ROT         6.1.2160
+SIGN        6.1.2210
+SPACE       6.1.2220
+SPACES      6.1.2230
+SWAP        6.1.2260    N
+THEN        6.1.2270
+TYPE        6.1.2310
+U.          6.1.2320
+U<          6.1.2340
+UM*         6.1.2360    N (optional)
+UM/MOD      6.1.2370    N (optional)
+UNTIL       6.1.2390
+VARIABLE    6.1.2410
+WHILE       6.1.2430
+WORD        6.1.2450
+XOR         6.1.2490    N
+[           6.1.2500
+]           6.1.2540
 
+==================================================
+CORE_EXT
+-------------------------
+.(          6.2.0200
+.R          6.2.0210
+HEX         6.2.1660
+PAD         6.2.2000
+PICK        6.2.2030
+U.R         6.2.2330
+WITHIN      6.2.2440
+\           6.2.2535
+
+==================================================
+OTHER WORDS
+-------------------------
+DNEGATE     DOUBLE 8.6.1.1230  - try to avoid, else it makes more sense to implement the full DOUBLE set...
+?KEY        FACILITY 10.6.1.1755
+.S          TOOLS 15.6.1.0220
+AHEAD       TOOLS 15.6.2.0702
+DUMP        TOOLS 15.6.1.1280
+WORDS       TOOLS 15.6.1.2465
+CMOVE       STRING 17.6.1.0910 thats a memcpy from low to high addresses
+
+==================================================
+Missing F2012 words
+-------------------------
+*/          6.1.0100
+*/MOD       6.1.0110
++LOOP       6.1.0140
+0=          6.1.0270
+1+          6.1.0290
+1-          6.1.0300
+2!          6.1.0310
+2*          6.1.0320
+2/          6.1.0330
+2@          6.1.0350
+2OVER       6.1.0400
+2SWAP       6.1.0430
+>           6.1.0540
+>BODY       6.1.0550
+>NUMBER     6.1.0570
+ALIGN       6.1.0705
+ALIGNED     6.1.0706
+CHAR        6.1.0895
+CHARS       6.1.0898
+CONSTANT    6.1.0950
+DO          6.1.1240
+ENVIRONMENT?6.1.1345
+EVALUATE    6.1.1360
+EXIT        6.1.1380
+FILL        6.1.1540
+FM/MOD      6.1.1561
+I           6.1.1680
+J           6.1.1730
+LEAVE       6.1.1760
+LOOP        6.1.1800
+LSHIFT      6.1.1805
+MOVE        6.1.1900    a real memmove that manages overlap
+RECURSE     6.1.2120
+RSHIFT      6.1.2162
+S>D         6.1.2170
+SOURCE      6.1.2216
+STATE       6.1.2250
+UNLOOP      6.1.2380
+[']         6.1.2510
+[CHAR]      6.1.2520
+
+==================================================
+desirable CORE_EXT missing
+-------------------------
+UNUSED  6.2.2395
+
+==================================================
+desirable STRING missing
+-------------------------
+COMPARE     17.6.1.0935
+
+==================================================
+desirable TOOLS missing
+-------------------------
+;CODE       15.6.2.0470
+ASSEMBLER   15.6.2.0740
+CODE        15.6.2.0930
+EDITOR      15.6.2.1300
+FORGET      15.6.2.1580
+
+==================================================
+Words to be fixed for standard compliance
+parse       PROPRIETARY -> PARSE 6.2.2008 - CHECK ARGS AND SEMANTICS
+PARSE       PROPRIETARY -> PARSE-NAME 6.2.2020
+NOT         PROPRIETARY -> INVERT 6.1.1720
+M/MOD       PROPRIETARY -> SM/REM 6.1.2214
+EQUAL       PROPRIETARY -> = 6.1.0530
+[COMPILE]   PROPRIETARY -> POSTPONE 6.1.2033
+COMPILE     TO BE REMOVED -> COMPILE, 6.2.0945
+LITTERAL    PROPRIETARY -> LITERAL 6.1.1780
+$"          PROPRIETARY -> S" 6.1.2165 ?
+FIND        PROPRIETARY - FIX and use 6.1.1550
+CATCH       EXCEPTION 9.6.1.0875 uses strings, make it use int codes.
+THROW       EXCEPTION 9.6.1.2275 uses strings, fix semantics to use int codes.
+
+==================================================
+Proprietary words
 IOINIT
 IOTX!
 ?IORX
@@ -8,168 +199,51 @@ SP!
 RP@
 RP!
 
-F2012 words
-
-!	6.1.0010	N
-#	6.1.0030
-#>	6.1.0040
-#S	6.1.0050
-'	6.1.0070
->R	6.1.0580	N
-@	6.1.0650	N
-C!	6.1.0850	N
-C@	6.1.0870	N
-EXECUTE	6.1.1370	N
-R>	6.1.2060	N
-R@	6.1.2070	N
-
-Missing F2012 words
-
-DUP	6.1.
-OVER	6.1.
-SWAP	6.1.
-DROP	6.1.
 UM+
-+	6.1.
-XOR	6.1.
-AND	6.1.
-OR	6.1.
-0<	6.1.
 @EXEC
-EMIT	6.1.
-?KEY	6.1.
-KEY	6.1.
 NUF?
 SP0
 RP0
-DEPTH	6.
-PICK
-2DUP
-2DROP
-?DUP
-ROT
-NOT
-NEGATE
-DNEGATE
--
-ABS
-UM*
-*
-M*
-UM/MOD
-M/MOD
-/MOD
-MOD
-/
-CELL+
-CHAR+
-CELLS
-U<
-<
-MAX
-MIN
-WITHIN
-EQUAL
-COUNT
-CMOVE
-PACK$
-CSAME?
-CCOMPARE
-NAMECOMPARE
+PACK$       
+CSAME?      PROPRIETARY
+CCOMPARE    PROPRIETARY
+NAMECOMPARE PROPRIETARY
 str"|
 ."|
-PAD
-<#
-HOLD
 DIGIT
 EXTRACT
-SIGN
 STR
-U.R
-.R
-U.
-.
-BASE
-HEX
-DECIMAL
 DIGIT?
 NUMBER?
-HERE
-+!
 BS
-BL
-SPACE
-SPACES
-CR
 BKSP
 TAP
 TTAP
-ACCEPT
-TYPE
 >CHAR
-parse
-PARSE
-.(
-(
-\
-FIND
-WORD
 TOKEN
 NAME?
 HANDLER
-CATCH
-THROW
-ABORT
-abort"
-[
+abort"      PROPRIETARY
 $INTERPRET
-]
 $COMPILE
-ALLOT
-,
-C,
-[COMPILE]
-COMPILE
-LITTERAL
 $,"
-FOR
-BEGIN
-NEXT
-UNTIL
-AGAIN
-IF
-AHEAD
-REPEAT
-THEN
+FOR         PROPRIETARY
+NEXT        PROPRIETARY
 AFT
-ELSE
-WHILE
-ABORT"
-$"
-."
 ?UNIQUE
 $,N
-:
 OVERT
-;
-IMMEDIATE
 DOVAR
-CREATE
-VARIABLE
-DOES>
 PROMPT
 ?STACK
 eval
 QUERY
 CONSOLE
-QUIT
+
 _TYPE
 dm+
-DUMP
-.S
 !CSP
 ?CSP
-WORDS
 VER
 hi
 BOOT
