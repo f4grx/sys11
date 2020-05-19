@@ -17,6 +17,8 @@ F2012 words
 /           6.1.0230
 /MOD        6.1.0240
 0<          6.1.0250
+1+          6.1.0290
+1-          6.1.0300
 2DROP       6.1.0370
 2DUP        6.1.0380
 :           6.1.0450
@@ -30,6 +32,7 @@ F2012 words
 ABORT       6.1.0670        TODO EXCEPTION_EXT 9.6.2.0670 to use int codes
 ABORT"      6.1.0680        TODO EXCEPTION_EXT 9.6.2.0680 fix semantics to use int codes
 ABS         6.1.0690
+ACCEPT      6.1.0695
 AGAIN       6.2.0700
 ALLOT       6.1.0710
 AND         6.1.0720    N
@@ -69,6 +72,7 @@ MOD         6.1.1890
 NEGATE      6.1.1910
 OR          6.1.1980    N
 OVER        6.1.1990    N
+POSTPONE    6.1.2033
 QUIT        6.1.2050        TO BE CHECKED FOR COMPLIANCE
 R>          6.1.2060    N
 R@          6.1.2070    N
@@ -78,6 +82,7 @@ S"          6.1.2165        TODO CHECK
 SIGN        6.1.2210
 SPACE       6.1.2220
 SPACES      6.1.2230
+STATE       6.1.2250
 SWAP        6.1.2260    N
 THEN        6.1.2270
 TYPE        6.1.2310
@@ -123,8 +128,6 @@ Missing F2012 words
 */MOD       6.1.0110
 +LOOP       6.1.0140
 0=          6.1.0270
-1+          6.1.0290
-1-          6.1.0300
 2!          6.1.0310
 2*          6.1.0320
 2/          6.1.0330
@@ -143,7 +146,6 @@ DO          6.1.1240
 ENVIRONMENT?6.1.1345
 EVALUATE    6.1.1360
 FILL        6.1.1540
-FM/MOD      6.1.1561
 I           6.1.1680
 J           6.1.1730
 LEAVE       6.1.1760
@@ -154,7 +156,6 @@ RECURSE     6.1.2120
 RSHIFT      6.1.2162
 S>D         6.1.2170
 SOURCE      6.1.2216
-STATE       6.1.2250
 UNLOOP      6.1.2380
 [']         6.1.2510
 [CHAR]      6.1.2520
@@ -180,10 +181,8 @@ FORGET      15.6.2.1580
 
 ==================================================
 Words to be fixed for standard compliance
-ACCEPT      6.1.0695        TODO FIX SEMANTICS
 parse       PROPRIETARY -> PARSE 6.2.2008 - CHECK ARGS AND SEMANTICS
 PARSE       PROPRIETARY -> PARSE-NAME 6.2.2020
-[COMPILE]   PROPRIETARY -> POSTPONE 6.1.2033
 COMPILE     TO BE REMOVED -> COMPILE, 6.2.0945
 FIND        PROPRIETARY - FIX and use 6.1.1550
 CATCH       EXCEPTION 9.6.1.0875 uses strings, make it use int codes.
@@ -191,24 +190,13 @@ THROW       EXCEPTION 9.6.1.2275 uses strings, fix semantics to use int codes.
 
 ==================================================
 Proprietary words
-IOINIT
-IOTX!
-?IORX
-SP@
-SP!
-RP@
-RP!
+IOINIT	IOTX!	?IORX
+SP@	SP!	RP@	RP!	SP0	RP0
 UM+
 @EXEC
 NUF?
-SP0
-RP0
 PACK$       
-CSAME?
-CCOMPARE
-NAMECOMPARE
-str"|
-."|
+CSAME?	CCOMPARE	NAMECOMPARE
 DIGIT
 EXTRACT
 STR

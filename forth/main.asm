@@ -188,7 +188,7 @@ _start:
 
 	/* Init serial port -> done in hi via IOINIT */
 
-	ldx	#word_BOOT
+	ldx	#word_hi
 	stx	*LASTP
 
 	/* Setup the runtime environment */
@@ -197,7 +197,7 @@ _start:
 
 	lds	#SP_ZERO	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#RP_ZERO	/* Return stack 1K before end of RAM. We push word per word. */
-	ldx	#BOOT1		/* load pointer to startup code, skipping the native ENTER pointer! */
+	ldx	#BOOT		/* load pointer to startup code, skipping the native ENTER pointer! */
 	bra	NEXT2		/* Start execution */
 
 /*===========================================================================*/
@@ -1382,6 +1382,7 @@ word_DEC:
 	.byte	2
 	.ascii	"1-"
 DEC:
+	.word	code_ENTER
 	.word	IMM,-1
 	.word	PLUS
 	.word	RETURN
@@ -2326,9 +2327,8 @@ ktap2:	.word	DROP		/*buf bufend ptr*/
 
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY ACCEPT ( buf len -- buf count) Read up to len or EOL into buf.
-   Return buf and char count */
-/* TODO change to ( buf len -- count ) to comply with F2012 CORE 6.1.0695 */
+/* CORE 6.1.0695 ACCEPT ( buf len -- count) Read up to len or EOL into buf.
+   Returns char count */
 	.section .dic
 word_ACCEPT:
 	.word	word_TTAP
@@ -2356,8 +2356,8 @@ ACCEPT2:
 	.word	BRANCH,ACCEPT1	/*buf bufend bufcur , again */
 ACCEPT4:
 	.word	DROP		/*buf bufend - bufend has been replaced by bufcur in TTAP*/
-	.word	OVER		/*buf bufend buf*/
-	.word	SUB		/*buf len */
+	.word	SWAP		/*bufend buf*/
+	.word	SUB		/*len */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3691,7 +3691,6 @@ QUIT1:
 	/* Save the length of the received buffer */
 	.word	IMM, NTIBP
 	.word	STORE
-	.word	DROP /* TODO change accept to be F2012 compliant and avoid this DROP */
     
 	/* Reset input buffer pointer to start of buffer */
 	.word	IMM,0
@@ -3887,14 +3886,9 @@ hi:
 
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
+/* There is no header and no code pointer. This is not really a valid word. */
 	.section .dic
-word_BOOT:
-	.word	word_hi
-	.byte	4
-	.ascii	"BOOT"
 BOOT:
-	.word	code_ENTER
-BOOT1:
 	.word	IOINIT
 	.word	CONSOLE
 	.word	DECIMAL		/* Setup environment */
