@@ -3832,22 +3832,43 @@ CSPCHECK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* TOOLS 15.6.1.2465 WORDS ( -- ) - display the names in the context vocabulary. */
+/* INTERNAL ( voc -- ) */
+/* Display chain of words starting at voc.
+ * Called multiple times in the future when we will support multiple vocs.
+ */
+WORDLIST:
+    .word   code_ENTER
+wldo:
+	.word	DUP		/* voc voc */
+	.word	LOAD		/* voc prev */
+	.word	SWAP		/* prev voc */
+	.word	CELLP		/* prev nameptr */
+	.word   COUNT		/* prev nameptr+1 len+flags */
+	.word	IMM,WORD_LENMASK/*prev nameptr namelen+flags 0x3F*/
+	.word	AND		/*prev nameptr namelen*/
+	.word   TYPE	/* prev*/
+	.word	DUPNZ		/*prev prev | 0*/
+	.word	BRANCHZ,wlend	/*prev | -- jmp if prev null*/
+
+	/* previous is not null, look at prev word */
+	.word	BRANCH,wldo	/*prev*/
+
+wlend:
+    .word   RETURN
+
+/*---------------------------------------------------------------------------*/
+/* TOOLS 15.6.1.2465 WORDS ( -- ) */
+/* Display the names in the context vocabulary. */
 word_WORDS:
 	.word	word_CSPCHECK
 	.byte	5
 	.ascii	"WORDS"
 WORDS:
 	.word	code_ENTER
-#                    fdb       crr,cntxt,at        ; only in context
-#wors1               fdb       at,qdup             ; ?at end of list
-#                    fdb       qbran,wors2
-#                    fdb       dup,space,dotid     ; display a name
-#                    fdb       cellm,nufq          ; user control
-#                    fdb       qbran,wors1
-#                    fdb       drop
-#wors2:
-	.word	RETURN
+	.word	IMM,LASTP	/*cstr [pointer containing the address of the last word] */
+	.word	LOAD		/*cstr voc[address of last word entry] */
+	.word	WORDLIST	/*code name [if found] || cstr 0 [if not found] */
+    .word   RETURN
 
 /*===========================================================================*/
 /* Boot */
