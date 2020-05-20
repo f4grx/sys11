@@ -2642,12 +2642,28 @@ found1:
 	.word	LOAD		/*reqcstr voc prev */
 	.word	TOR		/*reqcstr voc | R:prev */
 	.word	CELLP		/*reqcstr nameptr | R:prev */
-	
-	.word	DDUP		/*reqcstr nameptr cstr nameptr | R:prev */
+
+	/* In compilation mode, we do not have to avoid compile-only words */
+	.word	STATE		/* reqcstr nameptr 0[interpret]/-1[compile] */
+	.word	NOT		/* reqcstr nameptr -1[interpret]/0[compile] */
+	.word	BRANCHZ,noskip	/* reqcstr nameptr if compile then noskip */
+
+	/* We are in interpretation mode */
+	/* Check flags within name. If word is compile only, skip it without even comparing name*/
+	.word	DUP			/*reqcstr nameptr nameptr*/
+	.word	CLOAD			/*reqcstr nameptr namelen+flags */
+	.word	IMM,WORD_COMPILEONLY	/*reqcstr nameptr namelen+flags COMPILEONLY*/
+	.word	AND			/*reqcstr nameptr WORD_IS_COMPILE_1 */
+	.word	BRANCHZ,noskip	/*reqcstr nameptr if compile only then nextword */
+	/* word is compile only */
+	.word	BRANCH, nextword
+noskip:
+	.word	DDUP		/*reqcstr nameptr reqcstr nameptr | R:prev */
 	.word	NAMECOMPARE	/*reqcstr nameptr equal_flag | R: prev*/
 	.word	BRANCHZ,found	/*reqcstr nameptr jump if equal | R:prev */
 
-	/* Strings are different */
+nextword:
+	/* Strings are different / word is compile only, look at next word */
 	.word	DROP		/*reqcstr | R: prev*/
 	.word	RFROM		/*reqcstr prev */
 	.word	DUP		/*reqcstr prev prev*/
@@ -2677,7 +2693,8 @@ found:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY FIND ( cstr -- codeaddr nameaddr | cstr false ) NAME? */
+/* PROPRIETARY FIND ( cstr -- codeaddr nameaddr | cstr false ) */
+/* PROPRIETARY FIND ( cstr -- codeaddr 1 [] | codeaddr -1 [] | cstr 0 ) ? */
 /* TODO CHANGE TO CORE 6.1.1550 FIND and update semantics */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
 /* TODO : extend to return 1 for immediates and -1 for not immediate */
@@ -3838,6 +3855,7 @@ CSPCHECK:
  */
 WORDLIST:
     .word   code_ENTER
+	.word	CR
 wldo:
 	.word	DUP		/* voc voc */
 	.word	LOAD		/* voc prev */
@@ -3846,7 +3864,8 @@ wldo:
 	.word   COUNT		/* prev nameptr+1 len+flags */
 	.word	IMM,WORD_LENMASK/*prev nameptr namelen+flags 0x3F*/
 	.word	AND		/*prev nameptr namelen*/
-	.word   TYPE	/* prev*/
+	.word	SPACE
+	.word   TYPE		/* prev*/
 	.word	DUPNZ		/*prev prev | 0*/
 	.word	BRANCHZ,wlend	/*prev | -- jmp if prev null*/
 
