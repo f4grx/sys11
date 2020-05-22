@@ -124,8 +124,9 @@
 	.equ SCSR_TDRE     ,0x80 /* Transmit buffer empty */
 
 	/* Forth memory map */
-	.equ	SP_ZERO, 0x8000-5	/* End of RAM (address of first free byte) */
-	.equ	RP_ZERO, 0x7C00-2	/* 1K before param stack (address of first free word)*/
+	.equ	SP_ZERO  , 0x8000-5	/* End of RAM (address of first free byte) */
+	.equ	RP_ZERO  , 0x7C00-2	/* 1K before param stack (address of first free word)*/
+	.equ	HERE_ZERO, 0x0100	/* Start of user data space */
 
 	/* Forth config */
 	.equ	TIB_LEN, 80
@@ -192,9 +193,6 @@ _start:
 	stx	*LASTP
 
 	/* Setup the runtime environment */
-	ldx	#(0x100)
-	stx	*HEREP		/*Define HERE, the beginning of the user data zone */
-
 	lds	#SP_ZERO	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#RP_ZERO	/* Return stack 1K before end of RAM. We push word per word. */
 	ldx	#BOOT		/* load pointer to startup code, skipping the native ENTER pointer! */
@@ -1363,6 +1361,9 @@ CHARP:
 
 /*---------------------------------------------------------------------------*/
 /* CORE 6.1.0290 1+ (n -- n) */
+/* This is similar to CHARP. It would be more complex to define an alias
+ * mechanism than to duplicate the implementation
+ */
 	.section .dic
 word_INC:
 	.word	word_CHARP
@@ -2173,6 +2174,22 @@ HERE:
 	.word	code_ENTER
 	.word	IMM, HEREP		/* (HEREP=&HERE) */
 	.word	LOAD		/* (HERE) */ 
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* TOOLS 15.6.2.1580 FORGET ( <spaces>name<space> -- ) */
+/* OBSOLETE (but useful) */
+/* Delete name and all words added net */
+word_FORGET:
+	.word	word_HERE
+	.byte	6
+	.ascii	"FORGET"
+FORGET:
+	.word	code_ENTER
+	/* TODO: FIND, TOKEN, WORDLIST are ALL browsing the dictionary with
+	 * different actions. These words have to be implemented using the
+         * TRAVERSE-WORDLIST (TOOLS_EXT 15.6.2.2297).
+	 */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -3639,7 +3656,7 @@ QSTACK:
 
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY eval ( -- ) evaluate all words in input buffer. Each word is interpreted or compiled according to current behaviour */
-/* TODO extend this to remove BEHAP vectoring and act according to the value of STATE. */
+/* TODO merge $INTERPRET and $COMPILE */
 	.section .dic
 word_EVAL:
 	.word	word_QSTACK
@@ -3909,10 +3926,25 @@ WORDS:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+/* PROPRIETARY CLEAR ( -- ) */
+/* ERASE in F2012 is a memclr */
+/* Delete all added definitions. */
+word_CLEAR:
+	.word	word_WORDS
+	.byte	5
+	.ascii	"CLEAR"
+CLEAR:
+	.word	code_ENTER
+	.word	IMM, HERE_ZERO
+	.word	IMM, HEREP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* PROPRIETARY VER ( -- u ) */
 	.section .dic
 word_VER:
-	.word	word_WORDS
+	.word	word_CLEAR
 	.byte	3
 	.ascii	"VER"
 VER:
@@ -3944,9 +3976,10 @@ hi:
 /* There is no header and no code pointer. This is not really a valid word. */
 	.section .dic
 BOOT:
-	.word	IOINIT
-	.word	CONSOLE
+	.word	IOINIT		/* Setup HC11 uart */
+	.word	CONSOLE		/* Setup IO vectors */
 	.word	DECIMAL		/* Setup environment */
+	.word	CLEAR		/* Setup HERE */
 	.word	hi		/* Show a startup banner */
 
 	.word	QUIT
