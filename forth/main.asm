@@ -2200,7 +2200,7 @@ FORGET:
 /* PROPRIETARY BS ( -- 8 ) */
 	.section .dic
 word_BS:
-	.word	word_HERE
+	.word	word_FORGET
 	.byte	2
 	.ascii	"BS"
 BS:
@@ -2638,7 +2638,7 @@ BSLASH:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* INTERNAL TRWL_FIND ( req 0 cur -- flag ) */
+/* INTERNAL TRWL_FIND ( req 0 ] cur -- flag ) */
 /* callback for TRAVERSE-WORDLIST that finds words. */
 /* req : name that is searched for
  * cur : word currently TRAVERSEd
@@ -2656,58 +2656,56 @@ BSLASH:
 TRWL_FIND:
 	.word	code_ENTER
 	/*compare cstr to current name stored at voc*/
-;This version is used if the prev link is stored before the name
 
 	/* In compilation mode, we do not have to avoid compile-only words */
 	.word	STATE			/* req 0 cur 0[interpret]/-1[compile] */
 	.word	NOT			/* req 0 cur -1[interpret]/0[compile] */
-	.word	BRANCHZ,noskip		/* req 0 cur  if compile then noskip */
+	.word	BRANCHZ,compiling	/* req 0 cur  if compile then dont check CONLY flag */
 
-	/* We are in interpretation mode */
+	/* We are in interpretation mode. we have to check the compile only flag */
 	/* Check flags within name. If word is compile only, skip it without even comparing name*/
 	.word	DUP			/*req 0 cur cur*/
 	.word	CLOAD			/*req 0 cur namelen+flags */
 	.word	IMM,WORD_COMPILEONLY	/*req 0 cur namelen+flags COMPILEONLY*/
 	.word	AND			/*req 0 cur NZ_IF_COMPILE_ONLY */
-	.word	BRANCHZ,noskip		/*req 0 cur , if not compile only then compare names*/
+	.word	BRANCHZ,compiling	/*req 0 cur , if not compile only then compare names*/
 
 	/* word is compile only : finish iteration*/
 	.word	RETURN			/*req 0 cur -> not zero so try again with next word */
 
-noskip:
+compiling:
 	.word	ROT			/*0 cur req */
-	.word	DDUP			/*req 0 cur */
-	.word	NAMECOMPARE		/*req nameptr equal_flag*/
-	.word	BRANCHZ,found		/*ncstr nameptr jump if equal*/
+	.word	DDUP			/*0 cur req cur req*/
+	.word	NAMECOMPARE		/*0 cur req equal_flag*/
+	.word	BRANCHZ,found		/*0 cur req jump_if_equal*/
 
-nextword:
 	/* Strings are different / word is compile only, look at next word */
-	.word	IMM,1
-	.word	RETURN
+	.word	ROT			/*cur req 0 */
+	.word	ROT			/*req 0 cur */
+	.word	RETURN			/* req 0 cur -> not zero so try agn with next word */
 
 found:
-
-	/* Push a one if immediate, -1 if not immediate */
-
-	.word	DROP		/*nameptr */
-	.word	DUP		/*nameptr nameptr */
-	.word	DUP		/*nameptr nameptr nameptr */
-	.word	CLOAD		/*nameptr nameptr namelen+FLAGS */
-	.word	IMM,WORD_LENMASK/*nameptr nameptr namelen+flags 0x3F */
-	.word	AND		/*nameptr nameptr namelen */
-	.word	CHARP		/*nameptr nameptr namelen+1 */
-	.word	PLUS		/*nameptr codeptr */
-	.word	SWAP		/*codeptr nameptr*/
-	.word	CLOAD		/*codeptr namelen+flags */
+	/* Push a one if immediate, -1 if not immediate. now req is useless */
+	.word	DROP		/*0 cur */
+	.word	DUP		/*0 cur cur */
+	.word	CLOAD		/*0 cur namelen+FLAGS */
+	.word	DUP		/*0 cur namelen+FLAGS namelen+FLAGS*/
+	.word	IMM,WORD_LENMASK/*0 cur namelen+flags namelen+FLAGS 0x3F */
+	.word	AND		/*0 cur namelen+flags namelen */
+	.word	CHARP		/*0 cur namelen+flags namelen+1 */
+	.word	ROT		/*0 namelen+flags namelen+1 cur*/
+	.word	PLUS		/*0 namelen+flags codeptr */
+	.word	SWAP		/*0 codeptr namelen+flags*/
+	.word	ROT		/*codeptr namelen+flags 0 */
+	.word	DROP		/*codeptr namelen+flags */
 	.word	IMM,WORD_IMMEDIATE
-	.word	AND		/*codeptr imm_flag */
-	.word	IMM,-1		/*codeptr name_imm -1 (not imm by default) */
-	.word	SWAP		/*codeptr 1 imm_flag */
-	.word	BRANCHZ,fnotimm /*codeptr 1 jump if name is not imm */
-	/* an immediate word, will return 1 */
-	.word	NEGATE
+	.word	AND		/*codeptr NZ_IF_IMMEDIATE */
+	.word	IMM,-1		/*codeptr NZ_IF_IMM -1 (not imm by default) */
+	.word	SWAP		/*codeptr -1 NZ_IF_IMM */
+	.word	BRANCHZ,fnotimm /*codeptr -1 jump if name is not imm - will return -1*/
+	.word	NEGATE		/*codeptr 1 will return 1 for immediate */
 fnotimm:
-	.word	IMM,0		/* Flag to terminate the traversal */
+	.word	IMM,0		/* codeptr +-1 0 Flag to terminate the traversal */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -2716,7 +2714,7 @@ fnotimm:
 
 	.section .dic
 word_FIND:
-	.word	word_FINDONE
+	.word	word_BSLASH
 	.byte	4
 	.ascii	"FIND"
 FIND:
@@ -2893,18 +2891,9 @@ word_DOINTERPRET:
 	.ascii	"$INTERPRET"
 DOINTERPRET:
 	.word	code_ENTER
-	.word	FIND		/*code name || cstr false */
-	.word	DUPNZ		/*code name name || cstr false */
+	.word	FIND		/*code TRUE || name FALSE */
 	.word	BRANCHZ,donumi	/* if not name then jump */
-	/*Name is found */
-	/* Read the word name length to get the options */
-	.word	CLOAD		/*code namelen+flags */
-	.word	IMM,WORD_COMPILEONLY	/* code namelen+flags 0x40 */
-	.word	AND			/* code word_is_compile_only */
-	.word	ABORTNZ
-	.byte	12
-	.ascii	"compile only"
-	/* name is not compile only (abortnz did not trigger) */
+	/*Name is found. Execute in all cases (immediate or not) */
 	.word	EXECUTE
 	.word	RETURN
 
@@ -3085,7 +3074,7 @@ SCOMPQ:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY for ( -- a ) - start a for-next loop structure in a colon definition. */
+/* PROPRIETARY for ( -- a ) - start a for-next loop structure in a colon deND:nition. */
 /* This word pushes the current address on the data stack for later jump back*/
 	.section .dic
 word_FOR:
@@ -3892,23 +3881,28 @@ word_TRWL:
 TRWL:
 	.word   code_ENTER
 wldo:
-	.word	DUP		/* voc voc */
-	.word	LOAD		/* voc prev */
-	.word	TOR		/* voc | R:prev*/
-	.word	CELLP		/* nameptr | R:prev*/
-	.word	RFROM		/* nameptr callback | R:prev*/
-	.word	EXECUTE		/* flag | R:prev*/
-	.word	BRANCHZ,wlabrt	/* jump if callback has returned false | R:prev*/
-	.word	RFROM		/* prev */
-	.word	DUPNZ		/*prev prev | 0*/
-	.word	BRANCHZ,wlend	/*prev | -- jmp if prev null*/
+	.word	DUP		/* cbcodeptr voc voc */
+	.word	LOAD		/* cbcodeptr voc prev */
+	.word	TOR		/* cbcodeptr voc | R:prev*/
+	.word	OVER		/* cbcodeptr voc cbcodeptr | R:prev*/
+	.word	TOR		/* cbcodeptr voc | R: prev cbcodeptr */
+	.word	CELLP		/* cbcodeptr nameptr | R:prev cbcodeptr*/
+	.word	SWAP		/* nameptr cbcodeptr | R:prev cbcodeptr*/
+	.word	EXECUTE		/* flag | R:prev cbcodeptr*/
+	.word	BRANCHZ,wlabrt	/* jump if callback has returned false | R:prev cbcodeptr*/
+	.word	RFROM		/*cbcodeptr */
+	.word	RFROM		/*cbcodeptr prev */
+	.word	DUPNZ		/*cbcodeptr prev prev | cbcodeptr 0*/
+	.word	BRANCHZ,wlend	/*cbcodeptr prev | cbcodeptr, jmp if prev null*/
 
 	/* previous is not null, look at prev word */
-	.word	BRANCH,wldo	/*prev*/
+	.word	BRANCH,wldo	/*cbcodeptr prev*/
 wlabrt:
-	.word	RFROM		/*prev*/
-	.word	DROP		/*--*/
+	.word	RFROM		/*cbcodeptr |R:prev */
+	.word	RFROM		/*cbcodeptr prev*/
+	.word	DROP		/*cbcodeptr*/
 wlend:
+	.word	DROP		/*--*/
 	.word   RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3928,7 +3922,7 @@ TRWL_TYPE:
 /* TOOLS 15.6.1.2465 WORDS ( -- ) */
 /* Display the names in the context vocabulary. */
 word_WORDS:
-	.word	word_CSPCHECK
+	.word	word_TRWL
 	.byte	5
 	.ascii	"WORDS"
 WORDS:
