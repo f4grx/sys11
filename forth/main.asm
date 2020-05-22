@@ -1622,10 +1622,10 @@ csame0:
 csame1:
 	/*both chars are similar. Increment pointers and loop - ptra ptrb chrdiff | R:len*/
 	.word	DROP		/*ptra ptrb | R:len*/
-	.word	TOR		/*ptra | R: len ptrb*/
-	.word	CHARP		/*ptra+1 | R: len ptrb*/
-	.word	RFROM		/*ptra+1 ptrb | R: len*/
+	.word	CHARP		/*ptra+1 | R: len*/
+	.word	SWAP
 	.word	CHARP		/*ptra+1 ptrb+1 | R: len*/
+	.word	SWAP
 
 csame2:
 	.word	JNZD, csame0	/*ptra+1 ptrb+1 | R: len if not null, else --*/
@@ -1644,23 +1644,21 @@ csame2:
 internal_compare:
 	.word	code_ENTER
 	/*Compare lengths. not equal? not same strings.*/
-	.word	SUB		/*cstra cstrb (lena-lenb)*/
-	.word	DUP		/*cstra cstrb lendiff lendiff*/
-	.word	TOR		/*cstra cstrb lendiff | R: lendiff*/
-	.word	BRANCHZ, ccoeq	/*cstra cstrb | R:lendiff*/
+	.word	OVER		/*cstra cstrb lena lenb lena */
+	.word	SUB		/*cstra cstrb lena (lenb-lena)*/
+	.word	SWAP		/*cstra cstrb lendiff lena*/
+	.word	TOR		/*cstra cstrb lendiff | R:lena*/
+	.word	BRANCHZ, ccoeq	/*cstra cstrb */
 	/* Different lengths */
-	.word	DDROP		/*-- | R:lendiff*/
-	.word	RFROM		/*lendiff*/
+	.word	DDROP
+	.word	RFROM	/* lena if not zero serves as difference marker */
 	.word	RETURN
-	/*Length match. Compare chars */
 ccoeq:
-	.word	RFROM		/*cstra cstrb lendiff */
-	.word	DROP		/*cstra cstrb*/
-	.word	TOR		/*cstra / cstrb*/
-	.word	COUNT		/*bufa cnta / cstrb */
-	.word	RFROM		/*bufa cnta cstrb*/
-	.word	CHARP		/*bufa cnta bufb*/
-	.word	SWAP		/*bufa bufb cnta */
+	/*Length match. Compare chars */
+	.word	CHARP
+	.word	SWAP
+	.word	CHARP
+	.word	RFROM		/*bufb bufa len*/
 	.word	CSAME		/*result */
 	.word	RETURN
 
@@ -2656,7 +2654,6 @@ BSLASH:
 TRWL_FIND:
 	.word	code_ENTER
 	/*compare cstr to current name stored at voc*/
-
 	/* In compilation mode, we do not have to avoid compile-only words */
 	.word	STATE			/* req 0 cur 0[interpret]/-1[compile] */
 	.word	NOT			/* req 0 cur -1[interpret]/0[compile] */
@@ -2669,7 +2666,6 @@ TRWL_FIND:
 	.word	IMM,WORD_COMPILEONLY	/*req 0 cur namelen+flags COMPILEONLY*/
 	.word	AND			/*req 0 cur NZ_IF_COMPILE_ONLY */
 	.word	BRANCHZ,compiling	/*req 0 cur , if not compile only then compare names*/
-
 	/* word is compile only : finish iteration*/
 	.word	RETURN			/*req 0 cur -> not zero so try again with next word */
 
@@ -2891,7 +2887,7 @@ word_DOINTERPRET:
 	.ascii	"$INTERPRET"
 DOINTERPRET:
 	.word	code_ENTER
-	.word	FIND		/*code TRUE || name FALSE */
+	.word	FIND		/*code TRUE/+1 || name FALSE */
 	.word	BRANCHZ,donumi	/* if not name then jump */
 	/*Name is found. Execute in all cases (immediate or not) */
 	.word	EXECUTE
@@ -2918,16 +2914,12 @@ word_DOCOMPILE:
 	.ascii	"$COMPILE"
 DOCOMPILE:
 	.word	code_ENTER
-	.word	FIND		/*code name || cstr false */
-	.word	DUPNZ		/*code name name || cstr false */
-	.word	BRANCHZ,donumc	/*code name || cstr */
-				/*code cstr*/
-	/* Read the word name length to get the options */
-	.word	CLOAD		/*code namelen+flags */
-	.word	IMM,WORD_IMMEDIATE	/* code namelen+flags 0x80 */
-	.word	AND			/* code word_is_immediate */
-	.word	BRANCHZ,notimm		/* code */
-
+	.word	FIND		/*code TRUE || codeimm 1 || cstr false */
+	.word	DUPNZ
+	.word	BRANCHZ,donumc	/*code +-1 || cstr */
+	.word	IMM,-1		/*code +-1 -1 */
+	.word	XOR		/*code (0 if normal, something else if imm) */
+	.word	BRANCHZ,notimm
 	/* Word is immediate -> execute */
 	.word	EXECUTE
 	.word	RETURN
@@ -3340,9 +3332,8 @@ word_COLON:
 COLON:
 	.word	code_ENTER
 	.word	SNAME
-	.word	IMM,code_ENTER	/* save code to execute the definition */
-	.word	COMMA
-	.word	COMPIL		/* Enter compilation mode */
+	.word	COMPILE,code_ENTER	/* save codeptr to execute the definition */
+	.word	COMPIL			/* Enter compilation mode */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
