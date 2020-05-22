@@ -3375,6 +3375,15 @@ word_IMMEDIATE:
 	.ascii	"IMMEDIATE"
 IMMEDIATE:
 	.word	code_ENTER
+	.word	IMM,CURDP		/*curdp = &cur_def_ptr*/
+	.word	LOAD			/*cur_def_ptr*/
+	.word	CELLP			/*cstr*/
+	.word	DUP			/*cstr cstr*/
+	.word	CLOAD			/*cstr name_len_and_flags*/
+	.word	IMM,WORD_IMMEDIATE	/*cstr name_len_and_flags IMM*/
+	.word	OR			/*cstr name_len_and_flags|IMM*/
+	.word	SWAP			/*name_len_and_flags|IMM cstr*/
+	.word	CSTORE			/*--*/
 	.word	RETURN
  
 /*---------------------------------------------------------------------------*/
