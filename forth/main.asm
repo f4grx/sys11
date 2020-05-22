@@ -2621,10 +2621,9 @@ BSLASH:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY find ( cstr voc -- codeadr cstr | cstr f ) */
+/* INTERNAL FINDONE ( cstr voc -- codeaddr 1 [immediate] | codeaddr -1 [normal] | cstr 0 [notfound] ) */
 /* TODO : rename */
 /* TODO : extend to return 1 for immediates and -1 for not immediate */
-/* TODO : Do not find compile-only words if not in interpretation state */
 
 /* Search a name in a vocabulary (pointer to last entry of a chain). */
 /* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
@@ -2689,16 +2688,23 @@ found:
 	.word	AND		/*nameptr nameptr namelen */
 	.word	CHARP		/*nameptr nameptr namelen+1 */
 	.word	PLUS		/*nameptr codeptr */
-	.word	SWAP		/*reqcodeptr nameptr , as required by spec*/
+	.word	SWAP		/*codeptr nameptr*/
+	.word	CLOAD		/*codeptr namelen+flags */
+	.word	IMM,WORD_IMMEDIATE
+	.word	AND		/*codeptr imm_flag */
+	.word	IMM,-1		/*codeptr name_imm -1 (not imm by default) */
+	.word	SWAP		/*codeptr 1 imm_flag */
+	.word	BRANCHZ,fnotimm /*codeptr 1 jump if name is not imm */
+	/* an immediate word, will return 1 */
+	.word	NEGATE
+fnotimm:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY FIND ( cstr -- codeaddr nameaddr | cstr false ) */
-/* PROPRIETARY FIND ( cstr -- codeaddr 1 [] | codeaddr -1 [] | cstr 0 ) ? */
-/* TODO CHANGE TO CORE 6.1.1550 FIND and update semantics */
+/* TODO CORE 6.1.1550 FIND ( cstr -- codeaddr 1 [immediate] | codeaddr -1 [normal] | cstr 0 ) ? */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
 /* TODO : extend to return 1 for immediates and -1 for not immediate */
-/* TODO : Do not find compile-only words if not in interpretation state */
 
 	.section .dic
 word_FIND:
