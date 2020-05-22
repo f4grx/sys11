@@ -2638,65 +2638,57 @@ BSLASH:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* INTERNAL FINDONE ( cstr voc -- codeaddr 1 [immediate] | codeaddr -1 [normal] | cstr 0 [notfound] ) */
-/* TODO : rename */
-/* TODO : extend to return 1 for immediates and -1 for not immediate */
+/* INTERNAL TRWL_FIND ( req 0 cur -- flag ) */
+/* callback for TRAVERSE-WORDLIST that finds words. */
+/* req : name that is searched for
+ * cur : word currently TRAVERSEd
+ * Strategy: TRAVERSE-WORDLIST does not put items on the stack before calling
+ * its callback, so the previous items are available to the callback.
+ * FIND pushes a zero before browsing the list.
+ * if a word is found, TRWL_FIND will replace this zero with the code pointer
+ * of the found word and stop the search.
+ * After the list if traversed, we can inspect this item and determine if a
+ * word was found. The FIND word itself with then load the flags and determine
+ * immediate or not.
+ */
 
-/* Search a name in a vocabulary (pointer to last entry of a chain). */
-/* THIS WORD DEPENDS ON THE IMPLEMENTED DICT STRUCTURE */
 	.section .dic
-word_FINDONE:
-	.word	word_BSLASH
-	.byte	7
-	.ascii	"FINDONE"
-FINDONE:
+TRWL_FIND:
 	.word	code_ENTER
 	/*compare cstr to current name stored at voc*/
 ;This version is used if the prev link is stored before the name
-found1:
-	.word	DUP		/*reqcstr voc voc */
-	.word	LOAD		/*reqcstr voc prev */
-	.word	TOR		/*reqcstr voc | R:prev */
-	.word	CELLP		/*reqcstr nameptr | R:prev */
 
 	/* In compilation mode, we do not have to avoid compile-only words */
-	.word	STATE		/* reqcstr nameptr 0[interpret]/-1[compile] */
-	.word	NOT		/* reqcstr nameptr -1[interpret]/0[compile] */
-	.word	BRANCHZ,noskip	/* reqcstr nameptr if compile then noskip */
+	.word	STATE			/* req 0 cur 0[interpret]/-1[compile] */
+	.word	NOT			/* req 0 cur -1[interpret]/0[compile] */
+	.word	BRANCHZ,noskip		/* req 0 cur  if compile then noskip */
 
 	/* We are in interpretation mode */
 	/* Check flags within name. If word is compile only, skip it without even comparing name*/
-	.word	DUP			/*reqcstr nameptr nameptr*/
-	.word	CLOAD			/*reqcstr nameptr namelen+flags */
-	.word	IMM,WORD_COMPILEONLY	/*reqcstr nameptr namelen+flags COMPILEONLY*/
-	.word	AND			/*reqcstr nameptr WORD_IS_COMPILE_1 */
-	.word	BRANCHZ,noskip	/*reqcstr nameptr if compile only then nextword */
-	/* word is compile only */
-	.word	BRANCH, nextword
+	.word	DUP			/*req 0 cur cur*/
+	.word	CLOAD			/*req 0 cur namelen+flags */
+	.word	IMM,WORD_COMPILEONLY	/*req 0 cur namelen+flags COMPILEONLY*/
+	.word	AND			/*req 0 cur NZ_IF_COMPILE_ONLY */
+	.word	BRANCHZ,noskip		/*req 0 cur , if not compile only then compare names*/
+
+	/* word is compile only : finish iteration*/
+	.word	RETURN			/*req 0 cur -> not zero so try again with next word */
+
 noskip:
-	.word	DDUP		/*reqcstr nameptr reqcstr nameptr | R:prev */
-	.word	NAMECOMPARE	/*reqcstr nameptr equal_flag | R: prev*/
-	.word	BRANCHZ,found	/*reqcstr nameptr jump if equal | R:prev */
+	.word	ROT			/*0 cur req */
+	.word	DDUP			/*req 0 cur */
+	.word	NAMECOMPARE		/*req nameptr equal_flag*/
+	.word	BRANCHZ,found		/*ncstr nameptr jump if equal*/
 
 nextword:
 	/* Strings are different / word is compile only, look at next word */
-	.word	DROP		/*reqcstr | R: prev*/
-	.word	RFROM		/*reqcstr prev */
-	.word	DUP		/*reqcstr prev prev*/
-	.word	BRANCHZ,noprev	/*reqcstr prev, jmp if prev null*/
-
-	/* previous is not null, look at prev word */
-	.word	BRANCH,found1	/*reqstr prev*/
-
-	/* no previous word */
-noprev:
-	.word	DROP		/*reqcstr */
-	.word	IMM,0		/*reqcstr false */
+	.word	IMM,1
 	.word	RETURN
+
 found:
-	.word	RFROM		/*reqcstr nameptr prev */
-	.word	DROP		/*reqcstr nameptr */
-	.word	SWAP		/*nameptr reqcstr */
+
+	/* Push a one if immediate, -1 if not immediate */
+
 	.word	DROP		/*nameptr */
 	.word	DUP		/*nameptr nameptr */
 	.word	DUP		/*nameptr nameptr nameptr */
@@ -2715,13 +2707,12 @@ found:
 	/* an immediate word, will return 1 */
 	.word	NEGATE
 fnotimm:
+	.word	IMM,0		/* Flag to terminate the traversal */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY FIND ( cstr -- codeaddr nameaddr | cstr false ) */
-/* TODO CORE 6.1.1550 FIND ( cstr -- codeaddr 1 [immediate] | codeaddr -1 [normal] | cstr 0 ) ? */
+/* CORE 6.1.1550 FIND ( cstr -- codeaddr 1 [immediate] | codeaddr -1 [normal] | cstr 0 ) ? */
 /* Check ALL vocabularies for a matching word and return code and name address, else same cstr and zero*/
-/* TODO : extend to return 1 for immediates and -1 for not immediate */
 
 	.section .dic
 word_FIND:
@@ -2729,10 +2720,15 @@ word_FIND:
 	.byte	4
 	.ascii	"FIND"
 FIND:
-	.word	code_ENTER
-	.word	IMM,LASTP	/*cstr [pointer containing the address of the last word] */
-	.word	LOAD		/*cstr voc[address of last word entry] */
-	.word	FINDONE		/*code name [if found] || cstr 0 [if not found] */
+	.word	code_ENTER	/*req - is a cstr */
+	.word	IMM,0		/*req 0 - This setups the return state if nothing is found */
+	.word	IMM,TRWL_FIND	/*req 0 cb */
+	.word	IMM,LASTP	/*req 0 cb [pointer containing the address of the last word] */
+	.word	LOAD		/*req 0 cb voc[address of last word entry] */
+	.word	TRWL		/*Browse all words. The search stops when the required word is found */
+        /* Search complete. What do we find on the stack? */
+	/* If no word was found: the zero previously pushed will be found */
+	/* req 0 [if nothing found] codeptr +-1 [if found] */
 	.word	RETURN
 
 /*===========================================================================*/
@@ -3881,31 +3877,52 @@ CSPCHECK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* INTERNAL ( voc -- ) */
-/* Display chain of words starting at voc.
- * Called multiple times in the future when we will support multiple vocs.
+
+/*---------------------------------------------------------------------------*/
+/* TOOLS_EXT 15.6.2.2297 TRAVERSE-WORDLIST ( ... codeptr voc -- ... ) */
+/* TRAVERSE-WORDLIST-CALLBACK ( ... namecstr -- ... flag ) */
+/* Execute codeptr for each word in voc passing name ptr, stop when flag returns zero.
+ * When callback is executed the stack does not have anything,
+ * so previous items can be accessed.
  */
-WORDLIST:
-    .word   code_ENTER
-	.word	CR
+word_TRWL:
+	.word	word_CSPCHECK
+	.byte	17
+	.ascii	"TRAVERSE-WORDLIST"
+TRWL:
+	.word   code_ENTER
 wldo:
 	.word	DUP		/* voc voc */
 	.word	LOAD		/* voc prev */
-	.word	SWAP		/* prev voc */
-	.word	CELLP		/* prev nameptr */
-	.word   COUNT		/* prev nameptr+1 len+flags */
-	.word	IMM,WORD_LENMASK/*prev nameptr namelen+flags 0x3F*/
-	.word	AND		/*prev nameptr namelen*/
-	.word	SPACE
-	.word   TYPE		/* prev*/
+	.word	TOR		/* voc | R:prev*/
+	.word	CELLP		/* nameptr | R:prev*/
+	.word	RFROM		/* nameptr callback | R:prev*/
+	.word	EXECUTE		/* flag | R:prev*/
+	.word	BRANCHZ,wlabrt	/* jump if callback has returned false | R:prev*/
+	.word	RFROM		/* prev */
 	.word	DUPNZ		/*prev prev | 0*/
 	.word	BRANCHZ,wlend	/*prev | -- jmp if prev null*/
 
 	/* previous is not null, look at prev word */
 	.word	BRANCH,wldo	/*prev*/
-
+wlabrt:
+	.word	RFROM		/*prev*/
+	.word	DROP		/*--*/
 wlend:
-    .word   RETURN
+	.word   RETURN
+
+/*---------------------------------------------------------------------------*/
+/* INTERNAL routine to print each word enumerated by TRAVERSE-WORDLIST */
+/* (namecstr -- 0 [abort] | !0 [continue]) */
+TRWL_TYPE:
+	.word	code_ENTER
+	.word	DUP		/* namecstr nameptr - keep a nameptr on list to continue enum*/
+	.word   COUNT		/* namecstr nameptr+1 len+flags */
+	.word	IMM,WORD_LENMASK/* namecstr nameptr namelen+flags 0x3F*/
+	.word	AND		/* namecstr nameptr namelen*/
+	.word	SPACE
+	.word   TYPE		/* namecstr - this is a true flag to continue enum */
+	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* TOOLS 15.6.1.2465 WORDS ( -- ) */
@@ -3916,10 +3933,12 @@ word_WORDS:
 	.ascii	"WORDS"
 WORDS:
 	.word	code_ENTER
+	.word	CR
+	.word	IMM,TRWL_TYPE
 	.word	IMM,LASTP	/*cstr [pointer containing the address of the last word] */
 	.word	LOAD		/*cstr voc[address of last word entry] */
-	.word	WORDLIST	/*code name [if found] || cstr 0 [if not found] */
-    .word   RETURN
+	.word	TRWL		/* Run this word on all words of the list */
+	.word   RETURN
 
 /*===========================================================================*/
 /* Boot */
