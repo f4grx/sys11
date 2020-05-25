@@ -2179,10 +2179,15 @@ word_FORGET:
 	.ascii	"FORGET"
 FORGET:
 	.word	code_ENTER
-	/* TODO: FIND, TOKEN, WORDLIST are ALL browsing the dictionary with
-	 * different actions. These words have to be implemented using the
-         * TRAVERSE-WORDLIST (TOOLS_EXT 15.6.2.2297).
-	 */
+	/* TICK will return a code address via FIND. However, to forget words,
+	 * we need the name address instead. It is not easy to do that.
+	 * Rewinding the pointer back through the ASCII name until a special
+	 * value is reached will not work, because the name length is combined
+	 * with flags so values have no specific range non overlapping with
+	 * usual characters. We could check that:
+	 * nameaddr + (byte at nameaddr AND LENMASK) == codeaddr
+	 * but this would be quite a large code. However, such a routine could
+	 * be reused by the SEE disassembler word. */
 	.word	RETURN
 
 /*===========================================================================*/
