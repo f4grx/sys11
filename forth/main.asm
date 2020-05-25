@@ -2872,71 +2872,15 @@ COMPIL:
 	.word	STORE
 	.word	RETURN
 
-/*---------------------------------------------------------------------------*/
-/* PROPRIETARY $INTERPRET ( a -- ) */
-/* TODO use STATE instead and merge with $COMPILE as EVAL */
-	.section .dic
-word_DOINTERPRET:
-	.word	word_COMPIL
-	.byte	10
-	.ascii	"$INTERPRET"
-DOINTERPRET:
-	.word	code_ENTER
-	.word	FIND		/*code TRUE/+1 || name FALSE */
-	.word	BRANCHZ,donumi	/* if not name then jump */
-	/*Name is found. Execute in all cases (immediate or not) */
-	.word	EXECUTE
-	.word	RETURN
-
-donumi:        /* No word was found, attempt to parse as number, then push */
-	.word	NUMBERQ
-	.word	BRANCHZ,notfoundi	/*consume the OK flag and leaves the number on the stack for later use*/
-	.word	RETURN
-notfoundi:
-	.word	THROW			/* Throw the failed name as exception, to be caught in QUIT */
-
 /*===========================================================================*/
 /* Compiler */
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY $COMPILE ( a -- ) - compile next word to code dictionary as a token or literal. */
-/* TODO use STATE instead and merge with $COMPILE as EVAL */
-	.section .dic
-word_DOCOMPILE:
-	.word	word_DOINTERPRET
-	.byte	8
-	.ascii	"$COMPILE"
-DOCOMPILE:
-	.word	code_ENTER
-	.word	FIND		/*code TRUE || codeimm 1 || cstr false */
-	.word	DUPNZ
-	.word	BRANCHZ,donumc	/*code +-1 || cstr */
-	.word	IMM,-1		/*code +-1 -1 */
-	.word	XOR		/*code (0 if normal, something else if imm) */
-	.word	BRANCHZ,notimm
-	/* Word is immediate -> execute */
-	.word	EXECUTE
-	.word	RETURN
-notimm:
-	/* Word is not immediate -> Save a call to this word */
-	.word	COMMA
-	.word	RETURN
-donumc:				/*cstr*/
-	.word	NUMBERQ
-	.word	BRANCHZ,notfoundc
-	/* Generate code to push the number */
-	.word	LITERAL
-	.word	RETURN
-notfoundc:
-	/* Not a word, not a number */
-	.word	THROW
-
-/*---------------------------------------------------------------------------*/
 /* CORE 6.1.0070 ' ( "<spaces>name" -- ca ) - search context vocabularies for the next word in input stream. */
 	.section .dic
 word_TICK:
-	.word	word_DOCOMPILE
+	.word	word_COMPIL
 	.byte	1
 	.ascii	"'"
 TICK:
@@ -3632,20 +3576,52 @@ word_EVAL:
 EVAL:
 	.word	code_ENTER
 eval1:
-	.word	TOKEN		/* tokcstr */
-	.word	DUP		/* tokcstr tokcstr */
-	.word	CLOAD		/* tokcstr toklen input stream empty?*/
-	.word	BRANCHZ, eval2	/* tokcstr Could not parse: finish execution of buffer */
-	.word	STATE		/* tokstr state */
-	.word	BRANCHZ,evinterp
-	.word	DOCOMPILE
-	.word	BRANCH,evnxt
+	.word	TOKEN			/* tokcstr */
+	.word	DUP			/* tokcstr tokcstr */
+	.word	CLOAD			/* tokcstr toklen | input stream empty?*/
+	.word	BRANCHZ, evalfinish	/* tokcstr Could not parse: finish execution of buffer */
+
+	.word	FIND			/*code TRUE || codeimm 1 || cstr false */
+	.word	DUPNZ			/* Duplicate only if 1 or -1 */
+	.word	BRANCHZ,evnum		/* code +-1 | cstr if not name then evnum */
+
+	/*Name is found. Execute in all cases (immediate or not) */
+	.word	STATE			/* code +-1 state */
+	.word	BRANCHZ,evinterp	/* code +-1 */
+
+	/* In compilation mode. Check if word is immediate */
+	.word	IMM,1			/* code +-1 1 */
+	.word	XOR			/* code zero_if_imm */
+	.word	BRANCHZ, evinterp2	/* code */
+
+	/* Word is not immediate -> compile */
+	.word	COMMA
+	.word	BRANCH,evnext
+
 evinterp:
-	.word	DOINTERPRET
-evnxt:
-	.word	QSTACK		/*Check stack underflow */
+	.word	DROP			/* code */
+evinterp2:
+	/* Interpret word - because interpreting or compiling an immediate word.*/
+	.word	EXECUTE
+	.word	BRANCH, evnext	/* Manage next token */
+
+evnum:
+	.word	NUMBERQ
+	.word	BRANCHZ,notfound	/*consume the OK flag and leaves the number on the stack for later use*/
+	/* Valid number*/
+	.word	STATE		/* tokstr state */
+	.word	BRANCHZ, evnext	/* If interpreting, the number just stays on the stack and look at next token */
+	.word	LITERAL		/* If compiling, the number left on stack is instead compiled as an IMM */
+	.word	BRANCH, evnext	/* Manage next token */
+
+notfound:
+	.word	THROW	/* Throw the failed name as exception, to be caught in QUIT */
+
+evnext:
+	.word	QSTACK		/*TODO Check stack underflow */
 	.word	BRANCH, eval1	/* Do next token */
-eval2:
+
+evalfinish:
 	.word	DROP		/*--*/
 	.word	PROMPT		/**/
 	.word	RETURN
