@@ -807,7 +807,7 @@ void hc11_core_clock(struct hc11_core *core)
 
               case OP02_IDIV_INH : /*ZVC*/
                 core->regs.flags.V = 0;
-                log_msg(SYS_CORE, CORE_INST, "IDIV %04X / %04X\n", core->regs.x, core->regs.d);
+                log_msg(SYS_CORE, CORE_INST, "IDIV %04X / %04X\n", core->regs.d, core->regs.x);
                 if(core->regs.x == 0)
                   {
                     //divide by zero
@@ -819,13 +819,26 @@ void hc11_core_clock(struct hc11_core *core)
                     tmp = core->regs.x;
                     core->regs.x = core->regs.d / tmp;
                     core->regs.d = core->regs.d % tmp;
-                    core->regs.flags.Z = (core->regs.x == 0);
+                    core->regs.flags.Z = (tmp == 0);
                   }
                 break;
 
               case OP03_FDIV_INH : /*ZVC*/
-                core->busadr  = VECTOR_ILLEGAL;
-                core->state   = STATE_VECTORFETCH_H;
+                core->regs.flags.V = core->regs.x <= core->regs.d;
+                log_msg(SYS_CORE, CORE_INST, "FDIV %04X / %04X\n", core->regs.d, core->regs.x);
+                if(core->regs.x == 0)
+                  {
+                    //divide by zero
+                    core->regs.x = 0xFFFF;
+                    core->regs.flags.C = 1;
+                  }
+                else
+                  {
+                    tmp = core->regs.x;
+                    core->regs.x = (uint16_t)(((uint32_t)core->regs.d << 16) / (uint32_t)tmp);
+                    core->regs.d = (uint16_t)(((uint32_t)core->regs.d << 16) % (uint32_t)tmp);
+                    core->regs.flags.Z = (tmp == 0);
+                  }
                 break;
 
               case OP_MUL_INH   : /*C*/

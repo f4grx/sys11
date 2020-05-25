@@ -115,8 +115,6 @@ abort"
 STATE
 [
 ]
-$INTERPRET
-$COMPILE
 '
 ALLOT
 ,

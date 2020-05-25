@@ -132,7 +132,7 @@
 	.equ	TIB_LEN, 80
 	.equ	USE_RTS, 1		/* slightly smaller code using RTS to opcode jmp */
 	.equ	USE_MUL, 1		/* use HC11 multiplier instead of eforth UM* routine */
-	.equ	USE_DIV, 0		/* use HC11 divider instead of eforth UM/MOD routine */
+	.equ	USE_DIV, 1		/* use HC11 divider instead of eforth UM/MOD routine */
 
 	/* Word flags - added to length, so word length is encoded on 6 bits*/
 	.equ	WORD_IMMEDIATE   , 0x80
@@ -156,7 +156,7 @@ CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 
 	/* Input text buffering */
 
-pTEMP:	.long	0	/* Temp variable used in LPARSE and UM* */
+pTEMP:	.space	6	/* Temp variable used in LPARSE, UM* and UM/MOD */
 INN:	.word	0	/* Parse position in the input buffer */
 TIBBUF:	.space	TIB_LEN	/* Default Input buffer */
 NTIBP:	.word	0	/* Number of received characters in current line */
@@ -1208,31 +1208,86 @@ word_UMMOD:
 UMMOD:
 .if USE_DIV
 /* Native implementation of UM/MOD using HC11 divider.
-   HC11 divides 16 by 16 to produce a 16-bit quotient and remainder.
+   HC11 divides 16 by 16 to produce a 16-bit quotient and remainder (IDIV) or 16-bit left-shifted 16 by 16 (FDIV).
    We need to extend that to a 32/16 divide.
-   after tsx, the numbers are at these offsets:
-   0 uL
-   1 uH
-   2 udhL
-   3 udhH
-   4 udlL
-   5 udlH
 
-Example: divide:
+Example in base 10: divide 19 by 8
+19 | 8        To divide 19 by 8 we first divide 10 by 8
+10 |---       This yields 1 and remains 2 (FDIV)
+ 2 | 1        But we divided 10 instead of 19
+ 9 |          So we add the last digit to the remainder. Total is 11.
+11 |          This is larger than the base 10, there was a carry.
+10 | 1        So we have to divide again. Using hig digit we divide 10 by 8 and get 1 remains 2. (FDIV)
+ 2 |          But we divided 10 instead of 11.
+ 3 |          So we add the last digit to the remainder (IDIV). This is 3.
+Now the remainder is smaller than the divisor, process is complete.
+
+With Forth cells, the process is the same but we divide in base 65536.
+The first steps of the division are done with FDIV which divides D<<65536/X
+The last step is a HC11 IDIV since we divide a single digit with a single digit.
+
 0x12345678 = 0x5678 * 0x35E5 + 0x2520
  305419896 =  22136 *  13797 +   9504
 
-12345678 / 5678
-First start with the left part
-12340000 / 5678
-quotient is zero -> total quotient will be on 16 bits, good, else error
-12340000 / 5678 -> 0000
+Divide 0x12340000 by 0x5678 using FDIV, quotient is 0x35E4, remainder 0x2520
 
+Now add low digit: 0x5678 + 0x2520 = 0x7B98 without carry generated
+So the second FDIV step can be skipped.
+
+Final division 
+0x7B98 / 0x5678 = 0x5678 * 0x0001 + 0x2520
+
+Summary: Remainder is 0x2520, quotient is 0x35E4 + 1 = 0x35E5
+
+1 - udh(D) FDIV u(X), result is Q0 (X), R(D)
+2 - add R(D) with udl, result in D
+3 - if no carry goto 6
+4 - D FDIV u(X), result is Q1 (X), R(D)
+5 - add R(D) with udl, result in D
+6 - D FDIV u(X), result is Q2 (X), R(D)
+7 - final remainder is D, quotient is Q0+Q1+Q2
+
+udh is used once, it is used to accumulate the quotient
+
+To improve code performance we dont load D and X from stack directly (would need expensive opcodes involving Y index)
+We just pull the operands into pTEMP and access them from here in direct addressing mode.
 */
 	.word	code_UMMOD
 	.text
 code_UMMOD:
-    bra	NEXT2
+	pulx
+	stx	*pTEMP		/* u */
+	pulx
+	stx	*(pTEMP+2)	/* udh */
+	pulx
+	stx	*(pTEMP+4)	/* udl */
+
+	ldd	*(pTEMP+2)	/* load high word */
+	ldx	*pTEMP		/* load divisor */	
+
+	fdiv
+
+	addd	*(pTEMP+4)	/* add udl to remainder */
+	stx	*(pTEMP+2)	/* overwrite udh with quotient accumulator */
+	bcc	skipdiv2	/* no overflow so second fdiv is not required */
+
+	ldx	*pTEMP		/* load divisor, D is still alive, contains remainder+udl */
+
+	fdiv
+
+	addd	*(pTEMP+4)	/* add udl to remainder */
+	xgdx			/* now D contains new quotient */
+	addd	*(pTEMP+2)	/* acc quotient */
+	std	*(pTEMP+2)	/* store sum quotient*/
+	xgdx			/* now D contains remainder, X is quotient that was added*/
+
+skipdiv2:
+	ldx	*pTEMP		/* Final divisor load */
+	idiv			/* D contains final remainder */
+	xgdx			/* Remainder in X, D contains quotient to accumulate */
+	pshx			/* We're done with the remainder. */
+	addd	*(pTEMP+2)	/* Acc the quotient */
+	bra	PUSHD		/* Use common code to push it */
     
 .else
 	.word	code_ENTER
@@ -1267,8 +1322,8 @@ umm4:
 
 /*---------------------------------------------------------------------------*/
 /* CORE 6.1.1561 FM/MOD ( d n -- r q ) - signed floored divide of double by single. return mod and quotient. */
-word_FMSMOD:
 	.section .dic
+word_FMSMOD:
 	.word	word_UMMOD
 	.byte	6
 	.ascii	"FM/MOD"
@@ -1291,6 +1346,7 @@ mmod3:
 
 /*---------------------------------------------------------------------------*/
 /* CORE 6.1.0240 /MOD ( n n -- r q ) signed divide. return mod and quotient. */
+	.section .dic
 word_SLMOD:
 	.word	word_FMSMOD
 	.byte	4
@@ -1305,6 +1361,7 @@ SLMOD:
 
 /*---------------------------------------------------------------------------*/
 /* CORE 6.1.1890 MOD ( n n -- r ) signed divide. return mod only. */
+	.section .dic
 word_MOD:
 	.word	word_SLMOD
 	.byte	3
@@ -1317,6 +1374,7 @@ MOD:
 
 /*---------------------------------------------------------------------------*/
 /* CORE 6.1.0230 / ( n n -- q ) signed divide. return quotient only. */
+	.section .dic
 word_SLASH:
 	.word	word_MOD
 	.byte	1
