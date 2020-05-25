@@ -187,11 +187,6 @@ _start:
 	clra
 	staa	INIT+0x1000
 
-	/* Init serial port -> done in hi via IOINIT */
-
-	ldx	#word_hi
-	stx	*LASTP
-
 	/* Setup the runtime environment */
 	lds	#SP_ZERO	/* Parameter stack at end of RAM. HC11 pushes byte per byte. */
 	ldy	#RP_ZERO	/* Return stack 1K before end of RAM. We push word per word. */
@@ -2893,13 +2888,12 @@ DOINTERPRET:
 	.word	EXECUTE
 	.word	RETURN
 
-donumi:	/* No word was found, attempt to parse as number, then push */
+donumi:        /* No word was found, attempt to parse as number, then push */
 	.word	NUMBERQ
 	.word	BRANCHZ,notfoundi	/*consume the OK flag and leaves the number on the stack for later use*/
 	.word	RETURN
 notfoundi:
-	.word	THROW	/* Throw the failed name as exception, to be caught in QUIT */
-componly:
+	.word	THROW			/* Throw the failed name as exception, to be caught in QUIT */
 
 /*===========================================================================*/
 /* Compiler */
@@ -2908,6 +2902,7 @@ componly:
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY $COMPILE ( a -- ) - compile next word to code dictionary as a token or literal. */
 /* TODO use STATE instead and merge with $COMPILE as EVAL */
+	.section .dic
 word_DOCOMPILE:
 	.word	word_DOINTERPRET
 	.byte	8
@@ -3005,8 +3000,8 @@ CCOMMA:
 	.section .dic
 word_POSTPONE:
 	.word	word_CCOMMA
-	.byte	9 + WORD_IMMEDIATE
-	.ascii	"[COMPILE]"
+	.byte	8 + WORD_IMMEDIATE
+	.ascii	"POSTPONE"
 POSTPONE:
 	.word	code_ENTER
 	.word	TICK
@@ -3017,12 +3012,7 @@ POSTPONE:
 /* INTERNAL compile ( -- ) - compile the next address in colon list to code dictionary. */
 /* This is a short hand for IMM,VALUE,COMMA. Only goal is to save ROM space (one word saved per use wrt to direct IMM). */
 /* TODO rename COMPILE_IMM */
-	.section .dic
-word_COMPILE:
-	.word	word_POSTPONE
-	.byte	7 + WORD_COMPILEONLY
-	.ascii	"COMPILE"
-COMPILE:
+COMPILE_IMM:
 	.word	code_ENTER
 	.word	RFROM
 	.word	DUP
@@ -3037,12 +3027,12 @@ COMPILE:
 
 	.section .dic
 word_LITERAL:
-	.word	word_COMPILE
+	.word	word_POSTPONE
 	.byte	7 + WORD_IMMEDIATE
 	.ascii	"LITERAL"
 LITERAL:
 	.word	code_ENTER
-	.word	COMPILE,IMM
+	.word	COMPILE_IMM,IMM
 	.word	COMMA
 	.word	RETURN
 
@@ -3075,7 +3065,7 @@ word_FOR:
 	.ascii	"FOR"
 FOR:
 	.word	code_ENTER
-	.word	COMPILE,TOR
+	.word	COMPILE_IMM,TOR
 	.word	HERE
 	.word	RETURN
 
@@ -3089,7 +3079,7 @@ word_NEXT:
 	.ascii	"NEXT"
 NXT:
 	.word	code_ENTER
-	.word	COMPILE,JNZD
+	.word	COMPILE_IMM,JNZD
 	.word	COMMA
 	.word	RETURN
 
@@ -3133,7 +3123,7 @@ word_UNTIL:
 	.ascii	"UNTIL"
 UNTIL:
 	.word	code_ENTER
-	.word	COMPILE,BRANCHZ
+	.word	COMPILE_IMM,BRANCHZ
 	.word	COMMA
 	.word	RETURN
 
@@ -3147,7 +3137,7 @@ word_AGAIN:
 	.ascii	"AGAIN"
 AGAIN:
 	.word	code_ENTER
-	.word	COMPILE,BRANCH
+	.word	COMPILE_IMM,BRANCH
 	.word	COMMA
 	.word	RETURN
 
@@ -3161,7 +3151,7 @@ word_IF:
 	.ascii	"IF"
 IF:
 	.word	code_ENTER
-	.word	COMPILE,BRANCHZ
+	.word	COMPILE_IMM,BRANCHZ
 	.word	HERE			/* Push the address of the forward ref on the stack */
 	.word	IMM,0,COMMA		/* Reserve a cell to subsequent definition by THEN */
 	.word	RETURN
@@ -3175,7 +3165,7 @@ word_AHEAD:
 	.ascii	"AHEAD"
 AHEAD:
 	.word	code_ENTER
-	.word	COMPILE,BRANCH
+	.word	COMPILE_IMM,BRANCH
 	.word	HERE
 	.word	IMM,0
 	.word	COMMA
@@ -3248,7 +3238,7 @@ word_ABORTQ:
 	.ascii	"ABORT\""
 ABORTQ:
 	.word	code_ENTER
-	.word	COMPILE,ABORTNZ
+	.word	COMPILE_IMM,ABORTNZ
 	.word	SCOMPQ
 	.word	RETURN
 
@@ -3265,7 +3255,7 @@ word_STRQ:
 	.ascii	"S\""
 STRQ:
 	.word	code_ENTER
-	.word	COMPILE,IMMSTR
+	.word	COMPILE_IMM,IMMSTR
 	.word	SCOMPQ
 	.word	RETURN
 
@@ -3281,7 +3271,7 @@ word_DOTQ:
 	.ascii	".\""
 DOTQ:
 	.word	code_ENTER
-	.word	COMPILE,SHOWSTR
+	.word	COMPILE_IMM,SHOWSTR
 	.word	SCOMPQ
 	.word	RETURN
 
@@ -3332,7 +3322,7 @@ word_COLON:
 COLON:
 	.word	code_ENTER
 	.word	SNAME
-	.word	COMPILE,code_ENTER	/* save codeptr to execute the definition */
+	.word	COMPILE_IMM,code_ENTER	/* save codeptr to execute the definition */
 	.word	COMPIL			/* Enter compilation mode */
 	.word	RETURN
 
@@ -3360,7 +3350,7 @@ word_SEMICOL:
 	.ascii	";"
 SEMICOL:
 	.word	code_ENTER
-	.word	COMPILE,RETURN	/* Write the final RETURN */
+	.word	COMPILE_IMM,RETURN	/* Write the final RETURN */
 	.word	OVERT		/* Save new LAST */
 	.word	INTERP		/* Back to interpreter mode */
 	.word	RETURN
@@ -3422,7 +3412,7 @@ CREATE:
 	.word	IMM,LSTCRP
 	.word	STORE
 	/* Now emit the DOVAR, this word can be replaced later by DOES>*/
-	.word	COMPILE,DOVAR
+	.word	COMPILE_IMM,DOVAR
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3573,20 +3563,20 @@ DOES:
 	/* Now, we have to define a new unnamed word. The address
 	of the unnamed word is HERE. this value must be stored in place of
 	the DOVAR that was defined by the previous CREATE*/
-	.word	COMPILE,IMM
+	.word	COMPILE_IMM,IMM
 	.word	HERE
 	.word	IMM,6,CELLS,PLUS	/* Compute the address of the code that replaces DOVAR in the created def */
 	.word	COMMA
-	.word	COMPILE,IMM
-	.word	COMPILE,LSTCRP	/* The cell pointed by this address contains the address of the DOVAR for the last CREATE */
-	.word	COMPILE,LOAD	/* Get the address that contains DOVAR */
-	.word	COMPILE,STORE		/* This actually stores the SAME code pointer (after the definition end) in each created instance. */
+	.word	COMPILE_IMM,IMM
+	.word	COMPILE_IMM,LSTCRP	/* The cell pointed by this address contains the address of the DOVAR for the last CREATE */
+	.word	COMPILE_IMM,LOAD	/* Get the address that contains DOVAR */
+	.word	COMPILE_IMM,STORE		/* This actually stores the SAME code pointer (after the definition end) in each created instance. */
 	/* The code executed by the definition stops here. Next compiled words will be the DOES action. */
-	.word	COMPILE, RETURN
+	.word	COMPILE_IMM, RETURN
 
 	/*Start the code that will be executed by the CREATEd definition */
-	.word	COMPILE,code_ENTER
-	.word	COMPILE,RFROM	/* Just before executing the DOES action, we compile code that acts like the original DOVAR to get the CREATEd data field */
+	.word	COMPILE_IMM,code_ENTER
+	.word	COMPILE_IMM,RFROM	/* Just before executing the DOES action, we compile code that acts like the original DOVAR to get the CREATEd data field */
 	.word	RETURN		/* DOES> has finished preparing the mem. next compiled words are added. */
 
 /*===========================================================================*/
@@ -3632,6 +3622,7 @@ QSTACK:
 
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY eval ( -- ) evaluate all words in input buffer. Each word is interpreted or compiled according to current behaviour */
+/* This is close to F2012 CORE EVALUATE */
 /* TODO merge $INTERPRET and $COMPILE */
 	.section .dic
 word_EVAL:
@@ -3652,7 +3643,7 @@ eval1:
 evinterp:
 	.word	DOINTERPRET
 evnxt:
-	.word	QSTACK		/*TODO Check stack underflow */
+	.word	QSTACK		/*Check stack underflow */
 	.word	BRANCH, eval1	/* Do next token */
 eval2:
 	.word	DROP		/*--*/
@@ -3942,6 +3933,9 @@ CLEAR:
 	.word	IMM, HERE_ZERO
 	.word	IMM, HEREP
 	.word	STORE
+	.word	IMM, word_hi
+	.word	IMM,LASTP
+	.word	STORE
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
@@ -3978,7 +3972,7 @@ hi:
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 /* There is no header and no code pointer. This is not really a valid word. */
-	.section .dic
+	.section .rodata
 BOOT:
 	.word	IOINIT		/* Setup HC11 uart */
 	.word	CONSOLE		/* Setup IO vectors */

@@ -129,7 +129,7 @@ adrimm    = findsymaddr(b"IMM")
 adrimmstr = findsymaddr(b"IMMSTR")
 adrshowstr= findsymaddr(b"SHOWSTR")
 adrabortnz= findsymaddr(b"ABORTNZ")
-adrcompile= findsymaddr(b"COMPILE")
+adrcompile= findsymaddr(b"COMPILE_IMM")
 
 print("ENTER=%04X EXIT=%04X IMM=%04X IMMSTR=%04X" % (adrenter,adrexit,adrimm,adrimmstr))
 print("start=%04X end=%04X" % (dicstart,dicend))
