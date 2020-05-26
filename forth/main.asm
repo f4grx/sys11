@@ -1198,7 +1198,7 @@ msta1:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* CORE 6.1.2370 UM/MOD ( udl udh u -- ur uq ) - 32/16 division and modulo */
+/* CORE 6.1.2370 UM/MOD ( ul0 uh0 un -- ur uq ) - 32/16 division and modulo */
 /*TODO native implementation since hc11 has a divider*/
 	.section .dic
 word_UMMOD:
@@ -1256,30 +1256,32 @@ We just pull the operands into pTEMP and access them from here in direct address
 	.text
 code_UMMOD:
 	pulx
-	stx	*pTEMP		/* u */
+	stx	*pTEMP		/* n */
 	pulx
-	stx	*(pTEMP+2)	/* udh */
+	stx	*(pTEMP+2)	/* h0 */
 	pulx
-	stx	*(pTEMP+4)	/* udl */
+	stx	*(pTEMP+4)	/* l0 */
 
-	ldd	*(pTEMP+2)	/* load high word */
-	ldx	*pTEMP		/* load divisor */	
+	ldd	*(pTEMP+2)	/* load h0 word */
+	ldx	*pTEMP		/* load n */	
 
 	fdiv
 
 	addd	*(pTEMP+4)	/* add udl to remainder */
-	stx	*(pTEMP+2)	/* overwrite udh with quotient accumulator */
+	std	*(pTEMP+4)	/* save in back for later, keeps C */
+	stx	*(pTEMP+2)	/* overwrite udh with quotient accumulator, keeps C */
 	bcc	skipdiv2	/* no overflow so second fdiv is not required */
 
+	ldd	#0x0001		/* load H1, which is always one here. */
 	ldx	*pTEMP		/* load divisor, D is still alive, contains remainder+udl */
 
 	fdiv
 
-	addd	*(pTEMP+4)	/* add udl to remainder */
-	xgdx			/* now D contains new quotient */
+	addd	*(pTEMP+4)	/* add remainder to L1 */
+	xgdx			/* now D contains new quotient, X gets L1+R1 */
 	addd	*(pTEMP+2)	/* acc quotient */
 	std	*(pTEMP+2)	/* store sum quotient*/
-	xgdx			/* now D contains remainder, X is quotient that was added*/
+	xgdx			/* now D contains R1+L1, X is quotient sum*/
 
 skipdiv2:
 	ldx	*pTEMP		/* Final divisor load */
