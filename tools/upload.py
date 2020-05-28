@@ -272,7 +272,7 @@ try:
         if len(x) == 0 :
             time.sleep(0.01)
             continue
-        if x[0] < 0x20 and x[0] != 0x0D and x[0] != 0x0A:
+        if x[0] < 0x20 and x[0] != 0x0D and x[0] != 0x0A and x[0] != 0x08:
             print("<%02X>" % x[0], flush=True)
         else:
             print(chr(x[0]), end='', flush=True)

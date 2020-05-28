@@ -2229,27 +2229,6 @@ HERE:
 	.word	LOAD		/* (HERE) */ 
 	.word	RETURN
 
-/*---------------------------------------------------------------------------*/
-/* TOOLS 15.6.2.1580 FORGET ( <spaces>name<space> -- ) */
-/* OBSOLETE (but useful) */
-/* Delete name and all words added net */
-word_FORGET:
-	.word	word_HERE
-	.byte	6
-	.ascii	"FORGET"
-FORGET:
-	.word	code_ENTER
-	/* TICK will return a code address via FIND. However, to forget words,
-	 * we need the name address instead. It is not easy to do that.
-	 * Rewinding the pointer back through the ASCII name until a special
-	 * value is reached will not work, because the name length is combined
-	 * with flags so values have no specific range non overlapping with
-	 * usual characters. We could check that:
-	 * nameaddr + (byte at nameaddr AND LENMASK) == codeaddr
-	 * but this would be quite a large code. However, such a routine could
-	 * be reused by the SEE disassembler word. */
-	.word	RETURN
-
 /*===========================================================================*/
 /* Terminal */
 /*===========================================================================*/
@@ -2258,7 +2237,7 @@ FORGET:
 /* PROPRIETARY BS ( -- 8 ) */
 	.section .dic
 word_BS:
-	.word	word_FORGET
+	.word	word_HERE
 	.byte	2
 	.ascii	"BS"
 BS:
@@ -3588,6 +3567,66 @@ DOES:
 	.word	COMPILE_IMM,RFROM	/* Just before executing the DOES action, we compile code that acts like the original DOVAR to get the CREATEd data field */
 	.word	RETURN		/* DOES> has finished preparing the mem. next compiled words are added. */
 
+/*---------------------------------------------------------------------------*/
+/* CORE_EXT 6.2.1850 MARKER ( <spaces>name<spaces> -- ) */
+/* Create a definition that, when executed, will delete itself and all words
+   that were defined later. We do that by saving/restoring HERE and LAST */
+/* Example:
+sys11 forth ver 1.00
+MARKER base  ok
+$100 31 DUMP
+ 100  F2 A2  4 62 61 73 65 E0 21 E1 BE F2 A2 E1 BE  0  r"_base`!a>r"a>_
+ 110  44 E2  1 E1 BE  1  0 E1 BE  0 42 E2  1 E1 BC  4  Db_a>__a>_Bb_a<_  ok
+
+100	F2A2	PREV
+102	4 str -> base
+107	E021	code_ENTER
+109	E1BE	IMM
+10B	F2A2	prev
+10D	E1BE	IMM
+10F	0044	LASTP
+111	E201	STORE
+
+113	E1BE	IMM
+115	0100	HERE_START
+117	E1BE	IMM
+119	0042	HEREP
+11B	E201	STORE
+11D	E1BC	RETURN
+*/
+	.section .dic
+word_MARKER:
+	.word	word_DOES
+	.byte	6
+	.ascii	"MARKER"
+MARKER:
+	.word	code_ENTER
+	.word	HERE		/* here_before | Save HERE - this is the restore point*/
+	.word	CREATE		/* here_before | Create a DOVAR definition, eating the next token */
+	.word	IMM,LSTCRP	/* here_before &lstptr */
+	.word	LOAD		/* here_before listptr */
+	.word	IMM,HEREP	/* here_before listptr &here Rewind HERE to overwrite the DOVAR with COMMA */
+	.word	STORE		/* here_before -- */
+	/* Now TOS contains the pointer to this code's word. */
+	/* We can replace DOVAR by some code that will restore HERE and LASTP.*/
+	/*After create, loading at here_before will retrieve the ptr to the prev word */
+	.word	DUP		/* here_before here_before */
+
+	.word	LOAD		/* here_before prev_before */
+
+	.word	LITERAL		/* here_before Generate code to push prev_before */
+	.word	IMM,LASTP	/* here_before LASTP */
+	.word	LITERAL		/* here_before Generate code to push LASTP */
+	.word	COMPILE_IMM,STORE/*Generate code to store prev_before into LAST */
+
+	.word	LITERAL		/* Generate code to push here_before */
+	.word	IMM,HEREP	/* HEREP */
+	.word	LITERAL		/* Generate code to push the address of here */
+	.word	COMPILE_IMM,STORE
+
+	.word	COMPILE_IMM,RETURN
+	.word	RETURN
+
 /*===========================================================================*/
 /* Shell */
 /*===========================================================================*/
@@ -3596,7 +3635,7 @@ DOES:
 /* PROPRIETARY PROMPT ( -- ) */
 	.section .dic
 word_PROMPT:
-	.word	word_DOES
+	.word	word_MARKER
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
