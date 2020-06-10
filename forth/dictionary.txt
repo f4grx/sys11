@@ -55,13 +55,15 @@ DROP        6.1.1260    N
 DUP         6.1.1290    N
 ELSE        6.1.1310
 EMIT        6.1.1320
+EVALUATE    6.1.1360
 EXECUTE     6.1.1370    N
 EXIT        6.1.1380    N
+FIND        6.1.1550
 FM/MOD      6.1.1561
 HERE        6.1.1650
 HOLD        6.1.1670
 IF          6.1.1700
-IMMEDIATE   6.1.1710        TODO
+IMMEDIATE   6.1.1710
 INVERT      6.1.1720
 KEY         6.1.1750
 LITERAL     6.1.1780
@@ -107,6 +109,7 @@ HEX         6.2.1660
 PAD         6.2.2000
 PICK        6.2.2030
 U.R         6.2.2330
+UNUSED      6.2.2395
 WITHIN      6.2.2440
 \           6.2.2535
 
@@ -144,7 +147,6 @@ CHARS       6.1.0898
 CONSTANT    6.1.0950
 DO          6.1.1240
 ENVIRONMENT?6.1.1345
-EVALUATE    6.1.1360
 FILL        6.1.1540
 I           6.1.1680
 J           6.1.1730
@@ -161,11 +163,6 @@ UNLOOP      6.1.2380
 [CHAR]      6.1.2520
 
 ==================================================
-desirable CORE_EXT missing
--------------------------
-UNUSED  6.2.2395
-
-==================================================
 desirable STRING missing
 -------------------------
 COMPARE     17.6.1.0935
@@ -177,17 +174,43 @@ desirable TOOLS missing
 ASSEMBLER   15.6.2.0740
 CODE        15.6.2.0930
 EDITOR      15.6.2.1300
-FORGET      15.6.2.1580
 
 ==================================================
 Words to be fixed for standard compliance
 parse       PROPRIETARY -> PARSE 6.2.2008 - CHECK ARGS AND SEMANTICS
 PARSE       PROPRIETARY -> PARSE-NAME 6.2.2020
-COMPILE     TO BE REMOVED -> COMPILE, 6.2.0945
-FIND        PROPRIETARY - FIX and use 6.1.1550
 CATCH       EXCEPTION 9.6.1.0875 uses strings, make it use int codes.
 THROW       EXCEPTION 9.6.1.2275 uses strings, fix semantics to use int codes.
 
+==================================================
+Proprietary words for SPI
+SPIINIT ( -- )
+SPISEL  ( n -- )
+SPIEX   ( tx -- rx )
+SPITXRX ( n adrtx adrrx -- )
+
+: SPISEND ( n adr --) 0 SPITXRX ;
+: SPIRECV ( n adr --) 0 SWAP SPITXRX ;
+: SPITRAN ( n adr --) DUP SPITXRX ;
+
+==================================================
+BLOCK Word Set TODO
+BLK	      7.6.1.0790	( -- addr )
+BLOCK	      7.6.1.0800	( u -- addr )
+BUFFER	      7.6.1.0820	( u -- addr )
+EVALUATE      7.6.1.1360
+FLUSH         7.6.1.1559	( -- )
+LOAD          7.6.1.1790	( ... u -- ... )
+SAVE-BUFFERS  7.6.1.2180 ( -- )
+UPDATE        7.6.1.2400 ( -- )
+
+BLOCK_EXT Word Set TODO
+EMPTY-BUFFERS 7.6.2.1330 ( -- )
+LIST          7.6.2.1770 ( u -- )
+REFILL        7.6.2.2125 ( -- flag )
+SCR           7.6.2.2190 ( -- addr )
+THRU          7.6.2.2280 ( ... first last -- ... )
+\             7.6.2.2535 ( "ccc<eol>" -- )
 ==================================================
 Proprietary words
 IOINIT	IOTX!	?IORX
@@ -197,37 +220,22 @@ UM+
 NUF?
 PACK$       
 CSAME?	CCOMPARE	NAMECOMPARE
-DIGIT
-EXTRACT
-STR
-DIGIT?
-NUMBER?
-BS
-BKSP
-TAP
-TTAP
->CHAR
-TOKEN
+DIGIT	EXTRACT
+STR	DIGIT?		NUMBER?
+BS	BKSP
+TAP	TTAP		>CHAR		TOKEN
 NAME?
 HANDLER
-$INTERPRET
-$COMPILE
 $,"
-FOR
-NEXT
-AFT
-$,N
-OVERT
+FOR	NEXT		AFT
+$,N	OVERT
 PROMPT
 ?STACK
 eval
 QUERY
 CONSOLE
 
-_TYPE
-dm+
-!CSP
-?CSP
-VER
-hi
-BOOT
+_TYPE	dm+
+!CSP	?CSP
+VER	hi
+

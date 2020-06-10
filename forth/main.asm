@@ -134,6 +134,8 @@
 	.equ	USE_MUL, 1		/* use HC11 multiplier instead of eforth UM* routine */
 	.equ	USE_DIV, 1		/* use HC11 divider instead of eforth UM/MOD routine */
 
+	.equ	USE_SPI, 1		/* Enable words for SPI master transactions (specific to sys11) */
+
 	/* Word flags - added to length, so word length is encoded on 6 bits*/
 	.equ	WORD_IMMEDIATE   , 0x80
 	.equ	WORD_COMPILEONLY , 0x40
@@ -157,12 +159,11 @@ CSPP:	.word	0	/* Storage for stack pointer value used for checks */
 	/* Input text buffering */
 
 pTEMP:	.space	6	/* Temp variable used in LPARSE, UM* and UM/MOD */
-INN:	.word	0	/* Parse position in the input buffer */
-TIBBUF:	.space	TIB_LEN	/* Default Input buffer */
+TOINP:	.word	0	/* Parse position in the input buffer */
 NTIBP:	.word	0	/* Number of received characters in current line */
 STIBP:	.word	0	/* Size of the tib */
 TIBP:   .word	0	/* Address of the actual input buffer, to allow switching to other buffers */
-
+TIBBUF:	.space	TIB_LEN	/* Space for Default Input buffer */
 
 /*===========================================================================*/
 /* Structure of a compiled word: We have a suite of code pointers. Each code pointer has to be executed in turn.
@@ -2229,6 +2230,20 @@ HERE:
 	.word	LOAD		/* (HERE) */ 
 	.word	RETURN
 
+/*---------------------------------------------------------------------------*/
+/* CORE_EXT 6.2.2395 UNUSED ( -- u ) */
+/* Return the amount of free bytes in the data space */
+word_UNUSED:
+	.word	word_HERE
+	.byte	6
+	.ascii	"UNUSED"
+UNUSED:
+	.word	code_ENTER
+	.word	RPLOAD
+	.word	HERE
+	.word	SUB
+	.word	RETURN
+
 /*===========================================================================*/
 /* Terminal */
 /*===========================================================================*/
@@ -2237,7 +2252,7 @@ HERE:
 /* PROPRIETARY BS ( -- 8 ) */
 	.section .dic
 word_BS:
-	.word	word_HERE
+	.word	word_UNUSED
 	.byte	2
 	.ascii	"BS"
 BS:
@@ -2563,19 +2578,19 @@ PARSE:
 	.word	TOR		/* -- | R: delim*/
 	.word	IMM, TIBP	/* &tib */
 	.word	LOAD		/* tib */
-	.word	IMM, INN	/* tib &done_count */
+	.word	TOIN		/* tib &done_count */
 	.word	LOAD		/* tib done_count */
 	.word	PLUS		/* buf */
 	/* Compute remaining count */
 	.word	IMM,NTIBP	/* buf &ntib */
 	.word	LOAD		/* buf ntib */
-	.word	IMM, INN	/* buf ntib &done_count */
+	.word	TOIN		/* buf ntib &done_count */
 	.word	LOAD		/* buf ntib done_count */
 	.word	SUB		/* buf remaining_count */
 	.word	RFROM		/* buf remaining_count delim */
 	/* Call low level word */
 	.word	LPARSE		/* buf wordlen delta */
-	.word	IMM, INN	/* buf wordlen delta &done_count */
+	.word	TOIN		/* buf wordlen delta &done_count */
 	.word	PLUS_STORE	/* buf wordlen */
 	.word	RETURN
 
@@ -2656,7 +2671,8 @@ PAR:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* CORE_EXT 6.2.2535 \ ( -- ) Line comment , discard the rest of the input buffer */
+/* CORE_EXT 6.2.2535 \ ( "ccc<eol>" -- ) Line comment , discard the rest of the input buffer */
+/* BLOCK 7.6.2.2535 \ ( "ccc<eol>" -- ) */
 	.section .dic
 word_BSLASH:
 	.word	word_PAR
@@ -2666,7 +2682,7 @@ BSLASH:
 	.word	code_ENTER
 	.word	IMM, NTIBP
 	.word	LOAD
-	.word	IMM, INN
+	.word	TOIN
 	.word	STORE
 	.word	RETURN
 
@@ -3632,10 +3648,21 @@ MARKER:
 /*===========================================================================*/
 
 /*---------------------------------------------------------------------------*/
+	.section .dic
+word_TOIN:
+	.word	word_MARKER
+	.byte	3
+	.ascii	">IN"
+TOIN:
+	.word	code_ENTER
+	.word	IMM,TOINP
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
 /* PROPRIETARY PROMPT ( -- ) */
 	.section .dic
 word_PROMPT:
-	.word	word_MARKER
+	.word	word_TOIN
 	.byte	6
 	.ascii	"PROMPT"
 PROMPT:
@@ -3669,14 +3696,11 @@ QSTACK:
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
-/* PROPRIETARY eval ( -- ) evaluate all words in input buffer. Each word is interpreted or compiled according to current behaviour */
-/* This is close to F2012 CORE EVALUATE */
-/* TODO merge $INTERPRET and $COMPILE */
+/* INTERNAL eval ( -- ) */
+/* Used by EVALUATE nd QUIT. Evaluate all words in input buffer.
+ * Each word is interpreted or compiled according to current behaviour
+ */
 	.section .dic
-word_EVAL:
-	.word	word_QSTACK
-	.byte	4
-	.ascii	"eval"
 EVAL:
 	.word	code_ENTER
 eval1:
@@ -3733,7 +3757,7 @@ evalfinish:
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY HAND ( -- ) Reset the input buffer to its default storage and size. */
 word_HAND:
-	.word	word_EVAL
+	.word	word_QSTACK
 	.byte	4
 	.ascii	"HAND"
 HAND:
@@ -3744,12 +3768,101 @@ HAND:
 	.word	IMM, TIBBUF
 	.word	IMM, TIBP
 	.word	STORE
+	.word	IMM,0
+	.word	IMM,NTIBP
+	.word	STORE
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.2216 SOURCE ( -- buf len ) */
+/* Return the current input buffer address and length */
+word_SOURCE:
+	.word	word_HAND
+	.byte	6
+	.ascii	"SOURCE"
+SOURCE:
+	.word	code_ENTER
+	.word	IMM,TIBP
+	.word	LOAD
+	.word	IMM,STIBP
+	.word	LOAD
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE_EXT 6.2.2148 ( -- STIB NTIB IN TIB 4 ) */
+word_SAVEINPUT:
+	.word	word_SOURCE
+	.byte	10
+	.ascii	"SAVE-INPUT"
+SAVEINPUT:
+	.word	code_ENTER
+	.word	IMM,STIBP	/* buf len &tib_size */
+	.word	LOAD		/* buf */
+	.word	IMM,NTIBP	/* buf len &tib_received */
+	.word	LOAD		/* buf */
+	.word	TOIN		/* >IN */
+	.word	LOAD		/* -- */
+	.word	IMM,TIBP	/* buf &tib */
+	.word	LOAD		/* -- */
+	.word	IMM,4
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE_EXT 6.2.2148 ( STIB NTIB IN TIB 4 -- flag ) */
+word_RESTOREINPUT:
+	.word	word_SAVEINPUT
+	.byte	13
+	.ascii	"RESTORE-INPUT"
+RESTOREINPUT:
+	.word	code_ENTER
+	.word	IMM,4
+	.word	XOR
+	.word	BRANCHZ,restore
+	.word	IMM,1		/* cannot restore - stack problem */
+	.word	RETURN
+restore:
+	.word	IMM,TIBP	/* buf &tib */
+	.word	STORE		/* -- */
+	.word	TOIN		/* >IN */
+	.word	STORE		/* -- */
+	.word	IMM,NTIBP	/* buf len &tib_received */
+	.word	STORE		/* buf */
+	.word	IMM,STIBP	/* buf len &tib_size */
+	.word	STORE		/* buf */
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* CORE 6.1.1360 EVALUATE ( ... buf len -- ... ) */
+/* BLOCK 7.6.1.1360 EVALUATE */
+/* Make the buffer pointed by buf and len the TIB, evaluate, then restore the
+ * original console TIB. */
+word_EVALUATE:
+	.word	word_RESTOREINPUT
+	.byte	8
+	.ascii	"EVALUATE"
+EVALUATE:
+	.word	code_ENTER
+	.word	SAVEINPUT
+	.word	TOR,TOR,TOR,TOR,TOR
+	.word	DUP
+	.word	IMM,STIBP	/* buf len &tib_size */
+	.word	STORE		/* buf */
+	.word	IMM,NTIBP	/* buf len &tib_received */
+	.word	STORE		/* buf */
+	.word	IMM,TIBP	/* buf &tib */
+	.word	STORE		/* -- */
+	.word	IMM,0		/* 0 */
+	.word	TOIN		/* >IN */
+	.word	STORE		/* -- */
+	.word	EVAL		/* Evaluate input */
+	.word	RFROM,RFROM,RFROM,RFROM,RFROM
+	.word	RESTOREINPUT	/* Restore input source */
 	.word	RETURN
 
 /*---------------------------------------------------------------------------*/
 /* PROPRIETARY CONSOLE ( -- ) Make IO vectors point at the default serial implementations */
 word_CONSOLE:
-	.word	word_HAND
+	.word	word_EVALUATE
 	.byte	7
 	.ascii	"CONSOLE"
 CONSOLE:
@@ -3790,7 +3903,7 @@ QUIT1:
     
 	/* Reset input buffer pointer to start of buffer */
 	.word	IMM,0
-	.word	IMM,INN
+	.word	TOIN
 	.word	STORE
 
 	/* Execute the line */
@@ -4013,7 +4126,11 @@ CLEAR:
 	.word	IMM, HERE_ZERO
 	.word	IMM, HEREP
 	.word	STORE
+.if USE_SPI
+	.word	IMM, word_SPITRAN
+.else
 	.word	IMM, word_hi
+.endif
 	.word	IMM,LASTP
 	.word	STORE
 	.word	RETURN
@@ -4049,6 +4166,136 @@ hi:
 	.word	CR
 	.word	RETURN
 
+.if USE_SPI
+/*===========================================================================*/
+/* SPI Bus */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* ( -- ) */
+word_SPIINIT:
+	.word	word_hi
+	.byte	7
+	.ascii	"SPIINIT"
+SPIINIT:
+	.word	code_SPIINIT
+	.text
+code_SPIINIT:
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+/* ( n -- ) */
+	.section .dic
+word_SPISEL:
+	.word	word_SPIINIT
+	.byte	6
+	.ascii	"SPISEL"
+SPISEL:
+	.word	code_SPISEL
+	.text
+code_SPISEL:
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+/* ( tx -- rx ) */
+	.section .dic
+word_SPIEXCH:
+	.word	word_SPISEL
+	.byte	7
+	.ascii	"SPIEXCH"
+SPIEXCH:
+	.word	code_SPIEXCH
+	.text
+code_SPIEXCH:
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+/* ( n adrtx adrrx -- ) */
+	.section .dic
+word_SPITXRX:
+	.word	word_SPIEXCH
+	.byte	7
+	.ascii	"SPITXRX"
+SPITXRX:
+	.word	code_SPITXRX
+	.text
+code_SPITXRX:
+	bra	NEXT
+
+/*---------------------------------------------------------------------------*/
+/* ( n adr --) 0 SPITXRX*/
+	.section .dic
+word_SPISEND:
+	.word	word_SPITXRX
+	.byte	7
+	.ascii	"SPISEND"
+SPISEND:
+	.word	code_ENTER
+	.word	IMM,0
+	.word	SPITXRX
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( n adr --) 0 SWAP SPITXRX*/
+	.section .dic
+word_SPIRECV:
+	.word	word_SPISEND
+	.byte	7
+	.ascii	"SPIRECV"
+SPIRECV:
+	.word	code_ENTER
+	.word	IMM,0
+	.word	SWAP
+	.word	SPITXRX
+	.word	RETURN
+
+/*---------------------------------------------------------------------------*/
+/* ( n adr --) DUP SPITXRX*/
+	.section .dic
+word_SPITRAN:
+	.word	word_SPIRECV
+	.byte	7
+	.ascii	"SPITRAN"
+SPITRAN:
+	.word	code_ENTER
+	.word	DUP
+	.word	SPITXRX
+	.word	RETURN
+.endif
+
+.if USE_BLOCK
+/*===========================================================================*/
+/* F2012 BLOCK word set */
+/* This extension uses an SPI EEPROM through the SPI words */
+/*===========================================================================*/
+
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.0790 BLK ( -- addr ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.0800 BLOCK ( u -- addr ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.0820 BUFFER ( u -- addr ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.1559 FLUSH ( -- ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.1790 LOAD ( ... u -- ... ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.2180 SAVE-BUFFERS ( -- ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.1.2400 UPDATE ( -- ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.2.1330 EMPTY-BUFFERS ( -- ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.2.1770 LIST ( u -- ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.2.2125 REFILL ( -- flag ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.2.2190 SCR ( -- addr ) */
+/*---------------------------------------------------------------------------*/
+/* BLOCK 7.6.2.2280 THRU ( ... first last -- ... ) */
+/*---------------------------------------------------------------------------*/
+.endif
+
 /*---------------------------------------------------------------------------*/
 /* Main forth interactive interpreter loop */
 /* There is no header and no code pointer. This is not really a valid word. */
@@ -4057,7 +4304,7 @@ BOOT:
 	.word	IOINIT		/* Setup HC11 uart */
 	.word	CONSOLE		/* Setup IO vectors */
 	.word	DECIMAL		/* Setup environment */
-	.word	CLEAR		/* Setup HERE */
+	.word	CLEAR		/* Setup HERE and LAST*/
 	.word	hi		/* Show a startup banner */
 
 	.word	QUIT
