@@ -5,8 +5,8 @@
  * This GNU AS listing assembles to a short binary that is padded to 256
  * bytes by the linker script.
  * It can be loaded at address 0x0000 in the hc11 via the bootstrap mechanism.
- * Program goal: Test the 32K RAM located at 0100..7FFF
- * The registers are still mapped at 1000, but the testing loop skips them.
+ * Program goal: Test the 8K ROM located at E000..FFFF.
+ * This requires setting a 62256 in U11 and connecting U11->27 to XMEM_WR
  */
 
 	.equ REGS  , 0x1000
@@ -17,8 +17,8 @@
 	.include "timer.inc"
 	.include "system.inc"
 
-    .equ START, 0x0100
-    .equ END,   0x8000
+    .equ START, 0xE000
+    .equ END,   0x0000 /* this is FFFF+1 wrapped to 16-bits */
 
 /* Start of program */
 
