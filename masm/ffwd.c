@@ -7,7 +7,7 @@
 #define	ABS		0	/* absolute seek */
 
 int	Forward =0;		/* temp file's file descriptor	*/
-char	Fwd_name[] = { "Fwd_refs" } ;
+const char	Fwd_name[] = { "Fwd_refs" } ;
 
 /*
  *      fwdinit --- initialize forward ref file
